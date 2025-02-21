@@ -5,9 +5,15 @@ declare namespace API {
     message?: string;
   };
 
-  type BaseResponseListUrlTagCategoryVo_ = {
+  type BaseResponseInt_ = {
     code?: number;
-    data?: UrlTagCategoryVo[];
+    data?: number;
+    message?: string;
+  };
+
+  type BaseResponseListHotPostVO_ = {
+    code?: number;
+    data?: HotPostVO[];
     message?: string;
   };
 
@@ -23,15 +29,15 @@ declare namespace API {
     message?: string;
   };
 
-  type BaseResponsePageUrlRelate_ = {
+  type BaseResponsePagePost_ = {
     code?: number;
-    data?: PageUrlRelate_;
+    data?: PagePost_;
     message?: string;
   };
 
-  type BaseResponsePageUrlRelateVo_ = {
+  type BaseResponsePagePostVO_ = {
     code?: number;
-    data?: PageUrlRelateVo_;
+    data?: PagePostVO_;
     message?: string;
   };
 
@@ -47,6 +53,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponsePostVO_ = {
+    code?: number;
+    data?: PostVO;
+    message?: string;
+  };
+
   type BaseResponseString_ = {
     code?: number;
     data?: string;
@@ -56,24 +68,6 @@ declare namespace API {
   type BaseResponseTokenLoginUserVo_ = {
     code?: number;
     data?: TokenLoginUserVo;
-    message?: string;
-  };
-
-  type BaseResponseUrlRelate_ = {
-    code?: number;
-    data?: UrlRelate;
-    message?: string;
-  };
-
-  type BaseResponseUrlRelateVo_ = {
-    code?: number;
-    data?: UrlRelateVo;
-    message?: string;
-  };
-
-  type BaseResponseUrlTagVo_ = {
-    code?: number;
-    data?: UrlTagVo;
     message?: string;
   };
 
@@ -89,29 +83,13 @@ declare namespace API {
     message?: string;
   };
 
-  type checkUsingGETParams = {
-    /** echostr */
-    echostr?: string;
-    /** nonce */
-    nonce?: string;
-    /** signature */
-    signature?: string;
-    /** timestamp */
-    timestamp?: string;
-  };
-
   type DeleteRequest = {
     id?: number;
   };
 
-  type getUrlRelateVoByIdUsingGETParams = {
+  type getPostVoByIdUsingGETParams = {
     /** id */
     id?: number;
-  };
-
-  type getUrlRelateVoByShortLinkUsingGETParams = {
-    /** shortLink */
-    shortLink?: string;
   };
 
   type getUserByIdUsingGETParams = {
@@ -124,6 +102,23 @@ declare namespace API {
     id?: number;
   };
 
+  type HotPostDataVO = {
+    excerpt?: string;
+    followerCount?: number;
+    title?: string;
+    url?: string;
+  };
+
+  type HotPostVO = {
+    data?: HotPostDataVO[];
+    iconUrl?: string;
+    id?: number;
+    name?: string;
+    type?: string;
+    typeName?: string;
+    updateTime?: string;
+  };
+
   type LoginUserVO = {
     createTime?: string;
     id?: number;
@@ -134,110 +129,32 @@ declare namespace API {
     userRole?: string;
   };
 
-  type ModelAndView = {
-    empty?: boolean;
-    model?: Record<string, any>;
-    modelMap?: Record<string, any>;
-    reference?: boolean;
-    status?:
-      | 'CONTINUE'
-      | 'SWITCHING_PROTOCOLS'
-      | 'PROCESSING'
-      | 'CHECKPOINT'
-      | 'OK'
-      | 'CREATED'
-      | 'ACCEPTED'
-      | 'NON_AUTHORITATIVE_INFORMATION'
-      | 'NO_CONTENT'
-      | 'RESET_CONTENT'
-      | 'PARTIAL_CONTENT'
-      | 'MULTI_STATUS'
-      | 'ALREADY_REPORTED'
-      | 'IM_USED'
-      | 'MULTIPLE_CHOICES'
-      | 'MOVED_PERMANENTLY'
-      | 'FOUND'
-      | 'MOVED_TEMPORARILY'
-      | 'SEE_OTHER'
-      | 'NOT_MODIFIED'
-      | 'USE_PROXY'
-      | 'TEMPORARY_REDIRECT'
-      | 'PERMANENT_REDIRECT'
-      | 'BAD_REQUEST'
-      | 'UNAUTHORIZED'
-      | 'PAYMENT_REQUIRED'
-      | 'FORBIDDEN'
-      | 'NOT_FOUND'
-      | 'METHOD_NOT_ALLOWED'
-      | 'NOT_ACCEPTABLE'
-      | 'PROXY_AUTHENTICATION_REQUIRED'
-      | 'REQUEST_TIMEOUT'
-      | 'CONFLICT'
-      | 'GONE'
-      | 'LENGTH_REQUIRED'
-      | 'PRECONDITION_FAILED'
-      | 'PAYLOAD_TOO_LARGE'
-      | 'REQUEST_ENTITY_TOO_LARGE'
-      | 'URI_TOO_LONG'
-      | 'REQUEST_URI_TOO_LONG'
-      | 'UNSUPPORTED_MEDIA_TYPE'
-      | 'REQUESTED_RANGE_NOT_SATISFIABLE'
-      | 'EXPECTATION_FAILED'
-      | 'I_AM_A_TEAPOT'
-      | 'INSUFFICIENT_SPACE_ON_RESOURCE'
-      | 'METHOD_FAILURE'
-      | 'DESTINATION_LOCKED'
-      | 'UNPROCESSABLE_ENTITY'
-      | 'LOCKED'
-      | 'FAILED_DEPENDENCY'
-      | 'TOO_EARLY'
-      | 'UPGRADE_REQUIRED'
-      | 'PRECONDITION_REQUIRED'
-      | 'TOO_MANY_REQUESTS'
-      | 'REQUEST_HEADER_FIELDS_TOO_LARGE'
-      | 'UNAVAILABLE_FOR_LEGAL_REASONS'
-      | 'INTERNAL_SERVER_ERROR'
-      | 'NOT_IMPLEMENTED'
-      | 'BAD_GATEWAY'
-      | 'SERVICE_UNAVAILABLE'
-      | 'GATEWAY_TIMEOUT'
-      | 'HTTP_VERSION_NOT_SUPPORTED'
-      | 'VARIANT_ALSO_NEGOTIATES'
-      | 'INSUFFICIENT_STORAGE'
-      | 'LOOP_DETECTED'
-      | 'BANDWIDTH_LIMIT_EXCEEDED'
-      | 'NOT_EXTENDED'
-      | 'NETWORK_AUTHENTICATION_REQUIRED';
-    view?: View;
-    viewName?: string;
-  };
-
   type OrderItem = {
     asc?: boolean;
     column?: string;
   };
 
-  type PageUrlRelate_ = {
+  type PagePost_ = {
     countId?: string;
     current?: number;
     maxLimit?: number;
     optimizeCountSql?: boolean;
     orders?: OrderItem[];
     pages?: number;
-    records?: UrlRelate[];
+    records?: Post[];
     searchCount?: boolean;
     size?: number;
     total?: number;
   };
 
-  type PageUrlRelateVo_ = {
+  type PagePostVO_ = {
     countId?: string;
     current?: number;
     maxLimit?: number;
     optimizeCountSql?: boolean;
     orders?: OrderItem[];
     pages?: number;
-    records?: UrlRelateVo[];
+    records?: PostVO[];
     searchCount?: boolean;
     size?: number;
     total?: number;
@@ -269,9 +186,85 @@ declare namespace API {
     total?: number;
   };
 
-  type redirectToLongLinkUsingGETParams = {
-    /** shortLink */
-    shortLink: string;
+  type Post = {
+    content?: string;
+    createTime?: string;
+    favourNum?: number;
+    id?: number;
+    isDelete?: number;
+    tags?: string;
+    thumbNum?: number;
+    title?: string;
+    updateTime?: string;
+    userId?: number;
+  };
+
+  type PostAddRequest = {
+    content?: string;
+    tags?: string[];
+    title?: string;
+  };
+
+  type PostEditRequest = {
+    content?: string;
+    id?: number;
+    tags?: string[];
+    title?: string;
+  };
+
+  type PostFavourAddRequest = {
+    postId?: number;
+  };
+
+  type PostFavourQueryRequest = {
+    current?: number;
+    pageSize?: number;
+    postQueryRequest?: PostQueryRequest;
+    sortField?: string;
+    sortOrder?: string;
+    userId?: number;
+  };
+
+  type PostQueryRequest = {
+    content?: string;
+    current?: number;
+    favourUserId?: number;
+    id?: number;
+    notId?: number;
+    orTags?: string[];
+    pageSize?: number;
+    searchText?: string;
+    sortField?: string;
+    sortOrder?: string;
+    tags?: string[];
+    title?: string;
+    userId?: number;
+  };
+
+  type PostThumbAddRequest = {
+    postId?: number;
+  };
+
+  type PostUpdateRequest = {
+    content?: string;
+    id?: number;
+    tags?: string[];
+    title?: string;
+  };
+
+  type PostVO = {
+    content?: string;
+    createTime?: string;
+    favourNum?: number;
+    hasFavour?: boolean;
+    hasThumb?: boolean;
+    id?: number;
+    tagList?: string[];
+    thumbNum?: number;
+    title?: string;
+    updateTime?: string;
+    user?: UserVO;
+    userId?: number;
   };
 
   type SaTokenInfo = {
@@ -303,96 +296,6 @@ declare namespace API {
     biz?: string;
   };
 
-  type UrlRelate = {
-    allowNum?: number;
-    createTime?: string;
-    expireTime?: string;
-    id?: number;
-    ipNums?: number;
-    isDelete?: number;
-    longUrl?: string;
-    password?: string;
-    privateTarget?: number;
-    sortUrl?: string;
-    status?: number;
-    tags?: string;
-    title?: string;
-    updateTime?: string;
-    urlImg?: string;
-    userId?: number;
-    userNums?: number;
-    visits?: number;
-  };
-
-  type UrlRelateAddRequest = {
-    allowNum?: number;
-    expireTime?: string;
-    longUrl?: string;
-    password?: string;
-    privateTarget?: number;
-    tags?: string;
-    title?: string;
-    urlImg?: string;
-  };
-
-  type UrlRelateQueryRequest = {
-    current?: number;
-    id?: number;
-    longUrl?: string;
-    pageSize?: number;
-    sortField?: string;
-    sortOrder?: string;
-    title?: string;
-    userId?: number;
-  };
-
-  type UrlRelateUpdateRequest = {
-    allowNum?: number;
-    expireTime?: string;
-    id?: number;
-    longUrl?: string;
-    password?: string;
-    privateTarget?: number;
-    status?: number;
-    tags?: string;
-    title?: string;
-    urlImg?: string;
-  };
-
-  type UrlRelateVo = {
-    allowNum?: number;
-    expireTime?: string;
-    id?: number;
-    ipNums?: number;
-    longUrl?: string;
-    privateTarget?: number;
-    sortUrl?: string;
-    status?: number;
-    tags?: UrlTagVo[];
-    title?: string;
-    urlImg?: string;
-    userNums?: number;
-    visits?: number;
-  };
-
-  type UrlTagAddRequest = {
-    name?: string;
-    parentId?: number;
-  };
-
-  type UrlTagCategoryVo = {
-    id?: number;
-    name?: string;
-    tags?: UrlTagVo[];
-  };
-
-  type UrlTagVo = {
-    color?: string;
-    id?: number;
-    name?: string;
-    parentId?: number;
-  };
-
   type User = {
     createTime?: string;
     id?: number;
@@ -415,9 +318,13 @@ declare namespace API {
     userRole?: string;
   };
 
-  type userLoginByWxOpenUsingGETParams = {
-    /** code */
-    code: string;
+  type userLoginByGithubUsingPOSTParams = {
+    auth_code?: string;
+    authorization_code?: string;
+    code?: string;
+    oauth_token?: string;
+    oauth_verifier?: string;
+    state?: string;
   };
 
   type UserLoginRequest = {
@@ -442,7 +349,6 @@ declare namespace API {
     checkPassword?: string;
     userAccount?: string;
     userPassword?: string;
-    captchaVerification?: string;
   };
 
   type UserUpdateMyRequest = {
@@ -466,9 +372,5 @@ declare namespace API {
     userName?: string;
     userProfile?: string;
     userRole?: string;
-  };
-
-  type View = {
-    contentType?: string;
   };
 }

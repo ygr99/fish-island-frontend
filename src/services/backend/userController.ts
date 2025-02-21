@@ -102,7 +102,7 @@ export async function userLoginUsingPost(
   body: API.UserLoginRequest,
   options?: { [key: string]: any },
 ) {
-  return request<API.BaseResponseTokenLoginUserVo_>('/api/user/login', {
+  return request<API.BaseResponseLoginUserVO_>('/api/user/login', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -112,14 +112,14 @@ export async function userLoginUsingPost(
   });
 }
 
-/** 用户登录（微信开放平台） GET /api/user/login/wx_open */
-export async function userLoginByWxOpenUsingGet(
+/** 用户GitHub登录 POST /api/user/login/github */
+export async function userLoginByGithubUsingPost(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
-  params: API.userLoginByWxOpenUsingGETParams,
+  params: API.userLoginByGithubUsingPOSTParams,
   options?: { [key: string]: any },
 ) {
-  return request<API.BaseResponseLoginUserVO_>('/api/user/login/wx_open', {
-    method: 'GET',
+  return request<API.BaseResponseTokenLoginUserVo_>('/api/user/login/github', {
+    method: 'POST',
     params: {
       ...params,
     },
