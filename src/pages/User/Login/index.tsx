@@ -69,7 +69,7 @@ const Login: React.FC = () => {
           }}
           logo={<img alt="logo" style={{ height: '100%' }} src="https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png" />}
           title="摸鱼岛🎣"
-          subTitle={'React 初始化项目模版介绍。'}
+          subTitle={'加入摸鱼岛一起来摸吧'}
           initialValues={{
             autoLogin: true,
           }}

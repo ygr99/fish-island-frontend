@@ -1,4 +1,4 @@
-import {Col, Row, Card, Badge, Image, List, Typography, Tooltip} from 'antd';
+import {Col, Row, Card, Badge, Image, List, Typography, Tooltip, Button} from 'antd';
 import React, {useState, useEffect} from 'react';
 import {getHotPostListUsingPost} from '@/services/backend/hotPostController';
 
@@ -21,6 +21,7 @@ const Index: React.FC = () => {
 
   return (
     <>
+
       <Row gutter={[16, 16]}>
         {hostPostVoList.map((item, index) => (
           <Col span={8} key={index}>
