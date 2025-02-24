@@ -29,8 +29,8 @@ type MoYuTimeType = {
 export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const [moYuData, setMoYuData] = useState<MoYuTimeType>({
     goal: "365",
-    startTime: moment('09:00', 'HH:mm'),
-    endTime: moment('18:00', 'HH:mm'),
+    startTime: moment('08:30', 'HH:mm'),
+    endTime: moment('17:30', 'HH:mm'),
     lunchTime: moment('11:30', 'HH:mm'),
   });
 
@@ -245,11 +245,11 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 onFinishFailed={onFinishFailedMoYu}
                 autoComplete="off"
               >
-                <Form.Item label="上班时间" name="startTime" initialValue={moment('09:00', 'HH:mm')}>
+                <Form.Item label="上班时间" name="startTime" initialValue={moment('08:30', 'HH:mm')}>
                   <TimePicker format="HH:mm"/>
                 </Form.Item>
 
-                <Form.Item label="下班时间" name="endTime" initialValue={moment('18:00', 'HH:mm')}>
+                <Form.Item label="下班时间" name="endTime" initialValue={moment('17:30', 'HH:mm')}>
                   <TimePicker format="HH:mm"/>
                 </Form.Item>
 
