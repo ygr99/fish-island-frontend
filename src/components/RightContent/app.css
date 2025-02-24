@@ -1,0 +1,16 @@
+/* 默认样式，保持正常显示 */
+.responsive-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+}
+
+/* 小屏幕（例如宽度小于 600px）时隐藏内容 */
+@media (max-width: 600px) {
+  .responsive-container {
+    display: none;
+  }
+}

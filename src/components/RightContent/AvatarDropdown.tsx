@@ -1,9 +1,9 @@
 import {userLoginUsingPost, userLogoutUsingPost} from '@/services/backend/userController';
 import {LockOutlined, LogoutOutlined, SettingOutlined, UserOutlined} from '@ant-design/icons';
 import {history, useModel} from '@umijs/max';
-import {Avatar, Button, message, Modal, Space, Tabs} from 'antd';
+import {Avatar, Button, Form, FormProps, Input, message, Modal, Space, Tabs, TimePicker} from 'antd';
 import type {MenuInfo} from 'rc-menu/lib/interface';
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {flushSync} from 'react-dom';
 import {Link} from 'umi';
 import HeaderDropdown from '../HeaderDropdown';
@@ -12,13 +12,27 @@ import {Helmet} from "@@/exports";
 import Settings from "../../../config/defaultSettings";
 import {LoginForm, ProFormText} from "@ant-design/pro-components";
 import Footer from "@/components/Footer";
+import moment, {Moment} from "moment";
+import './app.css';
 
 export type GlobalHeaderRightProps = {
   menu?: boolean;
 };
+type MoYuTimeType = {
+  lunchTime?: Moment;
+  goal?: string;
+  startTime?: Moment;
+  endTime?: Moment;
+};
 
 
 export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
+  const [moYuData, setMoYuData] = useState<MoYuTimeType>({
+    goal: "365",
+    startTime: moment('09:00', 'HH:mm'),
+    endTime: moment('18:00', 'HH:mm'),
+    lunchTime: moment('11:30', 'HH:mm'),
+  });
 
   const [type, setType] = useState<string>('account');
   const containerClassName = useEmotionCss(() => {
@@ -31,7 +45,13 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       backgroundSize: '100% 100%',
     };
   });
+  const onFinishMoYu: FormProps<MoYuTimeType>['onFinish'] = (values) => {
+    setMoYuData(values);
+  };
 
+  const onFinishFailedMoYu: FormProps<MoYuTimeType>['onFinishFailed'] = (errorInfo) => {
+    console.log('Failed:', errorInfo);
+  };
   const handleSubmit = async (values: API.UserLoginRequest) => {
     try {
       // 登录
@@ -63,6 +83,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const loginOut = async () => {
     await userLogoutUsingPost();
   };
+  const [timeRemaining, setTimeRemaining] = useState<string>('00:00:00');
+  const [earnedAmount, setEarnedAmount] = useState<number>(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMoneyOpen, setIsMoneyOpen] = useState(false);
   const {initialState, setInitialState} = useModel('@@initialState');
@@ -84,6 +106,33 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
 
   const {currentUser} = initialState || {};
 
+  // 计算倒计时和已赚取金额
+  useEffect(() => {
+    if (moYuData?.endTime && moYuData?.startTime) {
+      const interval = setInterval(() => {
+        // 计算倒计时
+        const now = moment();
+        const endTime = moment(moYuData.endTime);
+        const duration = moment.duration(endTime.diff(now));
+        setTimeRemaining(duration.hours() + ':' + String(duration.minutes()).padStart(2, '0') + ':' + String(duration.seconds()).padStart(2, '0'));
+
+        // 计算每天工作时长
+        const startTime = moment(moYuData.startTime);
+        const endTimeForWork = moment(moYuData.endTime);
+        const workDuration = moment.duration(endTimeForWork.diff(startTime));
+        const workHoursPerDay = workDuration.asHours();  // 每天的工作时长
+
+        // 计算已赚取金额
+        const goalAmount = parseFloat(moYuData.goal ? moYuData.goal : '0'); // 每天的总目标工资
+        const workedDuration = moment.duration(now.diff(startTime));
+        const workedHours = workedDuration.asHours(); // 已经工作的小时数
+        const earned = (goalAmount / workHoursPerDay) * workedHours; // 已赚取的金额
+        setEarnedAmount(earned);
+      }, 100); // 每秒更新一次d
+
+      return () => clearInterval(interval);
+    }
+  }, [moYuData]);
   if (!currentUser) {
     return (
       <>
@@ -175,16 +224,53 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             <Footer/>
           </div>
         </Modal>
+
         <Button type="primary" shape="round" onClick={() => {
           setIsModalOpen(true);
         }}>
           登录
         </Button>
+
+
         <div className="App">
           {/* 其他内容 */}
-          <Modal footer={null} open={isMoneyOpen} onCancel={() => {
+          <Modal title="下班倒计时设定" footer={null} open={isMoneyOpen} onCancel={() => {
             setIsMoneyOpen(false);
           }}>
+            <div style={{display: "flex", justifyContent: "center", alignItems: "center", height: "100%"}}>
+              <Form
+                name="basic"
+                initialValues={{remember: true}}
+                onFinish={onFinishMoYu}
+                onFinishFailed={onFinishFailedMoYu}
+                autoComplete="off"
+              >
+                <Form.Item label="上班时间" name="startTime" initialValue={moment('09:00', 'HH:mm')}>
+                  <TimePicker format="HH:mm"/>
+                </Form.Item>
+
+                <Form.Item label="下班时间" name="endTime" initialValue={moment('18:00', 'HH:mm')}>
+                  <TimePicker format="HH:mm"/>
+                </Form.Item>
+
+                <Form.Item label="午饭时间" name="lunchTime" initialValue={moment('11:30', 'HH:mm')}>
+                  <TimePicker format="HH:mm"/>
+                </Form.Item>
+
+                <Form.Item label="你的目标" name="goal" initialValue={365}>
+                  <Input placeholder="（设置0则不显示）"/>
+                </Form.Item>
+
+                <Form.Item>
+                  <Button type="primary" htmlType="submit" onClick={() => {
+                    setIsMoneyOpen(false)
+                  }}>
+                    保存
+                  </Button>
+                </Form.Item>
+              </Form>
+            </div>
+
 
           </Modal>
           <Button
@@ -194,17 +280,23 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               setIsMoneyOpen(true);
             }}
             style={{
-              width: "120px",
-              height: "120px",
+              width: "110px",
+              height: "110px",
               position: "fixed",
-              bottom: "20px",
-              right: "20px",
+              bottom: "15px",
+              right: "15px",
               zIndex: 999,
-              backgroundColor: "white",  // 设置背景色为白色
-              color: "black",  // 设置文本颜色为黑色
-              border: "1px solid #d9d9d9"  // 设置边框为浅灰色（可以根据需求调整）
+              backgroundColor: "white",
+              color: "black",
+              border: "1px solid #d9d9d9"
             }}
-          >赚到💰：xxxxx</Button>
+          >
+            <div style={{textAlign: 'center'}}>
+              <div>🧑‍💻💭</div>
+              <div style={{padding: "5px"}}>⏱️️：{timeRemaining}</div>
+              <div>💰：{earnedAmount.toFixed(3)}</div>
+            </div>
+          </Button>
         </div>
       </>
 

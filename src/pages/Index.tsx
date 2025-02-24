@@ -21,7 +21,6 @@ const Index: React.FC = () => {
   dayjs.extend(relativeTime);
   return (
     <>
-
       <Row gutter={[16, 16]}>
         {hostPostVoList.map((item, index) => (
           <Col span={8} key={index}>
