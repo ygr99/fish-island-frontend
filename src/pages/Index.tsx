@@ -1,6 +1,8 @@
-import {Col, Row, Card, Badge, Image, List, Typography, Tooltip, Button} from 'antd';
+import {Col, Row, Card, Badge, Image, List, Typography, Tooltip} from 'antd';
 import React, {useState, useEffect} from 'react';
 import {getHotPostListUsingPost} from '@/services/backend/hotPostController';
+import dayjs from "dayjs";
+import relativeTime from 'dayjs/plugin/relativeTime';
 
 const Index: React.FC = () => {
   const [hostPostVoList, setHostPostVoList] = useState<API.HotPostVO[]>([]);
@@ -14,11 +16,9 @@ const Index: React.FC = () => {
   };
   // 使用 useEffect 进行异步请求
   useEffect(() => {
-
-
     fetchData();
   }, []); // 空依赖数组，确保只在组件挂载时请求一次
-
+  dayjs.extend(relativeTime);
   return (
     <>
 
@@ -37,6 +37,9 @@ const Index: React.FC = () => {
                       style={{width: 24, height: 24, marginRight: 8}}
                     />
                     <Typography.Text>{item.name}</Typography.Text>
+                    <Typography.Text style={{marginLeft: "10px", color: 'gray', fontSize: '12px'}}>
+                      (更新时间：{dayjs(item.updateTime).fromNow()})
+                    </Typography.Text>
                   </div>
                 }
               >

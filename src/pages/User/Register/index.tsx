@@ -11,13 +11,14 @@ import styles from './index.less';
 
 const Register: React.FC = () => {
   const [type, setType] = useState<string>('account');
-  const [valueData, setValueData] = useState<API.UserRegisterRequest>(null);
+  const [valueData, setValueData] = useState<API.UserRegisterRequest>();
 
   const ref = useRef();
 
   const click = () => {
-    ref.current?.verify();
-    console.log(ref.current?.verify());
+    const current = ref.current as any;
+    current.verify();
+    console.log(current.verify());
   };
   // 表单提交
   const handleSubmit = async (values: API.UserRegisterRequest) => {
@@ -123,7 +124,7 @@ const Register: React.FC = () => {
               />
               <Captcha
                 onSuccess={async (data) => {
-                  const value = valueData;
+                  const value = valueData as any ;
                   if (value) {
                     value.captchaVerification = data.captchaVerification;
                     await handleSubmit(value);

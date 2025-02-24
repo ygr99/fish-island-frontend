@@ -32,8 +32,9 @@ const Login: React.FC = () => {
       });
       if (res.code===0){
         const defaultLoginSuccessMessage = '登录成功！';
-        localStorage.setItem('tokenName', res.data?.saTokenInfo?.tokenName as string);
-        localStorage.setItem('tokenValue', res.data?.saTokenInfo?.tokenValue as string);
+        const result = res.data as any
+        localStorage.setItem('tokenName', result.saTokenInfo?.tokenName as string);
+        localStorage.setItem('tokenValue', result.saTokenInfo?.tokenValue as string);
         message.success(defaultLoginSuccessMessage);
         // 保存已登录用户信息
         setInitialState({

@@ -1,7 +1,7 @@
 import {userLoginUsingPost, userLogoutUsingPost} from '@/services/backend/userController';
-import {LockOutlined, LogoutOutlined, PlusOutlined, SettingOutlined, UserOutlined} from '@ant-design/icons';
+import {LockOutlined, LogoutOutlined, SettingOutlined, UserOutlined} from '@ant-design/icons';
 import {history, useModel} from '@umijs/max';
-import {Avatar, Button, Card, message, Modal, Space, Tabs} from 'antd';
+import {Avatar, Button, message, Modal, Space, Tabs} from 'antd';
 import type {MenuInfo} from 'rc-menu/lib/interface';
 import React, {useCallback, useState} from 'react';
 import {flushSync} from 'react-dom';
@@ -40,11 +40,14 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       });
       if (res.code === 0) {
         const defaultLoginSuccessMessage = '登录成功！';
-        localStorage.setItem('tokenName', res.data?.saTokenInfo?.tokenName as string);
-        localStorage.setItem('tokenValue', res.data?.saTokenInfo?.tokenValue as string);
+        const result = res.data as any
+        localStorage.setItem('tokenName', result.saTokenInfo?.tokenName as string);
+        localStorage.setItem('tokenValue', result.saTokenInfo?.tokenValue as string);
         message.success(defaultLoginSuccessMessage);
         // 保存已登录用户信息
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         setInitialState({
+          // eslint-disable-next-line @typescript-eslint/no-use-before-define
           ...initialState,
           currentUser: res.data,
         });
@@ -61,6 +64,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     await userLogoutUsingPost();
   };
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isMoneyOpen, setIsMoneyOpen] = useState(false);
   const {initialState, setInitialState} = useModel('@@initialState');
 
   const onMenuClick = useCallback(
@@ -178,10 +182,17 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         </Button>
         <div className="App">
           {/* 其他内容 */}
+          <Modal footer={null} open={isMoneyOpen} onCancel={() => {
+            setIsMoneyOpen(false);
+          }}>
 
+          </Modal>
           <Button
             type="primary"
             shape="circle"
+            onClick={() => {
+              setIsMoneyOpen(true);
+            }}
             style={{
               width: "120px",
               height: "120px",
