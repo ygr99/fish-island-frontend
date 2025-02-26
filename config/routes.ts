@@ -1,6 +1,7 @@
 export default [
   { path: '/user', layout: false, routes: [{ path: '/user/login', component: './User/Login' },{ path: '/user/register', component: './User/Register' }] },
   { path: '/index', icon: 'smile', component: './Index', name: '最新' },
+  { path: '/game', icon: 'DesktopOutlined', component: './Game/Piece', name: '五子棋' },
   {
     path: '/admin',
     icon: 'crown',
