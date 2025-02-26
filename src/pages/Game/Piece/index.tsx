@@ -141,6 +141,7 @@ function App() {
           <h2 className="text-xl font-medium mb-8 text-gray-800">选择您的执子颜色</h2>
           <div className="flex gap-6 justify-center">
             <button
+              type={"button"}
               onClick={() => startGame('black')}
               className="group px-8 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all duration-200 transform hover:scale-105"
             >
@@ -151,6 +152,7 @@ function App() {
               <span className="text-sm text-gray-400 group-hover:text-gray-300">First Move</span>
             </button>
             <button
+              type={"button"}
               onClick={() => startGame('white')}
               className="group px-8 py-4 bg-white border-2 border-gray-200 rounded-xl hover:border-gray-300 transition-all duration-200 transform hover:scale-105"
             >
@@ -185,6 +187,7 @@ function App() {
                 </div>
                 <div className="flex gap-3">
                   <button
+                    type={"button"}
                     onClick={undoMove}
                     disabled={moves.length < 2 || isThinking || !!winner}
                     className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
@@ -197,6 +200,7 @@ function App() {
                     <span className="font-medium">悔棋</span>
                   </button>
                   <button
+                    type={"button"}
                     onClick={() => setShowRestartModal(true)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                   >
@@ -319,6 +323,7 @@ function App() {
             <p className="text-gray-600 mb-6">请选择重新开始的方式：</p>
             <div className="space-y-3">
               <button
+                type={"button"}
                 onClick={continueWithSameColor}
                 className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
               >
@@ -330,6 +335,7 @@ function App() {
                 <span className="font-medium">继续{playerColor === 'black' ? '执黑先手' : '执白后手'}</span>
               </button>
               <button
+                type={"button"}
                 onClick={switchColor}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-gray-300 transition-colors flex items-center justify-center gap-2"
               >
@@ -343,6 +349,7 @@ function App() {
                 </span>
               </button>
               <button
+                type={"button"}
                 onClick={() => setShowRestartModal(false)}
                 className="w-full px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
               >
