@@ -4,8 +4,20 @@ import {Board, Player, Position, Move, COLUMNS, ROWS, WinningLine} from '@/game'
 import {createEmptyBoard, checkWin, getAIMove} from '@/utils/gameLogic';
 import {Trophy, RotateCcw, ArrowLeft, ChevronDown, Brain, Timer, X} from 'lucide-react';
 import "./index.css"
+import {Button, Input, message} from "antd";
 
 function App() {
+  // 新增类型定义
+  type GameMode = 'single' | 'online';
+  type OnlineStatus = 'connecting' | 'waiting' | 'playing';
+  // 在App组件中新增状态
+  const [gameMode, setGameMode] = useState<GameMode>('single');
+  const [onlineStatus, setOnlineStatus] = useState<OnlineStatus>('connecting');
+  const [ws, setWs] = useState<WebSocket | null>(null);
+  const [roomId, setRoomId] = useState<string>('');
+  const [opponentColor, setOpponentColor] = useState<Player>('white');
+  const [messageApi, contextHolder] = message.useMessage();
+  //原有单机模式
   const [board, setBoard] = useState<Board>(createEmptyBoard());
   const [currentPlayer, setCurrentPlayer] = useState<Player>('black');
   const [winner, setWinner] = useState<Player | null>(null);
@@ -17,6 +29,7 @@ function App() {
   const [winningLine, setWinningLine] = useState<WinningLine | null>(null);
   const [showRestartModal, setShowRestartModal] = useState(false);
 
+  // start 原有单机
   const addMove = (position: Position, player: Player) => {
     setMoves(prev => [...prev, {
       ...position,
@@ -24,24 +37,116 @@ function App() {
       number: prev.length + 1
     }]);
   };
-
-  const handleMove = useCallback((position: Position) => {
-    if (winner || board[position.row][position.col]) return;
-
-    const newBoard = board.map(row => [...row]);
-    newBoard[position.row][position.col] = currentPlayer;
+  // 处理远程对手的移动
+  const handleRemoteMove = (position: Position) => {
+    const newBoard = [...board];
+    newBoard[position.row][position.col] = opponentColor;
     setBoard(newBoard);
-    setLastMove(position);
-    addMove(position, currentPlayer);
+    addMove(position, opponentColor);
 
-    const winResult = checkWin(newBoard, position, currentPlayer);
+    // 检查胜利
+    const winResult = checkWin(newBoard, position, opponentColor);
     if (winResult) {
-      setWinner(currentPlayer);
+      setWinner(opponentColor);
       setWinningLine(winResult);
-      return;
+    } else {
+      setCurrentPlayer(playerColor); // 切换回本地玩家回合
+    }
+  };
+
+  //end 原有单机
+
+  // 建立WebSocket连接（根据后端URL修改）
+  useEffect(() => {
+    if (gameMode === 'online' && !ws) {
+      const socket = new WebSocket('wss://your-backend-url/gomoku');
+
+      socket.onopen = () => {
+        setOnlineStatus('waiting');
+        // 请求加入或创建房间逻辑
+        // 这里示例自动创建房间，实际需要UI让用户输入房间号
+        socket.send(JSON.stringify({
+          type: 'createRoom',
+          playerName: 'Player1' // 可添加玩家名称
+        }));
+      };
+
+      socket.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        switch (message.type) {
+          case 'roomCreated':
+            setRoomId(message.roomId);
+            break;
+          case 'joinSuccess':
+            setOpponentColor(message.opponentColor);
+            setPlayerColor(message.yourColor);
+            setOnlineStatus('playing');
+            if (message.yourColor === 'white') {
+              // 如果加入房间且执白，等待对方先手
+              setCurrentPlayer('black');
+            }
+            break;
+          case 'move':
+            // 处理对手的移动
+            handleRemoteMove(message.position);
+            break;
+          case 'error':
+            console.error('WebSocket Error:', message.error);
+            break;
+        }
+      };
+
+      setWs(socket);
+    }
+  }, [gameMode]);
+
+  //原有单机
+  const handleMove = useCallback((position: Position) => {
+    if (gameMode === 'single') {
+      // 原有单机逻辑...
+      if (winner || board[position.row][position.col]) return;
+
+      const newBoard = board.map(row => [...row]);
+      newBoard[position.row][position.col] = currentPlayer;
+      setBoard(newBoard);
+      setLastMove(position);
+      addMove(position, currentPlayer);
+
+      const winResult = checkWin(newBoard, position, currentPlayer);
+      if (winResult) {
+        setWinner(currentPlayer);
+        setWinningLine(winResult);
+        return;
+      }
+
+      setCurrentPlayer(currentPlayer === 'black' ? 'white' : 'black');
+    } else {
+      if (currentPlayer !== playerColor || winner) return;
+
+      // 发送移动信息到服务器
+      ws?.send(JSON.stringify({
+        type: 'move',
+        roomId,
+        position,
+        player: playerColor
+      }));
+
+      // 本地更新棋盘
+      const newBoard = board.map(row => [...row]);
+      newBoard[position.row][position.col] = playerColor;
+      setBoard(newBoard);
+      addMove(position, playerColor);
+
+      // 检查胜利
+      const winResult = checkWin(newBoard, position, playerColor);
+      if (winResult) {
+        setWinner(playerColor);
+        setWinningLine(winResult);
+      }
+
+      setCurrentPlayer(opponentColor); // 切换回合显示
     }
 
-    setCurrentPlayer(currentPlayer === 'black' ? 'white' : 'black');
   }, [board, currentPlayer, winner]);
 
   useEffect(() => {
@@ -54,7 +159,7 @@ function App() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [currentPlayer, board, winner, playerColor, gameStarted, handleMove]);
+  }, [gameMode, ws, roomId, currentPlayer, board, winner, playerColor, gameStarted, handleMove]);
 
   const switchColor = () => {
     const newColor: Player = playerColor === 'black' ? 'white' : 'black';
@@ -117,7 +222,7 @@ function App() {
     setLastMove(null);
     setWinningLine(null);
 
-    if (color === 'white') {
+    if (color === 'white' && gameMode === 'single') {
       const center = Math.floor(board.length / 2);
       handleMove({row: center, col: center});
     }
@@ -131,38 +236,106 @@ function App() {
 
   if (!gameStarted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br  to-indigo-50 flex items-center justify-center p-4">
         <div className="bg-white p-12 rounded-2xl shadow-xl max-w-lg w-full text-center">
           <h1
             className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             五子棋 Gomoku
           </h1>
           <p className="text-gray-600 mb-12">挑战AI，展现你的棋艺</p>
-          <h2 className="text-xl font-medium mb-8 text-gray-800">选择您的执子颜色</h2>
-          <div className="flex gap-6 justify-center">
-            <button
-              type={"button"}
-              onClick={() => startGame('black')}
-              className="group px-8 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all duration-200 transform hover:scale-105"
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-5 h-5 rounded-full bg-black border-2 border-gray-700"></div>
-                <span className="font-medium">执黑先手</span>
-              </div>
-              <span className="text-sm text-gray-400 group-hover:text-gray-300">First Move</span>
-            </button>
-            <button
-              type={"button"}
-              onClick={() => startGame('white')}
-              className="group px-8 py-4 bg-white border-2 border-gray-200 rounded-xl hover:border-gray-300 transition-all duration-200 transform hover:scale-105"
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-5 h-5 rounded-full bg-white border-2 border-gray-800"></div>
-                <span className="font-medium text-gray-800">执白后手</span>
-              </div>
-              <span className="text-sm text-gray-400 group-hover:text-gray-600">Second Move</span>
-            </button>
+          <div className="mb-8">
+            <h2 className="text-xl font-medium mb-4">选择游戏模式</h2>
+            <div className="flex gap-4 justify-center">
+              <button
+                style={{backgroundColor: gameMode === 'single' ? '#ffa768' : 'white', color: 'white'}}
+                type={"button"}
+                className="group px-8 py-4 bg-white border-2 border-gray-200 rounded-xl hover:border-gray-300 transition-all duration-200 transform hover:scale-105"
+                onClick={() => setGameMode('single')}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-5 h-5 rounded-full bg-white border-2 border-gray-800"></div>
+                  <span style={{color: gameMode === 'single' ? "white" : "black"}}
+                        className="font-medium text-gray-800">单人 VS AI</span>
+                </div>
+                <span className="text-sm text-gray-400 group-hover:text-gray-600">Local Game</span>
+              </button>
+              <button
+                type={"button"}
+                style={{backgroundColor: gameMode === 'online' ? '#ffa768' : 'white', color: 'white'}}
+                onClick={() => setGameMode('online')}
+                className="group px-8 py-4 bg-white border-2 border-gray-200 rounded-xl hover:border-gray-300 transition-all duration-200 transform hover:scale-105"
+
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-5 h-5 rounded-full bg-white border-2 border-gray-800"></div>
+                  <span style={{color: gameMode === 'online' ? "white" : "black"}}
+                        className="font-medium text-gray-800">联机对战</span>
+                </div>
+                <span className="text-sm text-gray-400 group-hover:text-gray-600"> Online Game</span>
+              </button>
+            </div>
           </div>
+          {contextHolder}
+          {/* 联机模式下的额外UI */}
+          {gameMode === 'online' && (
+
+            <div className="mb-8">
+              <Input
+                type="text"
+                placeholder="输入房间号（留空创建新房间）"
+                value={roomId}
+                onChange={(e) => setRoomId(e.target.value)}
+                className="border p-2 rounded-lg mb-4"
+              />
+              <Button
+                onClick={() => {
+                  messageApi.open({
+                    type: 'info',
+                    content: '🤔该功能还在开发中，请耐心等待...',
+                  });
+                  // if (roomId) {
+                  //   // 发送加入房间请求
+                  //   ws?.send(JSON.stringify({
+                  //     type: 'joinRoom',
+                  //     roomId
+                  //   }));
+                  // }
+                  // setGameStarted(true);
+                }}
+              >
+                {roomId ? '加入房间' : '创建房间'}
+              </Button>
+            </div>
+          )}
+          {gameMode === 'single' && (
+            <div>
+              <h2 className="text-xl font-medium mb-8 text-gray-800">选择您的执子颜色</h2>
+              <div className="flex gap-6 justify-center">
+                <button
+                  type={"button"}
+                  onClick={() => startGame('black')}
+                  className="group px-8 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all duration-200 transform hover:scale-105"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-5 h-5 rounded-full bg-black border-2 border-gray-700"></div>
+                    <span className="font-medium">执黑先手</span>
+                  </div>
+                  <span className="text-sm text-gray-400 group-hover:text-gray-300">First Move</span>
+                </button>
+                <button
+                  type={"button"}
+                  onClick={() => startGame('white')}
+                  className="group px-8 py-4 bg-white border-2 border-gray-200 rounded-xl hover:border-gray-300 transition-all duration-200 transform hover:scale-105"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-5 h-5 rounded-full bg-white border-2 border-gray-800"></div>
+                    <span className="font-medium text-gray-800">执白后手</span>
+                  </div>
+                  <span className="text-sm text-gray-400 group-hover:text-gray-600">Second Move</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -174,6 +347,20 @@ function App() {
         <div className="flex flex-col lg:flex-row gap-6 items-stretch">
           <div className="flex-1">
             <div className="bg-white rounded-2xl shadow-xl p-4">
+              {gameMode === 'online' && (
+                <div className="mb-3 bg-purple-50 border border-purple-100 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full ${
+                      onlineStatus === 'playing' ? 'bg-green-500' : 'bg-yellow-500'
+                    }`}/>
+                    <span className="text-sm text-purple-800">
+                      {onlineStatus === 'connecting' && '连接中...'}
+                      {onlineStatus === 'waiting' && `等待对手加入 (房间号: ${roomId})`}
+                      {onlineStatus === 'playing' && `对战中 - 你执${playerColor === 'black' ? '黑' : '白'}棋`}
+      </span>
+                  </div>
+                </div>
+              )}
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h1 className="text-2xl font-bold text-gray-800">五子棋 Gomoku</h1>
@@ -181,7 +368,7 @@ function App() {
                     <div
                       className={`w-3 h-3 rounded-full ${isThinking ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}/>
                     <span className="text-sm text-gray-600">
-                      {isThinking ? 'AI 思考中...' : '等待落子'}
+                      {isThinking ? gameMode === 'online' ? 'AI 思考中...' : '等待对方下棋' : '等待落子'}
                     </span>
                   </div>
                 </div>
