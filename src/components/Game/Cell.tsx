@@ -1,5 +1,5 @@
 import React from 'react';
-import {CellValue, Position} from '@/game';
+import { CellValue, Position } from '@/game';
 
 interface CellProps {
   value: CellValue;
@@ -8,14 +8,19 @@ interface CellProps {
   isLastMove?: boolean;
   isWinningPiece?: boolean;
   position: Position;
+  size: number;
 }
 
-export function Cell({value, onClick, isDisabled, isLastMove, isWinningPiece, position}: CellProps) {
+export function Cell({ value, onClick, isDisabled, isLastMove, isWinningPiece, size }: CellProps) {
+  const pieceSize = Math.floor(size * 0.8);
+  const dotSize = Math.floor(size * 0.15);
+
   return (
     <button
       onClick={onClick}
+      style={{ width: size, height: size }}
       className={`
-        w-10 h-10 border border-amber-200
+        border border-amber-200
         relative flex items-center justify-center
         ${!value && !isDisabled ? 'hover:bg-amber-100' : ''}
         transition-colors
@@ -24,8 +29,9 @@ export function Cell({value, onClick, isDisabled, isLastMove, isWinningPiece, po
     >
       {value && (
         <div
+          style={{ width: pieceSize, height: pieceSize }}
           className={`
-            w-8 h-8 rounded-full relative
+            rounded-full relative
             ${value === 'black'
             ? 'bg-gray-900 shadow-lg'
             : 'bg-white border-2 border-gray-900 shadow-md'
@@ -37,7 +43,9 @@ export function Cell({value, onClick, isDisabled, isLastMove, isWinningPiece, po
         >
           {isLastMove && (
             <div
-              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-red-500"/>
+              style={{ width: dotSize, height: dotSize }}
+              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full bg-red-500"
+            />
           )}
         </div>
       )}

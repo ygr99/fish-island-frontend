@@ -1,10 +1,9 @@
 import React, {useState, useCallback, useEffect} from 'react';
-import {Board, Player, Position, Move, COLUMNS, ROWS, WinningLine} from '@/game';
 import {Board as BoardComponent} from '@/components/Game/Board';
+import {Board, Player, Position, Move, COLUMNS, ROWS, WinningLine} from '@/game';
 import {createEmptyBoard, checkWin, getAIMove} from '@/utils/gameLogic';
-import {Trophy, RotateCcw, ArrowLeft, ChevronDown, Brain, Timer} from 'lucide-react';
-import './index.css';
-
+import {Trophy, RotateCcw, ArrowLeft, ChevronDown, Brain, Timer, X} from 'lucide-react';
+import "./index.css"
 
 function App() {
   const [board, setBoard] = useState<Board>(createEmptyBoard());
@@ -16,6 +15,7 @@ function App() {
   const [gameStarted, setGameStarted] = useState(false);
   const [lastMove, setLastMove] = useState<Position | null>(null);
   const [winningLine, setWinningLine] = useState<WinningLine | null>(null);
+  const [showRestartModal, setShowRestartModal] = useState(false);
 
   const addMove = (position: Position, player: Player) => {
     setMoves(prev => [...prev, {
@@ -56,15 +56,42 @@ function App() {
     }
   }, [currentPlayer, board, winner, playerColor, gameStarted, handleMove]);
 
-  const resetGame = () => {
+  const switchColor = () => {
+    const newColor: Player = playerColor === 'black' ? 'white' : 'black';
+
+    if (newColor === 'white') {
+      const center = Math.floor(board.length / 2);
+      handleMove({row: center, col: center})
+      // setTimeout(() => , 0);
+    }
+
+    setPlayerColor(newColor);
     setBoard(createEmptyBoard());
     setCurrentPlayer('black');
     setWinner(null);
     setIsThinking(false);
     setMoves([]);
-    setGameStarted(false);
     setLastMove(null);
     setWinningLine(null);
+    setShowRestartModal(false);
+
+
+  };
+
+  const continueWithSameColor = () => {
+    setBoard(createEmptyBoard());
+    setCurrentPlayer('black');
+    setWinner(null);
+    setIsThinking(false);
+    setMoves([]);
+    setLastMove(null);
+    setWinningLine(null);
+    setShowRestartModal(false);
+
+    if (playerColor === 'white') {
+      const center = Math.floor(board.length / 2);
+      setTimeout(() => handleMove({row: center, col: center}), 0);
+    }
   };
 
   const undoMove = () => {
@@ -104,7 +131,7 @@ function App() {
 
   if (!gameStarted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br to-indigo-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
         <div className="bg-white p-12 rounded-2xl shadow-xl max-w-lg w-full text-center">
           <h1
             className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
@@ -140,8 +167,8 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br flex items-center">
-      <div className="w-full max-w-7xl mx-auto ">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center">
+      <div className="w-full max-w-7xl mx-auto px-4">
         <div className="flex flex-col lg:flex-row gap-6 items-stretch">
           <div className="flex-1">
             <div className="bg-white rounded-2xl shadow-xl p-4">
@@ -170,7 +197,7 @@ function App() {
                     <span className="font-medium">悔棋</span>
                   </button>
                   <button
-                    onClick={resetGame}
+                    onClick={() => setShowRestartModal(true)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                   >
                     <RotateCcw className="w-4 h-4"/>
@@ -194,7 +221,9 @@ function App() {
                   className="mb-3 bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-full ${
-                      currentPlayer === 'black' ? 'bg-gray-900' : 'bg-white border-2 border-gray-900'
+                      currentPlayer === 'black'
+                        ? 'bg-gray-900'
+                        : 'bg-white border-2 border-gray-900'
                     }`}/>
                     <div>
                       <div className="font-medium text-gray-900">
@@ -272,6 +301,57 @@ function App() {
           </div>
         </div>
       </div>
+
+      {/* Restart Modal */}
+      {showRestartModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-gray-800">重新开始</h3>
+              {/* eslint-disable-next-line react/button-has-type */}
+              <button
+                onClick={() => setShowRestartModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5"/>
+              </button>
+            </div>
+            <p className="text-gray-600 mb-6">请选择重新开始的方式：</p>
+            <div className="space-y-3">
+              <button
+                onClick={continueWithSameColor}
+                className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <div className={`w-4 h-4 rounded-full ${
+                  playerColor === 'black'
+                    ? 'bg-gray-900'
+                    : 'bg-white border-2 border-gray-900'
+                }`}/>
+                <span className="font-medium">继续{playerColor === 'black' ? '执黑先手' : '执白后手'}</span>
+              </button>
+              <button
+                onClick={switchColor}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-gray-300 transition-colors flex items-center justify-center gap-2"
+              >
+                <div className={`w-4 h-4 rounded-full ${
+                  playerColor === 'black'
+                    ? 'bg-white border-2 border-gray-900'
+                    : 'bg-gray-900'
+                }`}/>
+                <span className="font-medium text-gray-800">
+                  改为{playerColor === 'black' ? '执白后手' : '执黑先手'}
+                </span>
+              </button>
+              <button
+                onClick={() => setShowRestartModal(false)}
+                className="w-full px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
