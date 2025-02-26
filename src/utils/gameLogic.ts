@@ -6,6 +6,10 @@ export function createEmptyBoard(): Board {
   return Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
 }
 
+export function isValidPosition(row: number, col: number): boolean {
+  return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
+}
+
 export function checkWin(board: Board, lastMove: Position, player: Player): WinningLine | null {
   const directions = [
     [1, 0],   // horizontal
@@ -44,9 +48,6 @@ export function checkWin(board: Board, lastMove: Position, player: Player): Winn
   return null;
 }
 
-export function isValidPosition(row: number, col: number): boolean {
-  return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
-}
 
 interface Pattern {
   own: number;
