@@ -108,10 +108,15 @@ function App() {
             setGameStarted(true);
             break;
           case 'joinSuccess':
-            setOpponentColor(message.opponentColor);
-            setPlayerColor(message.yourColor);
+            setOpponentColor(message.data.opponentColor);
+            setPlayerColor(message.data.yourColor);
             setOnlineStatus('playing');
-            if (message.yourColor === 'white') {
+            setGameStarted(true);
+            messageApi.open({
+              type: 'success',
+              content: '战斗开始！！！',
+            });
+            if (message.data.yourColor === 'white') {
               // 如果加入房间且执白，等待对方先手
               setCurrentPlayer('black');
             }
@@ -200,7 +205,7 @@ function App() {
       setCurrentPlayer(opponentColor); // 切换回合显示
     }
 
-  }, [board, currentPlayer, winner]);
+  }, [board, winner, onlineStatus, gameMode, currentPlayer, playerColor, opponentColor, ws, roomId, messageApi]);
 
   useEffect(() => {
     if (gameStarted && currentPlayer !== playerColor && !winner) {
@@ -351,7 +356,7 @@ function App() {
                   if (roomId) {
                     // 发送加入房间请求
                     ws?.send(JSON.stringify({
-                      type: 1,
+                      type: 2,
                       userId: -1,
                       data: {
                         type: 'joinRoom',
