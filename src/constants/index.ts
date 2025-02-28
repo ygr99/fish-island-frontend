@@ -1,12 +1,17 @@
 /**
  * 本地后端地址
  */
-export const BACKEND_HOST_LOCAL = 'https://fish.codebug.icu/fish';
+export const BACKEND_HOST_LOCAL = 'http://localhost:8123';
 
 /**
  * 线上后端地址
  */
 export const BACKEND_HOST_PROD = 'https://fish.codebug.icu/fish';
+
+/**
+ * 验证码地址
+ */
+export const BACKEND_HOST_CODE = 'http://localhost:8123/api';
 
 
 export const SYSTEM_LOGO =

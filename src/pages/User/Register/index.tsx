@@ -1,12 +1,12 @@
 import Footer from '@/components/Footer';
-import { SYSTEM_LOGO } from '@/constants';
-import { userRegisterUsingPost } from '@/services/backend/userController';
-import { LockOutlined, UserOutlined } from '@ant-design/icons';
-import { LoginForm, ProFormText } from '@ant-design/pro-form';
-import { Captcha } from 'aj-captcha-react';
-import { message, Tabs } from 'antd';
-import React, { useRef, useState } from 'react';
-import { history } from 'umi';
+import {BACKEND_HOST_CODE, SYSTEM_LOGO} from '@/constants';
+import {userRegisterUsingPost} from '@/services/backend/userController';
+import {LockOutlined, UserOutlined} from '@ant-design/icons';
+import {LoginForm, ProFormText} from '@ant-design/pro-form';
+import {Captcha} from 'aj-captcha-react';
+import {message, Tabs} from 'antd';
+import React, {useRef, useState} from 'react';
+import {history} from 'umi';
 import styles from './index.less';
 
 const Register: React.FC = () => {
@@ -22,7 +22,7 @@ const Register: React.FC = () => {
   };
   // 表单提交
   const handleSubmit = async (values: API.UserRegisterRequest) => {
-    const { userPassword, checkPassword } = values;
+    const {userPassword, checkPassword} = values;
     // 校验
     if (userPassword !== checkPassword) {
       message.error('两次输入的密码不一致');
@@ -55,7 +55,7 @@ const Register: React.FC = () => {
               submitText: '注册',
             },
           }}
-          logo={<img alt="logo" src={SYSTEM_LOGO} />}
+          logo={<img alt="logo" src={SYSTEM_LOGO}/>}
           title="摸鱼岛🎣"
           initialValues={{
             autoLogin: true,
@@ -66,7 +66,7 @@ const Register: React.FC = () => {
           }}
         >
           <Tabs activeKey={type} onChange={setType}>
-            <Tabs.TabPane key="account" tab={'账号密码注册'} />
+            <Tabs.TabPane key="account" tab={'账号密码注册'}/>
           </Tabs>
           {type === 'account' && (
             <>
@@ -74,7 +74,7 @@ const Register: React.FC = () => {
                 name="userAccount"
                 fieldProps={{
                   size: 'large',
-                  prefix: <UserOutlined className={styles.prefixIcon} />,
+                  prefix: <UserOutlined className={styles.prefixIcon}/>,
                 }}
                 placeholder="请输入账号"
                 rules={[
@@ -88,7 +88,7 @@ const Register: React.FC = () => {
                 name="userPassword"
                 fieldProps={{
                   size: 'large',
-                  prefix: <LockOutlined className={styles.prefixIcon} />,
+                  prefix: <LockOutlined className={styles.prefixIcon}/>,
                 }}
                 placeholder="请输入密码"
                 rules={[
@@ -107,7 +107,7 @@ const Register: React.FC = () => {
                 name="checkPassword"
                 fieldProps={{
                   size: 'large',
-                  prefix: <LockOutlined className={styles.prefixIcon} />,
+                  prefix: <LockOutlined className={styles.prefixIcon}/>,
                 }}
                 placeholder="请再次输入密码"
                 rules={[
@@ -124,13 +124,13 @@ const Register: React.FC = () => {
               />
               <Captcha
                 onSuccess={async (data) => {
-                  const value = valueData as any ;
+                  const value = valueData as any;
                   if (value) {
                     value.captchaVerification = data.captchaVerification;
                     await handleSubmit(value);
                   }
                 }}
-                path="http://localhost:8204/api"
+                path={BACKEND_HOST_CODE}
                 type="auto"
                 ref={ref}
               ></Captcha>
@@ -138,7 +138,7 @@ const Register: React.FC = () => {
           )}
         </LoginForm>
       </div>
-      <Footer />
+      <Footer/>
     </div>
   );
 };

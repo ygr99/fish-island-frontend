@@ -199,7 +199,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                   } else if (type === 'register') {
                     click();
                     setValueData(values);
-                    await handleRegisterSubmit(values as API.UserLoginRequest);
                   }
                 }}
               >
@@ -312,7 +311,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                           await handleRegisterSubmit(value);
                         }
                       }}
-                      path="http://localhost:8204/api"
+                      path="http://localhost:8123/api"
                       type="auto"
                       ref={ref}
                     ></Captcha>
