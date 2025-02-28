@@ -15,6 +15,7 @@ import moment, {Moment} from "moment";
 import './app.css';
 import styles from "@/pages/User/Register/index.less";
 import {Captcha} from "aj-captcha-react";
+import {BACKEND_HOST_CODE} from "@/constants";
 
 export type GlobalHeaderRightProps = {
   menu?: boolean;
@@ -311,7 +312,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                           await handleRegisterSubmit(value);
                         }
                       }}
-                      path="http://localhost:8123/api"
+                      path={BACKEND_HOST_CODE}
                       type="auto"
                       ref={ref}
                     ></Captcha>
@@ -428,23 +429,94 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   ];
 
   return (
-    <HeaderDropdown
-      menu={{
-        selectedKeys: [],
-        onClick: onMenuClick,
-        items: menuItems,
-      }}
-    >
-      <Space>
-        {currentUser?.userAvatar ? (
-          <Avatar size="default" src={currentUser?.userAvatar}/>
-        ) : (
-          <Avatar size="default" icon={<UserOutlined/>}/>
-        )}
-        <span className="anticon">{currentUser?.userName ?? '无名'}</span>
-      </Space>
-    </HeaderDropdown>
-  );
+    <div>
+      <div className="App">
+        {/* 其他内容 */}
+        <Modal title="下班倒计时设定" footer={null} open={isMoneyOpen} onCancel={() => {
+          setIsMoneyOpen(false);
+        }}>
+          <div style={{display: "flex", justifyContent: "center", alignItems: "center", height: "100%"}}>
+            <Form
+              name="basic"
+              initialValues={{remember: true}}
+              onFinish={onFinishMoYu}
+              onFinishFailed={onFinishFailedMoYu}
+              autoComplete="off"
+            >
+              <Form.Item label="上班时间" name="startTime" initialValue={moment('08:30', 'HH:mm')}>
+                <TimePicker format="HH:mm"/>
+              </Form.Item>
+
+              <Form.Item label="下班时间" name="endTime" initialValue={moment('17:30', 'HH:mm')}>
+                <TimePicker format="HH:mm"/>
+              </Form.Item>
+
+              <Form.Item label="午饭时间" name="lunchTime" initialValue={moment('11:30', 'HH:mm')}>
+                <TimePicker format="HH:mm"/>
+              </Form.Item>
+
+              <Form.Item label="你的目标" name="goal" initialValue={365}>
+                <Input placeholder="（设置0则不显示）"/>
+              </Form.Item>
+
+              <Form.Item>
+                <Button type="primary" htmlType="submit" onClick={() => {
+                  setIsMoneyOpen(false)
+                }}>
+                  保存
+                </Button>
+              </Form.Item>
+            </Form>
+          </div>
+
+
+        </Modal>
+        <Button
+          type="primary"
+          shape="circle"
+          onClick={() => {
+            setIsMoneyOpen(true);
+          }}
+          style={{
+            width: "110px",
+            height: "110px",
+            position: "fixed",
+            bottom: "15px",
+            right: "15px",
+            zIndex: 999,
+            backgroundColor: "white",
+            color: "black",
+            border: "1px solid #d9d9d9"
+          }}
+        >
+          <div style={{textAlign: 'center'}}>
+            <div>🧑‍💻💭</div>
+            <div style={{padding: "5px"}}>⏱️️：{timeRemaining}</div>
+            <div>💰：{earnedAmount.toFixed(3)}</div>
+          </div>
+        </Button>
+      </div>
+      <HeaderDropdown
+        menu={{
+          selectedKeys: [],
+          onClick: onMenuClick,
+          items: menuItems,
+        }}
+      >
+
+        <Space>
+          {currentUser?.userAvatar ? (
+            <Avatar size="default" src={currentUser?.userAvatar}/>
+          ) : (
+            <Avatar size="default" icon={<UserOutlined/>}/>
+          )}
+          <span className="anticon">{currentUser?.userName ?? '无名'}</span>
+        </Space>
+      </HeaderDropdown>
+    </div>
+
+  )
+    ;
 };
 
 export const AvatarName = () => {

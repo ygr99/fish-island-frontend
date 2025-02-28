@@ -5,13 +5,15 @@ import {createEmptyBoard, checkWin, getAIMove} from '@/utils/gameLogic';
 import {Trophy, RotateCcw, ArrowLeft, ChevronDown, Brain, Timer, X} from 'lucide-react';
 import "./index.css"
 import {Button, Input, message} from "antd";
+import {BACKEND_HOST_WS} from "@/constants";
+import {useModel} from "@@/exports";
 
 function App() {
   // 新增类型定义
   type GameMode = 'single' | 'online';
   type OnlineStatus = 'connecting' | 'waiting' | 'playing';
   // 在App组件中新增状态
-  const [gameMode, setGameMode] = useState<GameMode>('online');
+  const [gameMode, setGameMode] = useState<GameMode>('single');
   const [onlineStatus, setOnlineStatus] = useState<OnlineStatus>('connecting');
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [roomId, setRoomId] = useState<string>('');
@@ -29,7 +31,7 @@ function App() {
   const [lastMove, setLastMove] = useState<Position | null>(null);
   const [winningLine, setWinningLine] = useState<WinningLine | null>(null);
   const [showRestartModal, setShowRestartModal] = useState(false);
-
+  const {initialState, setInitialState} = useModel('@@initialState');
   // start 原有单机
   const addMove = (position: Position, player: Player) => {
 
@@ -59,25 +61,24 @@ function App() {
   };
 
   //end 原有单机
-
+  const {currentUser} = initialState || {};
   // 建立WebSocket连接（根据后端URL修改）
   useEffect(() => {
-
     if (gameMode === 'online') {
       const token = localStorage.getItem('tokenValue');
-      if (!token) {
+      if (!currentUser || !token) {
         messageApi.open({
           type: 'info',
           content: '请先登陆一下啦～',
         });
-        // setGameMode('single')
+        setGameMode('single')
         return;
       }
     }
     if (gameMode === 'online' && !ws) {
       const token = localStorage.getItem('tokenValue');
       console.log("开始连接系统")
-      const socket = new WebSocket('ws://127.0.0.1:8090?token=' + token);
+      const socket = new WebSocket(BACKEND_HOST_WS + token);
 
       socket.onopen = () => {
         setOnlineStatus('waiting');
@@ -88,10 +89,11 @@ function App() {
         }));
       };
       socket.onclose = () => {
-        messageApi.open({
-          type: 'error',
-          content: '连接断开啦🔗',
-        });
+        // messageApi.open({
+        //   type: 'error',
+        //   content: '连接断开啦🔗',
+        // });
+        console.log("WebSocket 已关闭")
         // setGameMode('single')
         setWs(null);
         setOnlineStatus('connecting');
