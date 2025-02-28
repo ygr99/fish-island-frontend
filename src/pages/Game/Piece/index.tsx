@@ -16,6 +16,7 @@ function App() {
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [roomId, setRoomId] = useState<string>('');
   const [opponentColor, setOpponentColor] = useState<Player>('white');
+  const [opponentUserId, setOpponentUserId] = useState<string>();
   const [messageApi, contextHolder] = message.useMessage();
   //原有单机模式
   const [board, setBoard] = useState<Board>(createEmptyBoard());
@@ -39,19 +40,21 @@ function App() {
     }]);
   };
   // 处理远程对手的移动
-  const handleRemoteMove = (position: Position) => {
+  const handleRemoteMove = (position: Position, player: any) => {
     const newBoard = [...board];
-    newBoard[position.row][position.col] = opponentColor;
+    setOpponentColor(player);
+    newBoard[position.row][position.col] = player;
     setBoard(newBoard);
     addMove(position, opponentColor);
 
     // 检查胜利
-    const winResult = checkWin(newBoard, position, opponentColor);
+    const winResult = checkWin(newBoard, position, player);
     if (winResult) {
-      setWinner(opponentColor);
+      setWinner(player);
       setWinningLine(winResult);
     } else {
-      setCurrentPlayer(playerColor); // 切换回本地玩家回合
+      setPlayerColor(player === 'black' ? 'white' : 'black')
+      setCurrentPlayer(player === 'black' ? 'white' : 'black'); // 切换回本地玩家回合
     }
   };
 
@@ -104,7 +107,6 @@ function App() {
               type: 'success',
               content: '房间创建成功啦',
             });
-
             setGameStarted(true);
             break;
           case 'joinSuccess':
@@ -112,6 +114,7 @@ function App() {
             setPlayerColor(message.data.yourColor);
             setOnlineStatus('playing');
             setGameStarted(true);
+            setOpponentUserId(message.data.playerId);
             messageApi.open({
               type: 'success',
               content: '战斗开始！！！',
@@ -122,8 +125,9 @@ function App() {
             }
             break;
           case 'moveChess':
+            setPlayerColor(message.data.player === 'black' ? 'white' : 'black');
             // 处理对手的移动
-            handleRemoteMove(message.position);
+            handleRemoteMove(message.data.position, message.data.player);
             break;
           case 'error':
             console.error('WebSocket Error:', message.error);
@@ -183,14 +187,21 @@ function App() {
       if (currentPlayer !== playerColor || winner) return;
       // 发送移动信息到服务器
       ws?.send(JSON.stringify({
-        type: 'move',
-        roomId,
-        position,
-        player: playerColor
+        type: '2',
+        userId: opponentUserId,
+        data: {
+          type: 'moveChess',
+          content: {
+            roomId: roomId,
+            position,
+            player: playerColor
+          }
+        },
       }));
 
       // 本地更新棋盘
-      const newBoard = board.map(row => [...row]);
+      const newBoard = [...board]
+      // const newBoard = board.map(row => [...row]);
       newBoard[position.row][position.col] = playerColor;
       setBoard(newBoard);
       addMove(position, playerColor);
@@ -217,7 +228,7 @@ function App() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [gameMode, ws, roomId, currentPlayer, board, winner, playerColor, gameStarted, handleMove]);
+  }, [gameMode, ws, roomId, currentPlayer, board, winner, opponentColor, playerColor, gameStarted, handleMove]);
 
   const switchColor = () => {
     const newColor: Player = playerColor === 'black' ? 'white' : 'black';
@@ -480,7 +491,8 @@ function App() {
                   className="mb-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center justify-center gap-3">
                   <Trophy className="w-6 h-6 text-yellow-600"/>
                   <span className="text-lg font-medium text-yellow-800">
-                    {winner === playerColor ? '恭喜你赢了！' : 'AI 赢了，再接再厉！'}
+                    {winner === playerColor ? '恭喜你赢了！' : gameMode === "online"
+                      ? "对手小胜，再接再厉" : 'AI 赢了，再接再厉！'}
                   </span>
                 </div>
               )}
