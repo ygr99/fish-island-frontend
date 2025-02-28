@@ -1,12 +1,36 @@
 import Footer from '@/components/Footer';
-import type { RunTimeLayoutConfig } from '@umijs/max';
-import { history } from '@umijs/max';
+import type {RunTimeLayoutConfig} from '@umijs/max';
+import {history} from '@umijs/max';
 import defaultSettings from '../config/defaultSettings';
-import { AvatarDropdown } from './components/RightContent/AvatarDropdown';
-import { requestConfig } from './requestConfig';
+import {AvatarDropdown} from './components/RightContent/AvatarDropdown';
+import {requestConfig} from './requestConfig';
 import {getLoginUserUsingGet} from "@/services/backend/userController";
+import {useEffect, useState} from "react";
 
 const loginPath = '/user/login';
+
+/**
+ * 监听老板键（Ctrl + Shift + B）切换工作模式
+ */
+const useBossKey = () => {
+  const [isBossMode, setIsBossMode] = useState(false);
+
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.key === 'B') {
+        setIsBossMode(prev => !prev); // 切换老板模式
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+    };
+  }, []);
+
+  return isBossMode;
+};
+
 
 /**
  * @see  https://umijs.org/zh-CN/plugins/plugin-initial-state
@@ -16,7 +40,7 @@ export async function getInitialState(): Promise<InitialState> {
     currentUser: undefined,
   };
   // 如果不是登录页面，执行
-  const { location } = history;
+  const {location} = history;
   if (location.pathname !== loginPath) {
     try {
       const res = await getLoginUserUsingGet();
@@ -38,17 +62,79 @@ export async function getInitialState(): Promise<InitialState> {
 
 // ProLayout 支持的api https://procomponents.ant.design/components/layout
 // @ts-ignore
-export const layout: RunTimeLayoutConfig = ({ initialState }) => {
+export const layout: RunTimeLayoutConfig = ({initialState}) => {
+
+  const isBossMode = useBossKey(); // 监听老板键
+
+  if (isBossMode) {
+    // @ts-ignore
+    return {
+      waterMarkProps: {content: '工作页面'},
+      footerRender: () => <Footer/>,
+      menuRender: false, // 隐藏左侧菜单
+      rightContentRender: false, // 隐藏右上角菜单
+      childrenRender: () => (
+        <div style={{
+          width: '100%',
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#ffffff'
+        }}>
+          {/* 百度 Logo */}
+          <img src="https://www.baidu.com/img/flexible/logo/pc/result.png" alt="百度"
+               style={{width: '270px', marginBottom: '20px'}}/>
+
+          {/* 搜索框 */}
+          <div style={{
+            width: '500px',
+            display: 'flex',
+            alignItems: 'center',
+            border: '1px solid #ccc',
+            borderRadius: '24px',
+            padding: '5px 10px',
+            boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.1)'
+          }}>
+            <input type="text" placeholder="百度一下，你就知道"
+                   style={{
+                     flex: 1,
+                     height: '40px',
+                     border: 'none',
+                     outline: 'none',
+                     fontSize: '16px',
+                     paddingLeft: '10px'
+                   }}
+            />
+            <button type="button" style={{
+              backgroundColor: '#3385ff',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '20px',
+              width: '100px',
+              height: '36px',
+              fontSize: '16px',
+              cursor: 'pointer'
+            }}>百度一下
+            </button>
+          </div>
+
+        </div>
+      ),
+    };
+  }
+
   return {
     avatarProps: {
       render: () => {
-        return <AvatarDropdown />;
+        return <AvatarDropdown/>;
       },
     },
     waterMarkProps: {
       content: initialState?.currentUser?.userName,
     },
-    footerRender: () => <Footer />,
+    footerRender: () => <Footer/>,
     menuHeaderRender: undefined,
     // 自定义 403 页面
     // unAccessible: <div>unAccessible</div>,
