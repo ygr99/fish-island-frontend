@@ -9,7 +9,7 @@ export default [
     routes: [
       { path: '/game', redirect: '/game/piece' },
       { icon: 'DesktopOutlined', path: '/game/piece', component: './Game/Piece', name: '五子棋' },
-      { icon: 'DesktopOutlined', path: '/game/2048', component: './Game/2048', name: '五子棋' },
+      { icon: 'DesktopOutlined', path: '/game/2048', component: './Game/2048', name: '2048' },
     ],
   },
   // { path: '/game', icon: 'DesktopOutlined', component: './Game/Piece', name: '五子棋' },

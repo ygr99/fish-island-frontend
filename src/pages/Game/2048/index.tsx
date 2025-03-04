@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Layout, Typography, Button, Modal, Statistic, Space, Card, Divider } from 'antd';
-import { motion } from 'framer-motion';
-import { Trophy, RotateCcw, Info, Github } from 'lucide-react';
+import React, {useState, useEffect} from 'react';
+import {Layout, Typography, Button, Modal, Statistic, Space, Card, Divider} from 'antd';
+import {motion} from 'framer-motion';
+import {Trophy, RotateCcw, Info} from 'lucide-react';
 import Game2048 from '@/components/Game/Game2048';
 import GameInstructions from '@/components/Game/GameInstructions';
 import "./index.css"
-const { Header, Content, Footer } = Layout;
-const { Title } = Typography;
+
+const {Header, Content, Footer} = Layout;
+const {Title} = Typography;
 
 function App() {
   const [score, setScore] = useState(0);
@@ -34,27 +35,27 @@ function App() {
   };
 
   return (
-    <Layout className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-100">
-      <Header className="flex items-center justify-between px-4 sm:px-6 bg-amber-500 shadow-md">
+    <Layout style={{borderRadius:20}} className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-100">
+      <Header style={{borderRadius:20}} className="flex items-center justify-between px-4 sm:px-6 bg-amber-500 shadow-md">
         <div className="flex items-center">
           <motion.div
-            initial={{ rotate: 0 }}
-            animate={{ rotate: 360 }}
-            transition={{ duration: 0.5 }}
+            initial={{rotate: 0}}
+            animate={{rotate: 360}}
+            transition={{duration: 0.5}}
           >
-            <Trophy className="h-8 w-8 text-yellow-100 mr-2" />
+            <Trophy className="h-8 w-8 text-yellow-100 mr-2"/>
           </motion.div>
         </div>
         <Space>
           <Button
             type="text"
-            icon={<Info className="h-5 w-5 text-white" />}
+            icon={<Info className="h-5 w-5 text-white"/>}
             onClick={() => setInstructionsOpen(true)}
             className="text-white hover:text-yellow-100"
           />
           <Button
             type="text"
-            icon={<RotateCcw className="h-5 w-5 text-white" />}
+            icon={<RotateCcw className="h-5 w-5 text-white"/>}
             onClick={resetGame}
             className="text-white hover:text-yellow-100"
           />
@@ -67,14 +68,14 @@ function App() {
             <Statistic
               title="当前分数"
               value={score}
-              valueStyle={{ color: '#d97706' }}
+              valueStyle={{color: '#d97706'}}
             />
           </Card>
           <Card className="bg-amber-100 border-amber-200 shadow-sm">
             <Statistic
               title="最高分数"
               value={bestScore}
-              valueStyle={{ color: '#b45309' }}
+              valueStyle={{color: '#b45309'}}
             />
           </Card>
           <Button
@@ -88,9 +89,9 @@ function App() {
         </div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          initial={{opacity: 0, y: 20}}
+          animate={{opacity: 1, y: 0}}
+          transition={{duration: 0.5}}
           className="mb-6"
         >
           <Game2048
