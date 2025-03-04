@@ -1,5 +1,10 @@
-import {userLoginUsingPost, userLogoutUsingPost, userRegisterUsingPost} from '@/services/backend/userController';
-import {LockOutlined, LogoutOutlined, SettingOutlined, UserOutlined} from '@ant-design/icons';
+import {
+  updateMyUserUsingPost,
+  userLoginUsingPost,
+  userLogoutUsingPost,
+  userRegisterUsingPost
+} from '@/services/backend/userController';
+import {LockOutlined, LogoutOutlined, SettingOutlined, UserOutlined, EditOutlined} from '@ant-design/icons';
 import {history, useModel} from '@umijs/max';
 import {Avatar, Button, Form, FormProps, Input, message, Modal, Space, Tabs, TimePicker} from 'antd';
 import type {MenuInfo} from 'rc-menu/lib/interface';
@@ -120,6 +125,39 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       message.error(defaultLoginFailureMessage);
     }
   };
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [editProfileForm] = Form.useForm();
+
+  const menuItems = [
+    ...(menu
+      ? [
+        {
+          key: 'center',
+          icon: <UserOutlined/>,
+          label: '个人中心',
+        },
+        {
+          key: 'settings',
+          icon: <SettingOutlined/>,
+          label: '个人设置',
+        },
+        {
+          type: 'divider' as const,
+        },
+      ]
+      : []),
+    {
+      key: 'edit',
+      icon: <EditOutlined />,
+      label: '修改信息',
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined/>,
+      label: '退出登录',
+    },
+  ];
+
   const onMenuClick = useCallback(
     (event: MenuInfo) => {
       const {key} = event;
@@ -128,6 +166,10 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           setInitialState((s) => ({...s, currentUser: undefined}));
         });
         loginOut();
+        return;
+      }
+      if (key === 'edit') {
+        setIsEditProfileOpen(true);
         return;
       }
       history.push(`/account/${key}`);
@@ -403,33 +445,67 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       ;
   }
 
-  const menuItems = [
-    ...(menu
-      ? [
-        {
-          key: 'center',
-          icon: <UserOutlined/>,
-          label: '个人中心',
-        },
-        {
-          key: 'settings',
-          icon: <SettingOutlined/>,
-          label: '个人设置',
-        },
-        {
-          type: 'divider' as const,
-        },
-      ]
-      : []),
-    {
-      key: 'logout',
-      icon: <LogoutOutlined/>,
-      label: '退出登录',
-    },
-  ];
-
   return (
     <div>
+      <Modal
+        title="修改个人信息"
+        open={isEditProfileOpen}
+        onCancel={() => setIsEditProfileOpen(false)}
+        footer={null}
+      >
+        <Form
+          form={editProfileForm}
+          initialValues={{
+            userName: currentUser?.userName,
+            userAvatar: currentUser?.userAvatar,
+          }}
+          onFinish={async (values) => {
+            try {
+              // TODO: 实现更新用户信息的API调用
+              await updateMyUserUsingPost({
+                userAvatar: values.userAvatar,
+                userName: values.userName,
+              })
+              message.success('更新成功！');
+              setIsEditProfileOpen(false);
+              // 更新本地用户信息
+              setInitialState((s) => ({
+                ...s,
+                currentUser: {
+                  ...s?.currentUser,
+                  ...values,
+                },
+              }));
+            } catch (error) {
+              message.error('更新失败，请重试！');
+            }
+          }}
+        >
+          <Form.Item
+            name="userName"
+            label="用户名称"
+            rules={[{ required: true, message: '请输入用户名称！' }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="userAvatar"
+            label="头像地址"
+            rules={[
+              { required: true, message: '请输入头像地址！' },
+              { type: 'url', message: '请输入有效的图片URL！' }
+            ]}
+            extra="请输入在线图片地址"
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item style={{ textAlign: 'right' }}>
+            <Button type="primary" htmlType="submit">
+              保存
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
       <div className="App">
         {/* 其他内容 */}
         <Modal title="下班倒计时设定" footer={null} open={isMoneyOpen} onCancel={() => {
