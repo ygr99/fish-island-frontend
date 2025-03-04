@@ -1,4 +1,4 @@
-import {Col, Row, Card, Badge, Image, List, Typography, Tooltip} from 'antd';
+import {Col, Row, Card, Badge, Image, List, Typography, Tooltip, Tabs} from 'antd';
 import React, {useState, useEffect} from 'react';
 import {getHotPostListUsingPost} from '@/services/backend/hotPostController';
 import dayjs from "dayjs";
@@ -6,23 +6,62 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 
 const Index: React.FC = () => {
   const [hostPostVoList, setHostPostVoList] = useState<API.HotPostVO[]>([]);
+  const [activeTab, setActiveTab] = useState<string>('all');
+  const [categories, setCategories] = useState<string[]>([]);
+
   const fetchData = async () => {
     try {
       const result = await getHotPostListUsingPost();
-      setHostPostVoList(result.data as any);
+      if (result.data) {
+        setHostPostVoList(result.data);
+        // 提取所有不重复的 category
+        const uniqueCategories = Array.from(new Set(result.data.map((item: API.HotPostVO) => item.category || '')));
+        setCategories(uniqueCategories.filter(Boolean));
+      }
     } catch (error) {
       console.error('Error fetching hot post list:', error);
     }
   };
-  // 使用 useEffect 进行异步请求
+
   useEffect(() => {
     fetchData();
-  }, []); // 空依赖数组，确保只在组件挂载时请求一次
+  }, []);
+
   dayjs.extend(relativeTime);
+
+  // 根据分类返回对应的 emoji
+  const getCategoryEmoji = (category: string) => {
+    const emojiMap: Record<string, string> = {
+      '1': '🌈',
+      '2': '✨',
+      '3': '📺'
+    };
+    return emojiMap[category] || '🎯';
+  };
+
+  const filteredList = activeTab === 'all'
+    ? hostPostVoList
+    : hostPostVoList.filter(item => item.category === activeTab);
+
+  const items = [
+    { key: 'all', label: '🌟 全部' },
+    ...categories.map(category => ({
+      key: category,
+      label: `${getCategoryEmoji(category)} ${hostPostVoList.find(item => item.category === category)?.categoryName || category}`
+    }))
+  ];
+
+
   return (
     <>
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={items}
+        style={{ marginBottom: 16 }}
+      />
       <Row gutter={[16, 16]}>
-        {hostPostVoList.map((item, index) => (
+        {filteredList.map((item, index) => (
           <Col span={8} key={index}>
             <Badge.Ribbon text={item.typeName}>
               <Card

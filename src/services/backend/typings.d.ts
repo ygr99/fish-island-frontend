@@ -117,6 +117,8 @@ declare namespace API {
     type?: string;
     typeName?: string;
     updateTime?: string;
+    category?: string;
+    categoryName?: string;
   };
 
   type LoginUserVO = {
@@ -346,6 +348,7 @@ declare namespace API {
   };
 
   type UserRegisterRequest = {
+    captchaVerification?: string;
     checkPassword?: string;
     userAccount?: string;
     userPassword?: string;
