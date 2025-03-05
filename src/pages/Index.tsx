@@ -67,12 +67,14 @@ const Index: React.FC = () => {
         bodyStyle={{ padding: 0 }} // 移除 padding
         width={350} // 让 Modal 宽度匹配 iframe
       >
-        <iframe
-          frameBorder="no"
-          width={300}
-          height={86}
-          src={currentMusic}>
-        </iframe>
+        {isMusicOpen && ( // 只有 Modal 打开时才渲染 iframe
+          <iframe
+            frameBorder="no"
+            width={300}
+            height={86}
+            src={currentMusic}
+          />
+        )}
       </Modal>
       <Tabs
         activeKey={activeTab}
