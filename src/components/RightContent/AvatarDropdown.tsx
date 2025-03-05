@@ -420,21 +420,11 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             onClick={() => {
               setIsMoneyOpen(true);
             }}
-            style={{
-              width: "110px",
-              height: "110px",
-              position: "fixed",
-              bottom: "15px",
-              right: "15px",
-              zIndex: 999,
-              backgroundColor: "white",
-              color: "black",
-              border: "1px solid #d9d9d9"
-            }}
+            className="money-button"
           >
-            <div style={{textAlign: 'center'}}>
+            <div className="money-button-content">
               <div>🧑‍💻💭</div>
-              <div style={{padding: "5px"}}>⏱️️：{timeRemaining}</div>
+              <div>⏱️️：{timeRemaining}</div>
               <div>💰：{earnedAmount.toFixed(3)}</div>
             </div>
           </Button>
@@ -553,21 +543,11 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           onClick={() => {
             setIsMoneyOpen(true);
           }}
-          style={{
-            width: "110px",
-            height: "110px",
-            position: "fixed",
-            bottom: "15px",
-            right: "15px",
-            zIndex: 999,
-            backgroundColor: "white",
-            color: "black",
-            border: "1px solid #d9d9d9"
-          }}
+          className="money-button"
         >
-          <div style={{textAlign: 'center'}}>
+          <div className="money-button-content">
             <div>🧑‍💻💭</div>
-            <div style={{padding: "5px"}}>⏱️️：{timeRemaining}</div>
+            <div>⏱️️：{timeRemaining}</div>
             <div>💰：{earnedAmount.toFixed(3)}</div>
           </div>
         </Button>
