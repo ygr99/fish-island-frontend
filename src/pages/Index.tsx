@@ -16,6 +16,7 @@ const Index: React.FC = () => {
         setHostPostVoList(result.data);
         // 提取所有不重复的 category
         const uniqueCategories = Array.from(new Set(result.data.map((item: API.HotPostVO) => item.category || '')));
+        // @ts-ignore
         setCategories(uniqueCategories.filter(Boolean));
       }
     } catch (error) {
@@ -34,20 +35,22 @@ const Index: React.FC = () => {
     const emojiMap: Record<string, string> = {
       '1': '🌈',
       '2': '✨',
-      '3': '📺'
+      '3': '📺',
+      '4': '🎶'
     };
     return emojiMap[category] || '🎯';
   };
 
+  // @ts-ignore
   const filteredList = activeTab === 'all'
     ? hostPostVoList
-    : hostPostVoList.filter(item => item.category === activeTab);
+    : hostPostVoList.filter(item => item.category as any === activeTab);
 
   const items = [
-    { key: 'all', label: '🌟 全部' },
+    {key: 'all', label: '🌟 全部'},
     ...categories.map(category => ({
       key: category,
-      label: `${getCategoryEmoji(category)} ${hostPostVoList.find(item => item.category === category)?.categoryName || category}`
+      label: `${getCategoryEmoji(category)} ${hostPostVoList.find(item => item.category as any === category)?.categoryName || category}`
     }))
   ];
 
@@ -58,7 +61,7 @@ const Index: React.FC = () => {
         activeKey={activeTab}
         onChange={setActiveTab}
         items={items}
-        style={{ marginBottom: 16 }}
+        style={{marginBottom: 16}}
       />
       <Row gutter={[16, 16]}>
         {filteredList.map((item, index) => (
@@ -91,13 +94,13 @@ const Index: React.FC = () => {
 
                   <List
                     dataSource={item.data}
-                    renderItem={(item, index) => (
+                    renderItem={(data, index) => (
                       <List.Item
                       >
-                        <Tooltip title={item.title} mouseEnterDelay={0.2}>
+                        <Tooltip title={data.title} mouseEnterDelay={0.2}>
                           <Typography.Link
                             target="_blank" // 在新标签页打开链接
-                            href={item.url}
+                            href={data.url}
                             style={{
                               display: 'flex',
                               width: '100%',
@@ -109,13 +112,14 @@ const Index: React.FC = () => {
                           >
                             <span
                               style={{flexGrow: 1, textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}}>
-                              {index + 1}.{item?.title?.length && item?.title?.length > 25 ? item.title.slice(0, 25) + '...' : item.title}
+                              {index + 1}.{data?.title?.length && data?.title?.length > 25 ? data.title.slice(0, 25) + '...' : data.title}
                             </span>
                             <span style={{
                               flexShrink: 0,
                               marginRight: '10px',
                               fontSize: '12px'
-                            }}>🔥 {item.followerCount && item.followerCount >= 10000 ? (item.followerCount / 10000).toFixed(1) + "万" : item.followerCount}</span>
+                            }}>
+                              🔥 {data.followerCount && data.followerCount >= 10000 ? (data.followerCount / 10000).toFixed(1) + "万" : data.followerCount === 0 ? "置顶🔝" : data.followerCount}</span>
                           </Typography.Link>
                         </Tooltip>
 

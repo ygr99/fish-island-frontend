@@ -21,6 +21,7 @@ import {PlusOutlined, CalendarOutlined, ClockCircleOutlined, CheckOutlined, Dele
 import dayjs from "dayjs"
 import "dayjs/locale/zh-cn"
 import locale from "antd/es/date-picker/locale/zh_CN"
+import {getTodoUsingPost, saveTodoUsingPost} from "@/services/backend/todoController";
 
 const {Header, Content} = Layout
 const {Title, Text} = Typography
@@ -28,14 +29,14 @@ const {TextArea} = Input
 const {Option} = Select
 
 // 优先级对应的颜色和emoji
-const priorityConfig = {
+const priorityConfig: any = {
   high: {color: "red", emoji: "🔥", text: "高"},
   medium: {color: "orange", emoji: "⚡", text: "中"},
   low: {color: "blue", emoji: "🌱", text: "低"},
 }
 
 // 任务状态
-const taskStatus = {
+const taskStatus: any = {
   pending: {text: "待完成", color: "processing"},
   completed: {text: "已完成", color: "success"},
 }
@@ -44,6 +45,12 @@ export default function TodoList() {
   // 状态管理
   const [tasks, setTasks] = useState(() => {
     // 从本地存储加载任务
+    getTodoUsingPost().then(r => {
+      if (r.data) {
+        console.log(222, r.data.length > 0)
+        localStorage.setItem("todoTasks", r.data.length > 0 ? r.data : "[]")
+      }
+    });
     const savedTasks = localStorage.getItem("todoTasks")
     return savedTasks ? JSON.parse(savedTasks) : []
   })
@@ -54,6 +61,9 @@ export default function TodoList() {
 
   // 保存任务到本地存储
   useEffect(() => {
+    saveTodoUsingPost({
+      todoData: tasks
+    })
     localStorage.setItem("todoTasks", JSON.stringify(tasks))
   }, [tasks])
 

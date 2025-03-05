@@ -8,6 +8,7 @@ import * as postController from './postController';
 import * as postFavourController from './postFavourController';
 import * as postThumbController from './postThumbController';
 import * as restAuthController from './restAuthController';
+import * as todoController from './todoController';
 import * as userController from './userController';
 export default {
   fileController,
@@ -16,5 +17,6 @@ export default {
   postController,
   postFavourController,
   postThumbController,
+  todoController,
   userController,
 };

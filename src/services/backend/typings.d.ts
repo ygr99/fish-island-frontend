@@ -110,6 +110,8 @@ declare namespace API {
   };
 
   type HotPostVO = {
+    category?: number;
+    categoryName?: string;
     data?: HotPostDataVO[];
     iconUrl?: string;
     id?: number;
@@ -117,8 +119,6 @@ declare namespace API {
     type?: string;
     typeName?: string;
     updateTime?: string;
-    category?: string;
-    categoryName?: string;
   };
 
   type LoginUserVO = {
@@ -281,6 +281,11 @@ declare namespace API {
     tokenSessionTimeout?: number;
     tokenTimeout?: number;
     tokenValue?: string;
+  };
+
+  type SaveTodoDto = {
+    /** Todo data */
+    todoData: Record<string, any>[];
   };
 
   type TokenLoginUserVo = {
