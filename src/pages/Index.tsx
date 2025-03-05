@@ -1,4 +1,4 @@
-import {Col, Row, Card, Badge, Image, List, Typography, Tooltip, Tabs} from 'antd';
+import {Col, Row, Card, Badge, Image, List, Typography, Tooltip, Tabs, Modal} from 'antd';
 import React, {useState, useEffect} from 'react';
 import {getHotPostListUsingPost} from '@/services/backend/hotPostController';
 import dayjs from "dayjs";
@@ -8,6 +8,8 @@ const Index: React.FC = () => {
   const [hostPostVoList, setHostPostVoList] = useState<API.HotPostVO[]>([]);
   const [activeTab, setActiveTab] = useState<string>('all');
   const [categories, setCategories] = useState<string[]>([]);
+  const [isMusicOpen, setIsMusicOpen] = useState(false);
+  const [currentMusic, setCurrentMusic] = useState("//music.163.com/outchain/player?type=2&id=2674443509&auto=0&height=66");
 
   const fetchData = async () => {
     try {
@@ -57,6 +59,21 @@ const Index: React.FC = () => {
 
   return (
     <>
+      <Modal
+        title="🎵"
+        footer={null}
+        open={isMusicOpen}
+        onCancel={() => setIsMusicOpen(false)}
+        bodyStyle={{ padding: 0 }} // 移除 padding
+        width={350} // 让 Modal 宽度匹配 iframe
+      >
+        <iframe
+          frameBorder="no"
+          width={300}
+          height={86}
+          src={currentMusic}>
+        </iframe>
+      </Modal>
       <Tabs
         activeKey={activeTab}
         onChange={setActiveTab}
@@ -91,7 +108,6 @@ const Index: React.FC = () => {
                     overflow: 'auto',
                   }}
                 >
-
                   <List
                     dataSource={item.data}
                     renderItem={(data, index) => (
@@ -100,6 +116,13 @@ const Index: React.FC = () => {
                         <Tooltip title={data.title} mouseEnterDelay={0.2}>
                           <Typography.Link
                             target="_blank" // 在新标签页打开链接
+                            onClick={(e) => {
+                              if (item.category === 4) {
+                                e.preventDefault()
+                                setCurrentMusic(data.url as any);
+                                setIsMusicOpen(true);
+                              }
+                            }}
                             href={data.url}
                             style={{
                               display: 'flex',
