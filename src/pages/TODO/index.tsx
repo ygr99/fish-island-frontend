@@ -37,34 +37,121 @@ const priorityConfig: any = {
 
 // 任务状态
 const taskStatus: any = {
-  pending: {text: "待完成", color: "processing"},
-  completed: {text: "已完成", color: "success"},
+  pending: {text: "待完成", color: "processing", icon: "⚡️"},
+  completed: {text: "已完成", color: "success", icon: "✅"},
+}
+
+interface Task {
+  id: number;
+  title: string;
+  description?: string;
+  date: string;
+  priority: 'high' | 'medium' | 'low';
+  status: 'pending' | 'completed';
 }
 
 export default function TodoList() {
   // 状态管理
-  const [tasks, setTasks] = useState(() => {
-    // 从本地存储加载任务
-    getTodoUsingPost().then(r => {
-      if (r.data) {
-        console.log(222, r.data.length > 0)
-        localStorage.setItem("todoTasks", r.data.length > 0 ? r.data : "[]")
-      }
-    });
-    const savedTasks = localStorage.getItem("todoTasks")
-    return savedTasks ? JSON.parse(savedTasks) : []
-  })
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [loading, setLoading] = useState(true)
   const [isModalVisible, setIsModalVisible] = useState(false)
   const [selectedDate, setSelectedDate] = useState(dayjs())
   const [form] = Form.useForm()
   const [viewMode, setViewMode] = useState("list") // 'list' 或 'calendar'
 
-  // 保存任务到本地存储
+  // 加载任务数据
   useEffect(() => {
-    saveTodoUsingPost({
-      todoData: tasks
-    })
-    localStorage.setItem("todoTasks", JSON.stringify(tasks))
+    const loadTasks = async () => {
+      try {
+        setLoading(true)
+        const response = await getTodoUsingPost()
+        if (response.data) {
+          // 确保数据是数组
+          const tasksData = Array.isArray(JSON.parse(response.data)) ? JSON.parse(response.data) : []
+          // 验证每个任务的数据结构
+          const validTasks = tasksData.filter((task: { id: any; title: any; date: any; priority: string; status: string }) =>
+            task &&
+            typeof task.id === 'number' &&
+            typeof task.title === 'string' &&
+            typeof task.date === 'string' &&
+            ['high', 'medium', 'low'].includes(task.priority) &&
+            ['pending', 'completed'].includes(task.status)
+          ) as Task[]
+
+          // 只有当远程数据有效时才更新
+          if (validTasks.length > 0) {
+            setTasks(validTasks)
+            localStorage.setItem("todoTasks", JSON.stringify(validTasks))
+          } else {
+            // 如果远程数据无效，尝试从本地加载
+            const savedTasks = localStorage.getItem("todoTasks")
+            if (savedTasks) {
+              try {
+                const parsedTasks = JSON.parse(savedTasks)
+                const localValidTasks = Array.isArray(parsedTasks) ? parsedTasks.filter(task =>
+                  task &&
+                  typeof task.id === 'number' &&
+                  typeof task.title === 'string' &&
+                  typeof task.date === 'string' &&
+                  ['high', 'medium', 'low'].includes(task.priority) &&
+                  ['pending', 'completed'].includes(task.status)
+                ) as Task[] : []
+                if (localValidTasks.length > 0) {
+                  setTasks(localValidTasks)
+                }
+              } catch (error) {
+                console.error('解析本地存储数据失败:', error)
+                setTasks([])
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('加载任务失败:', error)
+        // 如果远程加载失败，尝试从本地存储加载
+        const savedTasks = localStorage.getItem("todoTasks")
+        if (savedTasks) {
+          try {
+            const parsedTasks = JSON.parse(savedTasks)
+            const validTasks = Array.isArray(parsedTasks) ? parsedTasks.filter(task =>
+              task &&
+              typeof task.id === 'number' &&
+              typeof task.title === 'string' &&
+              typeof task.date === 'string' &&
+              ['high', 'medium', 'low'].includes(task.priority) &&
+              ['pending', 'completed'].includes(task.status)
+            ) as Task[] : []
+            if (validTasks.length > 0) {
+              setTasks(validTasks)
+            }
+          } catch (error) {
+            console.error('解析本地存储数据失败:', error)
+            setTasks([])
+          }
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadTasks()
+  }, [])
+
+  // 保存任务到远程和本地存储
+  useEffect(() => {
+    const saveTasks = async () => {
+      try {
+        await saveTodoUsingPost({
+          todoData: tasks
+        })
+        localStorage.setItem("todoTasks", JSON.stringify(tasks))
+      } catch (error) {
+        console.error('保存任务失败:', error)
+        // 这里可以添加错误提示
+      }
+    }
+    if (tasks.length > 0) {
+      saveTasks()
+    }
   }, [tasks])
 
   // 打开添加任务模态框
@@ -76,12 +163,12 @@ export default function TodoList() {
 
   // 添加新任务
   const handleAddTask = (values: {
-    title: any;
-    description: any;
-    date: { format: (arg0: string) => any };
-    priority: any
+    title: string;
+    description: string;
+    date: { format: (arg0: string) => string };
+    priority: 'high' | 'medium' | 'low'
   }) => {
-    const newTask = {
+    const newTask: Task = {
       id: Date.now(),
       title: values.title,
       description: values.description,
@@ -94,8 +181,10 @@ export default function TodoList() {
   }
 
   // 完成任务
-  const completeTask = (taskId: any) => {
-    setTasks(tasks.map((task: { id: any }) => (task.id === taskId ? {...task, status: "completed"} : task)))
+  const completeTask = (taskId: number) => {
+    setTasks(tasks.map((task) =>
+      task.id === taskId ? {...task, status: "completed" as const} : task
+    ))
   }
 
   // 删除任务
@@ -192,15 +281,18 @@ export default function TodoList() {
                       task.status === "pending" ? (
                         <Button
                           style={{
-                            backgroundColor: "#52c41a", // 柔和的浅绿色
+                            backgroundColor: "#52c41a",
                             borderColor: "#52c41a",
                             color: "#fff",
-                            boxShadow: "0 2px 4px rgba(111, 207, 151, 0.5)", // 增加柔和的阴影
+                            boxShadow: "0 2px 4px rgba(111, 207, 151, 0.5)",
+                            borderRadius: "6px",
+                            padding: "4px 12px",
+                            height: "32px",
                           }}
                           type="primary"
                           icon={<CheckOutlined/>}
                           onClick={() => completeTask(task.id)}
-                          key="complete" // Added key prop here
+                          key="complete"
                         >
                           完成
                         </Button>
@@ -210,38 +302,98 @@ export default function TodoList() {
                         danger
                         icon={<DeleteOutlined/>}
                         onClick={() => deleteTask(task.id)}
-                        key="delete" // Added key prop here
+                        key="delete"
+                        style={{
+                          padding: "4px 12px",
+                          height: "32px",
+                        }}
                       >
                         删除
                       </Button>,
                     ]}
                     style={{
                       background: "#fff",
-                      marginBottom: 8,
-                      padding: "12px 24px",
-                      borderRadius: 8,
-                      opacity: task.status === "completed" ? 0.6 : 1,
-                      textDecoration: task.status === "completed" ? "line-through" : "none",
+                      marginBottom: "12px",
+                      padding: "16px 24px",
+                      borderRadius: "8px",
+                      boxShadow: task.status === "completed" 
+                        ? "0 2px 8px rgba(0,0,0,0.02)" 
+                        : "0 2px 8px rgba(0,0,0,0.04)",
+                      opacity: task.status === "completed" ? 0.85 : 1,
+                      transition: "all 0.3s ease",
+                      border: task.status === "completed" 
+                        ? "1px solid rgba(82, 196, 26, 0.1)" 
+                        : "1px solid transparent",
                     }}
                   >
                     <List.Item.Meta
                       title={
-                        <Space>
-                          <span>
-                            {priorityConfig[task.priority].emoji} {task.title}
+                        <Space size={12} style={{ marginBottom: "8px" }}>
+                          <span style={{ 
+                            fontSize: "16px", 
+                            fontWeight: task.status === "completed" ? 400 : 500,
+                            color: task.status === "completed" ? "#8c8c8c" : "#333",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px"
+                          }}>
+                            {task.status === "completed" ? (
+                              <span style={{ 
+                                color: "#52c41a",
+                                fontSize: "18px"
+                              }}>
+                                {taskStatus.completed.icon}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: "18px" }}>
+                                {priorityConfig[task.priority].emoji}
+                              </span>
+                            )}
+                            {task.title}
                           </span>
-                          <Tag color={priorityConfig[task.priority].color}>
-                            {priorityConfig[task.priority].text}优先级
-                          </Tag>
-                          <Tag color={taskStatus[task.status].color}>{taskStatus[task.status].text}</Tag>
+                          <Space size={4}>
+                            <Tag 
+                              color={priorityConfig[task.priority].color}
+                              style={{ 
+                                borderRadius: "4px",
+                                padding: "0 8px",
+                                height: "24px",
+                                lineHeight: "22px",
+                                opacity: task.status === "completed" ? 0.7 : 1
+                              }}
+                            >
+                              {priorityConfig[task.priority].text}优先级
+                            </Tag>
+                            <Tag 
+                              color={taskStatus[task.status].color}
+                              style={{ 
+                                borderRadius: "4px",
+                                padding: "0 8px",
+                                height: "24px",
+                                lineHeight: "22px"
+                              }}
+                            >
+                              {taskStatus[task.status].text}
+                            </Tag>
+                          </Space>
                         </Space>
                       }
                       description={
-                        <div>
-                          <div>
-                            <ClockCircleOutlined/> 日期: {task.date}
-                          </div>
-                          {task.description && <div style={{marginTop: 8}}>{task.description}</div>}
+                        <div style={{ 
+                          display: "flex", 
+                          flexDirection: "column", 
+                          gap: "4px",
+                          color: task.status === "completed" ? "#8c8c8c" : "#666"
+                        }}>
+                          {task.description && (
+                            <div style={{ 
+                              marginTop: "4px",
+                              fontSize: "14px",
+                              lineHeight: "1.6"
+                            }}>
+                              {task.description}
+                            </div>
+                          )}
                         </div>
                       }
                     />
@@ -249,7 +401,15 @@ export default function TodoList() {
                 )}
               />
             ) : (
-              <Empty description="今天没有任务，休息一下吧 🎉" image={Empty.PRESENTED_IMAGE_SIMPLE}/>
+              <Empty 
+                description="今天没有任务，休息一下吧 🎉" 
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                style={{ 
+                  padding: "40px 0",
+                  background: "#fff",
+                  borderRadius: "8px"
+                }}
+              />
             )}
           </Card>
         ) : (
