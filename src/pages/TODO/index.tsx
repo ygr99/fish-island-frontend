@@ -17,7 +17,7 @@ import {
   Badge,
   Card,
 } from "antd"
-import {PlusOutlined, CalendarOutlined, ClockCircleOutlined, CheckOutlined, DeleteOutlined} from "@ant-design/icons"
+import {PlusOutlined, CalendarOutlined, CheckOutlined, DeleteOutlined} from "@ant-design/icons"
 import dayjs from "dayjs"
 import "dayjs/locale/zh-cn"
 import locale from "antd/es/date-picker/locale/zh_CN"
@@ -316,21 +316,21 @@ export default function TodoList() {
                       marginBottom: "12px",
                       padding: "16px 24px",
                       borderRadius: "8px",
-                      boxShadow: task.status === "completed" 
-                        ? "0 2px 8px rgba(0,0,0,0.02)" 
+                      boxShadow: task.status === "completed"
+                        ? "0 2px 8px rgba(0,0,0,0.02)"
                         : "0 2px 8px rgba(0,0,0,0.04)",
                       opacity: task.status === "completed" ? 0.85 : 1,
                       transition: "all 0.3s ease",
-                      border: task.status === "completed" 
-                        ? "1px solid rgba(82, 196, 26, 0.1)" 
+                      border: task.status === "completed"
+                        ? "1px solid rgba(82, 196, 26, 0.1)"
                         : "1px solid transparent",
                     }}
                   >
                     <List.Item.Meta
                       title={
                         <Space size={12} style={{ marginBottom: "8px" }}>
-                          <span style={{ 
-                            fontSize: "16px", 
+                          <span style={{
+                            fontSize: "16px",
                             fontWeight: task.status === "completed" ? 400 : 500,
                             color: task.status === "completed" ? "#8c8c8c" : "#333",
                             display: "flex",
@@ -338,7 +338,7 @@ export default function TodoList() {
                             gap: "8px"
                           }}>
                             {task.status === "completed" ? (
-                              <span style={{ 
+                              <span style={{
                                 color: "#52c41a",
                                 fontSize: "18px"
                               }}>
@@ -352,9 +352,9 @@ export default function TodoList() {
                             {task.title}
                           </span>
                           <Space size={4}>
-                            <Tag 
+                            <Tag
                               color={priorityConfig[task.priority].color}
-                              style={{ 
+                              style={{
                                 borderRadius: "4px",
                                 padding: "0 8px",
                                 height: "24px",
@@ -364,9 +364,9 @@ export default function TodoList() {
                             >
                               {priorityConfig[task.priority].text}优先级
                             </Tag>
-                            <Tag 
+                            <Tag
                               color={taskStatus[task.status].color}
-                              style={{ 
+                              style={{
                                 borderRadius: "4px",
                                 padding: "0 8px",
                                 height: "24px",
@@ -379,14 +379,14 @@ export default function TodoList() {
                         </Space>
                       }
                       description={
-                        <div style={{ 
-                          display: "flex", 
-                          flexDirection: "column", 
+                        <div style={{
+                          display: "flex",
+                          flexDirection: "column",
                           gap: "4px",
                           color: task.status === "completed" ? "#8c8c8c" : "#666"
                         }}>
                           {task.description && (
-                            <div style={{ 
+                            <div style={{
                               marginTop: "4px",
                               fontSize: "14px",
                               lineHeight: "1.6"
@@ -401,10 +401,10 @@ export default function TodoList() {
                 )}
               />
             ) : (
-              <Empty 
-                description="今天没有任务，休息一下吧 🎉" 
+              <Empty
+                description="今天没有任务，休息一下吧 🎉"
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
-                style={{ 
+                style={{
                   padding: "40px 0",
                   background: "#fff",
                   borderRadius: "8px"

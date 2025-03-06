@@ -2,7 +2,7 @@ export default [
   { path: '/user', layout: false, routes: [{ path: '/user/login', component: './User/Login' },{ path: '/user/register', component: './User/Register' }] },
   { path: '/index', icon: 'smile', component: './Index', name: '最新' },
   { path: '/todo', icon: 'CalendarOutlined', component: './TODO', name: '每日待办' },
-  { path: '/rank', icon: 'crown', component: './Rank', name: '摸鱼榜' },
+  // { path: '/rank', icon: 'crown', component: './Rank', name: '摸鱼榜' },
   {
     path: '/game',
     icon: 'DesktopOutlined',

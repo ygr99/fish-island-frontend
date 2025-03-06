@@ -63,18 +63,23 @@ const Index: React.FC = () => {
         title="🎵"
         footer={null}
         open={isMusicOpen}
-        onCancel={() => setIsMusicOpen(false)}
-        bodyStyle={{ padding: 0 }} // 移除 padding
-        width={350} // 让 Modal 宽度匹配 iframe
+        onCancel={() => {
+          setCurrentMusic("about:blank"); // 先设置为空白页面
+          setTimeout(() => {
+            setIsMusicOpen(false);
+            setCurrentMusic(""); // 最后清空
+          }, 100);
+        }}
+        bodyStyle={{ padding: 0 }}
+        width={350}
       >
-        {isMusicOpen && ( // 只有 Modal 打开时才渲染 iframe
-          <iframe
-            frameBorder="no"
-            width={300}
-            height={86}
-            src={currentMusic}
-          />
-        )}
+        <iframe
+          key={currentMusic}
+          frameBorder="no"
+          width={300}
+          height={86}
+          src={currentMusic}
+        />
       </Modal>
       <Tabs
         activeKey={activeTab}
