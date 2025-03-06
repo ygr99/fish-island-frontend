@@ -50,6 +50,28 @@ interface Task {
   status: 'pending' | 'completed';
 }
 
+// 添加自定义 hook 用于监听窗口大小
+const useWindowSize = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    // 初始检查
+    checkMobile();
+
+    // 添加窗口大小变化监听
+    window.addEventListener('resize', checkMobile);
+
+    // 清理监听器
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+};
+
 export default function TodoList() {
   // 状态管理
   const [tasks, setTasks] = useState<Task[]>([])
@@ -58,6 +80,7 @@ export default function TodoList() {
   const [selectedDate, setSelectedDate] = useState(dayjs())
   const [form] = Form.useForm()
   const [viewMode, setViewMode] = useState("list") // 'list' 或 'calendar'
+  const isMobile = useWindowSize();
 
   // 加载任务数据
   useEffect(() => {
@@ -231,16 +254,39 @@ export default function TodoList() {
 
   return (
     <Layout style={{minHeight: "100vh", background: "#f5f5f5"}}>
-      <Header style={{background: "#fff", padding: "0 20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)"}}>
-        <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", height: "100%"}}>
-          <Title level={4} style={{margin: 0}}>
+      <Header style={{
+        background: "#fff", 
+        padding: "0 20px", 
+        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+        height: isMobile ? "auto" : "64px"
+      }}>
+        <div style={{
+          display: "flex", 
+          flexDirection: isMobile ? "column" : "row",
+          justifyContent: "space-between", 
+          alignItems: isMobile ? "stretch" : "center",
+          padding: isMobile ? "12px 0" : "0",
+          gap: isMobile ? "12px" : "0"
+        }}>
+          <Title level={4} style={{margin: 0, fontSize: isMobile ? "18px" : "20px"}}>
             <span>🔊:今天也要加油鸭💪</span>
           </Title>
-          <Space>
+          <Space 
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "8px",
+              width: isMobile ? "100%" : "auto"
+            }}
+          >
             <Button
               type={viewMode === "list" ? "primary" : "default"}
               icon={<CalendarOutlined/>}
               onClick={() => setViewMode("list")}
+              style={{
+                flex: isMobile ? "1" : "none",
+                minWidth: isMobile ? "0" : "auto"
+              }}
             >
               列表视图
             </Button>
@@ -248,24 +294,49 @@ export default function TodoList() {
               type={viewMode === "calendar" ? "primary" : "default"}
               icon={<CalendarOutlined/>}
               onClick={() => setViewMode("calendar")}
+              style={{
+                flex: isMobile ? "1" : "none",
+                minWidth: isMobile ? "0" : "auto"
+              }}
             >
               日历视图
             </Button>
-            <Button type="primary" icon={<PlusOutlined/>} onClick={showModal}>
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined/>} 
+              onClick={showModal}
+              style={{
+                flex: isMobile ? "1" : "none",
+                minWidth: isMobile ? "0" : "auto"
+              }}
+            >
               添加任务
             </Button>
           </Space>
         </div>
       </Header>
 
-      <Content style={{padding: "24px"}}>
+      <Content style={{padding: isMobile ? "12px" : "24px"}}>
         {viewMode === "list" ? (
           <Card>
-            <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20}}>
-              <Title level={4} style={{margin: 0}}>
+            <div style={{
+              display: "flex", 
+              flexDirection: isMobile ? "column" : "row",
+              justifyContent: "space-between", 
+              alignItems: isMobile ? "flex-start" : "center",
+              gap: isMobile ? "12px" : "0",
+              marginBottom: 20
+            }}>
+              <Title level={4} style={{margin: 0, fontSize: isMobile ? "18px" : "20px"}}>
                 <CalendarOutlined/> {selectedDate.format("YYYY年MM月DD日")} 的任务
               </Title>
-              <DatePicker value={selectedDate} onChange={setSelectedDate} locale={locale} allowClear={false}/>
+              <DatePicker 
+                value={selectedDate} 
+                onChange={setSelectedDate} 
+                locale={locale} 
+                allowClear={false}
+                style={{ width: isMobile ? "100%" : "auto" }}
+              />
             </div>
 
             <Divider/>
@@ -288,6 +359,8 @@ export default function TodoList() {
                             borderRadius: "6px",
                             padding: "4px 12px",
                             height: "32px",
+                            marginBottom: isMobile ? "8px" : 0,
+                            width: isMobile ? "100%" : "auto"
                           }}
                           type="primary"
                           icon={<CheckOutlined/>}
@@ -306,6 +379,7 @@ export default function TodoList() {
                         style={{
                           padding: "4px 12px",
                           height: "32px",
+                          width: isMobile ? "100%" : "auto"
                         }}
                       >
                         删除
@@ -314,7 +388,7 @@ export default function TodoList() {
                     style={{
                       background: "#fff",
                       marginBottom: "12px",
-                      padding: "16px 24px",
+                      padding: isMobile ? "12px" : "16px",
                       borderRadius: "8px",
                       boxShadow: task.status === "completed"
                         ? "0 2px 8px rgba(0,0,0,0.02)"
@@ -324,34 +398,52 @@ export default function TodoList() {
                       border: task.status === "completed"
                         ? "1px solid rgba(82, 196, 26, 0.1)"
                         : "1px solid transparent",
+                      flexDirection: isMobile ? "column" : "row",
+                      alignItems: isMobile ? "flex-start" : "center"
                     }}
                   >
                     <List.Item.Meta
+                      style={{
+                        flex: 1,
+                        marginBottom: isMobile ? "12px" : 0,
+                        width: "100%"
+                      }}
                       title={
-                        <Space size={12} style={{ marginBottom: "8px" }}>
-                          <span style={{
-                            fontSize: "16px",
-                            fontWeight: task.status === "completed" ? 400 : 500,
-                            color: task.status === "completed" ? "#8c8c8c" : "#333",
+                        <div style={{
+                          display: "flex",
+                          flexDirection: isMobile ? "column" : "row",
+                          gap: isMobile ? "8px" : "12px",
+                          alignItems: isMobile ? "flex-start" : "center",
+                          width: "100%"
+                        }}>
+                          <div style={{
                             display: "flex",
                             alignItems: "center",
-                            gap: "8px"
+                            gap: "8px",
+                            fontSize: isMobile ? "14px" : "16px",
+                            fontWeight: task.status === "completed" ? 400 : 500,
+                            color: task.status === "completed" ? "#8c8c8c" : "#333",
                           }}>
                             {task.status === "completed" ? (
                               <span style={{
                                 color: "#52c41a",
-                                fontSize: "18px"
+                                fontSize: isMobile ? "16px" : "18px"
                               }}>
                                 {taskStatus.completed.icon}
                               </span>
                             ) : (
-                              <span style={{ fontSize: "18px" }}>
+                              <span style={{ fontSize: isMobile ? "16px" : "18px" }}>
                                 {priorityConfig[task.priority].emoji}
                               </span>
                             )}
-                            {task.title}
-                          </span>
-                          <Space size={4}>
+                            <span style={{ wordBreak: "break-all" }}>{task.title}</span>
+                          </div>
+                          <div style={{
+                            display: "flex",
+                            gap: "8px",
+                            flexWrap: "wrap",
+                            marginTop: isMobile ? "4px" : 0
+                          }}>
                             <Tag
                               color={priorityConfig[task.priority].color}
                               style={{
@@ -359,7 +451,8 @@ export default function TodoList() {
                                 padding: "0 8px",
                                 height: "24px",
                                 lineHeight: "22px",
-                                opacity: task.status === "completed" ? 0.7 : 1
+                                opacity: task.status === "completed" ? 0.7 : 1,
+                                fontSize: isMobile ? "12px" : "14px"
                               }}
                             >
                               {priorityConfig[task.priority].text}优先级
@@ -370,46 +463,37 @@ export default function TodoList() {
                                 borderRadius: "4px",
                                 padding: "0 8px",
                                 height: "24px",
-                                lineHeight: "22px"
+                                lineHeight: "22px",
+                                fontSize: isMobile ? "12px" : "14px"
                               }}
                             >
                               {taskStatus[task.status].text}
                             </Tag>
-                          </Space>
-                        </Space>
-                      }
-                      description={
-                        <div style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "4px",
-                          color: task.status === "completed" ? "#8c8c8c" : "#666"
-                        }}>
-                          {task.description && (
-                            <div style={{
-                              marginTop: "4px",
-                              fontSize: "14px",
-                              lineHeight: "1.6"
-                            }}>
-                              {task.description}
-                            </div>
-                          )}
+                          </div>
                         </div>
                       }
+                      description={
+                        task.description && (
+                          <div style={{
+                            marginTop: "8px",
+                            fontSize: isMobile ? "12px" : "14px",
+                            lineHeight: "1.6",
+                            color: task.status === "completed" ? "#8c8c8c" : "#666",
+                            wordBreak: "break-all"
+                          }}>
+                            {task.description}
+                          </div>
+                        )
+                      }
                     />
+                    {isMobile && <div style={{ width: "100%", height: "1px" }} />}
                   </List.Item>
                 )}
               />
             ) : (
-              <Empty
-                description="今天没有任务，休息一下吧 🎉"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                style={{
-                  padding: "40px 0",
-                  background: "#fff",
-                  borderRadius: "8px"
-                }}
-              />
+              <Card>
+                <Calendar locale={locale} dateCellRender={dateCellRender} onSelect={onCalendarSelect}/>
+              </Card>
             )}
           </Card>
         ) : (
