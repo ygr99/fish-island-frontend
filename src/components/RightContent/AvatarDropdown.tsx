@@ -98,6 +98,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const ref = useRef();
 
   const {initialState, setInitialState} = useModel('@@initialState');
+  const {currentUser}: any = initialState || {};
+
   const click = () => {
     const current = ref.current as any;
     current.verify();
@@ -127,6 +129,37 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   };
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [editProfileForm] = Form.useForm();
+  const [selectedAvatar, setSelectedAvatar] = useState<string>('');
+  const [previewAvatar, setPreviewAvatar] = useState<string>('');
+
+  // 默认头像列表
+  const defaultAvatars = [
+    'https://img1.baidu.com/it/u=3014707936,92115294&fm=253&app=120&size=w931&n=0&f=JPEG&fmt=auto?sec=1741366800&t=1e39c948763f0da7919f2da645dfd933',
+    'https://img0.baidu.com/it/u=2218138162,227420128&fm=253&fmt=auto&app=138&f=JPEG?w=607&h=607',
+    'https://img2.baidu.com/it/u=1855636951,3171633874&fm=253&fmt=auto?w=800&h=800',
+    'https://img2.baidu.com/it/u=1130909076,1175412011&fm=253&app=138&size=w931&n=0&f=JPEG&fmt=auto?sec=1741366800&t=a777374386780f063fd0b0d8423474cd',
+    'https://img2.baidu.com/it/u=4235829091,920344249&fm=253&app=138&size=w931&n=0&f=JPEG&fmt=auto?sec=1741366800&t=f7a30e0458cdb1ef78ba4562d5e3a07b',
+  ];
+
+  const handleEditProfile = async (values: any) => {
+    try {
+      // 如果选择了默认头像，使用选中的头像
+      const userAvatar = selectedAvatar || values.userAvatar;
+      const res = await updateMyUserUsingPost({
+        ...values,
+        userAvatar,
+      });
+      if (res.code === 0) {
+        message.success('修改信息成功！');
+        setIsEditProfileOpen(false);
+        // 更新当前用户信息
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
+        setInitialState((s) => ({...s, currentUser: {...currentUser, ...values, userAvatar}}));
+      }
+    } catch (error: any) {
+      message.error(`修改失败，${error.message}`);
+    }
+  };
 
   const menuItems = [
     ...(menu
@@ -148,7 +181,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       : []),
     {
       key: 'edit',
-      icon: <EditOutlined />,
+      icon: <EditOutlined/>,
       label: '修改信息',
     },
     {
@@ -158,6 +191,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     },
   ];
 
+  // @ts-ignore
+  // @ts-ignore
   const onMenuClick = useCallback(
     (event: MenuInfo) => {
       const {key} = event;
@@ -170,14 +205,19 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       }
       if (key === 'edit') {
         setIsEditProfileOpen(true);
+        // 设置初始头像预览
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
+        if (currentUser?.userAvatar && !defaultAvatars.includes(currentUser.userAvatar)) {
+          // eslint-disable-next-line @typescript-eslint/no-use-before-define
+          setPreviewAvatar(currentUser.userAvatar);
+        }
         return;
       }
       history.push(`/account/${key}`);
     },
-    [setInitialState],
+    [setInitialState, currentUser?.userAvatar],
   );
 
-  const {currentUser} = initialState || {};
 
   // 计算倒计时和已赚取金额
   useEffect(() => {
@@ -218,19 +258,19 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     alignItems: 'center',
     padding: '4px 8px',
     borderRadius: '16px',
-    background: hasCheckedIn 
+    background: hasCheckedIn
       ? 'linear-gradient(135deg, #40a9ff 0%, #1890ff 100%)'
       : 'linear-gradient(135deg, #f5f5f5 0%, #fafafa 100%)',
-    boxShadow: hasCheckedIn 
+    boxShadow: hasCheckedIn
       ? '0 2px 4px rgba(24, 144, 255, 0.2)'
       : '0 1px 3px rgba(0, 0, 0, 0.05)',
     border: `1px solid ${hasCheckedIn ? '#1890ff' : '#e8e8e8'}`,
     '&:hover': {
       transform: 'scale(1.03)',
-      background: hasCheckedIn 
+      background: hasCheckedIn
         ? 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)'
         : 'linear-gradient(135deg, #f0f0f0 0%, #f5f5f5 100%)',
-      boxShadow: hasCheckedIn 
+      boxShadow: hasCheckedIn
         ? '0 3px 6px rgba(24, 144, 255, 0.3)'
         : '0 2px 4px rgba(0, 0, 0, 0.1)',
     },
@@ -257,7 +297,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       message.info('今天已经摸鱼打卡啦！明天继续加油 🐟');
       return;
     }
-    
+
     setIsCheckinAnimating(true);
     setTimeout(() => {
       setHasCheckedIn(true);
@@ -538,7 +578,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center' }}>
+    <div style={{display: 'flex', alignItems: 'center'}}>
       <HeaderDropdown
         menu={{
           selectedKeys: [],
@@ -547,7 +587,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         }}
       >
         <Space>
-          <div style={{ position: 'relative' }}>
+          <div style={{position: 'relative'}}>
             <span className={vipBadgeStyle}>VIP</span>
             {currentUser?.userAvatar ? (
               <Avatar size="default" src={currentUser?.userAvatar}/>
@@ -558,14 +598,121 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           <span className="anticon">{currentUser?.userName ?? '无名'}</span>
         </Space>
       </HeaderDropdown>
+
+      {/* 添加修改信息的 Modal */}
+      <Modal
+        title="修改个人信息"
+        open={isEditProfileOpen}
+        onCancel={() => {
+          setIsEditProfileOpen(false);
+          setPreviewAvatar('');
+          setSelectedAvatar('');
+          // 重置表单
+          editProfileForm.resetFields();
+        }}
+        footer={null}
+        width={600}
+      >
+        <Form
+          form={editProfileForm}
+          onFinish={handleEditProfile}
+          initialValues={{
+            userName: currentUser?.userName,
+            userProfile: currentUser?.userProfile,
+            userAvatar: !defaultAvatars.includes(currentUser?.userAvatar || '') ? currentUser?.userAvatar : '',
+          }}
+        >
+          <Form.Item
+            name="userName"
+            label="用户名"
+            rules={[{required: true, message: '请输入用户名！'}]}
+          >
+            <Input/>
+          </Form.Item>
+
+          <Form.Item
+            label="头像选择"
+            name="userAvatar"
+            help="可以输入在线图片地址，或者选择下方默认头像"
+          >
+            <div style={{display: 'flex', gap: '8px', alignItems: 'flex-start'}}>
+              <Input
+                placeholder="请输入头像地址（选填）"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSelectedAvatar('');
+                  setPreviewAvatar(value);
+                  editProfileForm.setFieldValue('userAvatar', value);
+                }}
+                value={editProfileForm.getFieldValue('userAvatar')}
+                style={{flex: 1}}
+              />
+              {(previewAvatar || editProfileForm.getFieldValue('userAvatar')) && (
+                <div style={{
+                  marginLeft: '8px',
+                  padding: '4px',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '4px'
+                }}>
+                  <Avatar
+                    src={previewAvatar || editProfileForm.getFieldValue('userAvatar')}
+                    size={64}
+                    onError={() => {
+                      message.error('图片加载失败，请检查地址是否正确');
+                      return false;
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </Form.Item>
+
+          <Form.Item label="默认头像">
+            <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+              {defaultAvatars.map((avatar, index) => (
+                <div
+                  key={index}
+                  onClick={() => {
+                    setSelectedAvatar(avatar);
+                    setPreviewAvatar('');
+                    editProfileForm.setFieldValue('userAvatar', '');
+                  }}
+                  style={{
+                    cursor: 'pointer',
+                    border: (selectedAvatar === avatar || currentUser?.userAvatar === avatar) ? '2px solid #1890ff' : '2px solid transparent',
+                    borderRadius: '4px',
+                    padding: '4px',
+                  }}
+                >
+                  <Avatar src={avatar} size={64}/>
+                </div>
+              ))}
+            </div>
+          </Form.Item>
+
+          <Form.Item
+            name="userProfile"
+            label="个人简介"
+          >
+            <Input.TextArea rows={4}/>
+          </Form.Item>
+
+          <Form.Item>
+            <Button type="primary" htmlType="submit">
+              保存修改
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
+
       <Tooltip title={hasCheckedIn ? '今日已完成摸鱼打卡' : '点击摸鱼打卡'}>
-        <div 
-          className={checkinButtonStyle} 
+        <div
+          className={checkinButtonStyle}
           onClick={(e) => {
             e.stopPropagation();
             handleCheckin();
           }}
-          style={{ marginLeft: 24 }}
+          style={{marginLeft: 24}}
         >
           <span className="checkin-emoji">
             {hasCheckedIn ? '🐟' : '🎣'}
@@ -575,7 +722,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           </span>
         </div>
       </Tooltip>
-      <div className="App" style={{ marginLeft: 'auto' }}>
+      <div className="App" style={{marginLeft: 'auto'}}>
         {/* 其他内容 */}
         <Modal title="下班倒计时设定" footer={null} open={isMoneyOpen} onCancel={() => {
           setIsMoneyOpen(false);
