@@ -45,6 +45,19 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
     onClose?.();
   };
 
+  const processContent = (text: string) => {
+    // 将换行符转换为 <br> 标签
+    let processedText = text.replace(/\n/g, '<br>');
+    
+    // 将 URL 转换为可点击的链接
+    processedText = processedText.replace(
+      /(https?:\/\/[^\s]+)/g,
+      '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+    );
+    
+    return processedText;
+  };
+
   return (
     <Modal
       title={title}
@@ -67,9 +80,10 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
       ]}
       className={styles.announcementModal}
     >
-      <div className={styles.content}>
-        {content}
-      </div>
+      <div 
+        className={styles.content}
+        dangerouslySetInnerHTML={{ __html: processContent(content) }}
+      />
     </Modal>
   );
 };
