@@ -6,7 +6,7 @@ import {
 } from '@/services/backend/userController';
 import {LockOutlined, LogoutOutlined, SettingOutlined, UserOutlined, EditOutlined} from '@ant-design/icons';
 import {history, useModel} from '@umijs/max';
-import {Avatar, Button, Form, FormProps, Input, message, Modal, Space, Tabs, TimePicker} from 'antd';
+import {Avatar, Button, Form, FormProps, Input, message, Modal, Space, Tabs, TimePicker, Tooltip} from 'antd';
 import type {MenuInfo} from 'rc-menu/lib/interface';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
@@ -206,6 +206,108 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       return () => clearInterval(interval);
     }
   }, [moYuData]);
+
+  const [hasCheckedIn, setHasCheckedIn] = useState(false);
+  const [isCheckinAnimating, setIsCheckinAnimating] = useState(false);
+
+  // 签到动画的样式
+  const checkinButtonStyle = useEmotionCss(() => ({
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '4px 8px',
+    borderRadius: '16px',
+    background: hasCheckedIn 
+      ? 'linear-gradient(135deg, #40a9ff 0%, #1890ff 100%)'
+      : 'linear-gradient(135deg, #f5f5f5 0%, #fafafa 100%)',
+    boxShadow: hasCheckedIn 
+      ? '0 2px 4px rgba(24, 144, 255, 0.2)'
+      : '0 1px 3px rgba(0, 0, 0, 0.05)',
+    border: `1px solid ${hasCheckedIn ? '#1890ff' : '#e8e8e8'}`,
+    '&:hover': {
+      transform: 'scale(1.03)',
+      background: hasCheckedIn 
+        ? 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)'
+        : 'linear-gradient(135deg, #f0f0f0 0%, #f5f5f5 100%)',
+      boxShadow: hasCheckedIn 
+        ? '0 3px 6px rgba(24, 144, 255, 0.3)'
+        : '0 2px 4px rgba(0, 0, 0, 0.1)',
+    },
+    '.checkin-emoji': {
+      fontSize: '16px',
+      marginRight: '4px',
+      transition: 'all 0.5s ease',
+      transform: isCheckinAnimating ? 'scale(1.2) rotate(360deg)' : 'scale(1)',
+      display: 'inline-flex',
+      alignItems: 'center',
+      filter: hasCheckedIn ? 'brightness(1.1)' : 'none',
+    },
+    '.checkin-text': {
+      fontSize: '13px',
+      fontWeight: 500,
+      color: hasCheckedIn ? '#ffffff' : '#595959',
+      textShadow: hasCheckedIn ? '0 1px 1px rgba(0, 0, 0, 0.1)' : 'none',
+    },
+  }));
+
+  // 处理签到
+  const handleCheckin = () => {
+    if (hasCheckedIn) {
+      message.info('今天已经摸鱼打卡啦！明天继续加油 🐟');
+      return;
+    }
+    
+    setIsCheckinAnimating(true);
+    setTimeout(() => {
+      setHasCheckedIn(true);
+      setIsCheckinAnimating(false);
+      message.success('摸鱼打卡成功！获得 10 积分 🎣');
+    }, 500);
+  };
+
+  // VIP 标识动画样式
+  const vipBadgeStyle = useEmotionCss(() => ({
+    position: 'absolute',
+    top: -6,
+    right: -8,
+    fontSize: '12px',
+    padding: '1px 4px',
+    borderRadius: '4px',
+    background: 'linear-gradient(135deg, #ffd700 0%, #ffb700 100%)',
+    color: '#873800',
+    fontWeight: 'bold',
+    lineHeight: 1,
+    animation: 'vipFloat 3s ease-in-out infinite',
+    zIndex: 1,
+    transformOrigin: 'center bottom',
+    boxShadow: '0 1px 2px rgba(255, 215, 0, 0.3)',
+    '@keyframes vipFloat': {
+      '0%, 100%': {
+        transform: 'translateY(0)',
+        filter: 'drop-shadow(0 1px 2px rgba(255, 215, 0, 0.4))',
+      },
+      '50%': {
+        transform: 'translateY(-2px)',
+        filter: 'drop-shadow(0 2px 4px rgba(255, 215, 0, 0.6))',
+      }
+    },
+    '&:hover': {
+      animation: 'vipPop 0.3s ease-in-out forwards',
+    },
+    '@keyframes vipPop': {
+      '0%': {
+        transform: 'scale(1)',
+      },
+      '50%': {
+        transform: 'scale(1.1)',
+      },
+      '100%': {
+        transform: 'scale(1.05)',
+      }
+    }
+  }));
+
   if (!currentUser) {
     return (
       <>
@@ -436,67 +538,44 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   }
 
   return (
-    <div>
-      <Modal
-        title="修改个人信息"
-        open={isEditProfileOpen}
-        onCancel={() => setIsEditProfileOpen(false)}
-        footer={null}
+    <div style={{ display: 'flex', alignItems: 'center' }}>
+      <HeaderDropdown
+        menu={{
+          selectedKeys: [],
+          onClick: onMenuClick,
+          items: menuItems,
+        }}
       >
-        <Form
-          form={editProfileForm}
-          initialValues={{
-            userName: currentUser?.userName,
-            userAvatar: currentUser?.userAvatar,
+        <Space>
+          <div style={{ position: 'relative' }}>
+            <span className={vipBadgeStyle}>VIP</span>
+            {currentUser?.userAvatar ? (
+              <Avatar size="default" src={currentUser?.userAvatar}/>
+            ) : (
+              <Avatar size="default" icon={<UserOutlined/>}/>
+            )}
+          </div>
+          <span className="anticon">{currentUser?.userName ?? '无名'}</span>
+        </Space>
+      </HeaderDropdown>
+      <Tooltip title={hasCheckedIn ? '今日已完成摸鱼打卡' : '点击摸鱼打卡'}>
+        <div 
+          className={checkinButtonStyle} 
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCheckin();
           }}
-          onFinish={async (values) => {
-            try {
-              // TODO: 实现更新用户信息的API调用
-              await updateMyUserUsingPost({
-                userAvatar: values.userAvatar,
-                userName: values.userName,
-              })
-              message.success('更新成功！');
-              setIsEditProfileOpen(false);
-              // 更新本地用户信息
-              setInitialState((s) => ({
-                ...s,
-                currentUser: {
-                  ...s?.currentUser,
-                  ...values,
-                },
-              }));
-            } catch (error) {
-              message.error('更新失败，请重试！');
-            }
-          }}
+          style={{ marginLeft: 24 }}
         >
-          <Form.Item
-            name="userName"
-            label="用户名称"
-            rules={[{ required: true, message: '请输入用户名称！' }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="userAvatar"
-            label="头像地址"
-            rules={[
-              { required: true, message: '请输入头像地址！' },
-              { type: 'url', message: '请输入有效的图片URL！' }
-            ]}
-            extra="请输入在线图片地址"
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item style={{ textAlign: 'right' }}>
-            <Button type="primary" htmlType="submit">
-              保存
-            </Button>
-          </Form.Item>
-        </Form>
-      </Modal>
-      <div className="App">
+          <span className="checkin-emoji">
+            {hasCheckedIn ? '🐟' : '🎣'}
+          </span>
+          <span className="checkin-text">
+            {hasCheckedIn ? '已打卡' : '摸鱼'}
+          </span>
+        </div>
+      </Tooltip>
+      <div className="App" style={{ marginLeft: 'auto' }}>
         {/* 其他内容 */}
         <Modal title="下班倒计时设定" footer={null} open={isMoneyOpen} onCancel={() => {
           setIsMoneyOpen(false);
@@ -552,27 +631,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           </div>
         </Button>
       </div>
-      <HeaderDropdown
-        menu={{
-          selectedKeys: [],
-          onClick: onMenuClick,
-          items: menuItems,
-        }}
-      >
-
-        <Space>
-          {currentUser?.userAvatar ? (
-            <Avatar size="default" src={currentUser?.userAvatar}/>
-          ) : (
-            <Avatar size="default" icon={<UserOutlined/>}/>
-          )}
-          <span className="anticon">{currentUser?.userName ?? '无名'}</span>
-        </Space>
-      </HeaderDropdown>
     </div>
-
   )
-    ;
 };
 
 export const AvatarName = () => {
