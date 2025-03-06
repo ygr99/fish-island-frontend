@@ -491,9 +491,18 @@ export default function TodoList() {
                 )}
               />
             ) : (
-              <Card>
-                <Calendar locale={locale} dateCellRender={dateCellRender} onSelect={onCalendarSelect}/>
-              </Card>
+              <Empty
+                description={
+                  <div style={{ textAlign: 'center' }}>
+                    <p style={{ marginBottom: '8px', color: '#8c8c8c' }}>今天都没有待办任务喔～</p>
+                    <Button type="primary" onClick={showModal}>
+                      <PlusOutlined /> 添加下任务吧
+                    </Button>
+                  </div>
+                }
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                style={{ margin: '40px 0' }}
+              />
             )}
           </Card>
         ) : (
