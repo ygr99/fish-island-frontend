@@ -6,6 +6,7 @@ import {AvatarDropdown} from './components/RightContent/AvatarDropdown';
 import {requestConfig} from './requestConfig';
 import {getLoginUserUsingGet} from "@/services/backend/userController";
 import {useEffect, useState} from "react";
+import AnnouncementModal from '@/components/AnnouncementModal';
 
 const loginPath = '/user/login';
 
@@ -65,6 +66,7 @@ export async function getInitialState(): Promise<InitialState> {
 export const layout: RunTimeLayoutConfig = ({initialState}) => {
 
   const isBossMode = useBossKey(); // 监听老板键
+  const [showAnnouncement, setShowAnnouncement] = useState(true);
 
   if (isBossMode) {
     // @ts-ignore
@@ -139,6 +141,18 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
     // 自定义 403 页面
     // unAccessible: <div>unAccessible</div>,
     ...defaultSettings,
+    childrenRender: (children) => {
+      return (
+        <>
+          {children}
+          <AnnouncementModal
+            visible={showAnnouncement}
+            onClose={() => setShowAnnouncement(false)}
+            title="系统公告"
+          />
+        </>
+      );
+    },
   };
 };
 
