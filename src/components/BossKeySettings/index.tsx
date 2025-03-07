@@ -1,25 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Upload, Button, Image, message } from 'antd';
-import { UploadOutlined, LoadingOutlined } from '@ant-design/icons';
+import { Modal, Form, Upload, Button, Image } from 'antd';
+import { UploadOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 
 interface BossKeySettingsProps {
   visible: boolean;
   onClose: () => void;
-  onConfigUpdate: (config: BossKeyConfig) => void;
 }
 
 interface BossKeyConfig {
   image: string;
-  title: string;
-  placeholder: string;
 }
 
-const BossKeySettings: React.FC<BossKeySettingsProps> = ({ visible, onClose, onConfigUpdate }) => {
+const BossKeySettings: React.FC<BossKeySettingsProps> = ({ visible, onClose }) => {
   const [form] = Form.useForm();
   const [previewImage, setPreviewImage] = useState<string>('');
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [uploading, setUploading] = useState(false);
 
   // 从localStorage加载配置
   useEffect(() => {
@@ -43,8 +39,6 @@ const BossKeySettings: React.FC<BossKeySettingsProps> = ({ visible, onClose, onC
   const handleSubmit = async () => {
     const config: BossKeyConfig = {
       image: previewImage || '',
-      title: '工作页面',
-      placeholder: '百度一下，你就知道'
     };
     localStorage.setItem('bossKeyConfig', JSON.stringify(config));
     onClose();
@@ -60,48 +54,20 @@ const BossKeySettings: React.FC<BossKeySettingsProps> = ({ visible, onClose, onC
   };
 
   const handleChange = async ({ fileList: newFileList }: any) => {
-    setFileList(newFileList);
-    
     if (newFileList.length > 0) {
       const file = newFileList[0].originFileObj;
       if (file) {
         try {
-          setUploading(true);
-          message.loading('图片处理中...', 0);
-          
           const base64 = await handleImageUpload(file);
           setPreviewImage(base64);
-          
-          // 立即更新配置
-          const newConfig: BossKeyConfig = {
-            image: base64,
-            title: '工作页面',
-            placeholder: '百度一下，你就知道'
-          };
-          localStorage.setItem('bossKeyConfig', JSON.stringify(newConfig));
-          onConfigUpdate(newConfig);
-          
-          message.destroy(); // 清除loading消息
-          message.success('图片已更新');
         } catch (error) {
-          message.destroy();
-          message.error('图片处理失败，请重试');
           console.error('Error uploading image:', error);
-        } finally {
-          setUploading(false);
         }
       }
     } else {
       setPreviewImage('');
-      // 清除图片时也更新配置
-      const newConfig: BossKeyConfig = {
-        image: '',
-        title: '工作页面',
-        placeholder: '百度一下，你就知道'
-      };
-      localStorage.setItem('bossKeyConfig', JSON.stringify(newConfig));
-      onConfigUpdate(newConfig);
     }
+    setFileList(newFileList);
   };
 
   return (
@@ -124,11 +90,8 @@ const BossKeySettings: React.FC<BossKeySettingsProps> = ({ visible, onClose, onC
             onChange={handleChange}
             beforeUpload={() => false}
             maxCount={1}
-            disabled={uploading}
           >
-            {fileList.length === 0 && (
-              uploading ? <LoadingOutlined /> : <UploadOutlined />
-            )}
+            {fileList.length === 0 && <UploadOutlined />}
           </Upload>
           <div className="text-gray-500 text-sm mt-2">
             提示：上传图片后，按下老板键将全屏显示此图片。不上传图片则显示默认的百度搜索页面。
@@ -148,8 +111,8 @@ const BossKeySettings: React.FC<BossKeySettingsProps> = ({ visible, onClose, onC
         )}
 
         <Form.Item>
-          <Button type="primary" onClick={onClose} block>
-            完成
+          <Button type="primary" onClick={handleSubmit} block>
+            保存设置
           </Button>
         </Form.Item>
       </Form>

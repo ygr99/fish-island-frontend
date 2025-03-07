@@ -1,3 +1,4 @@
+import Footer from '@/components/Footer';
 import type {RunTimeLayoutConfig} from '@umijs/max';
 import {history} from '@umijs/max';
 import defaultSettings from '../config/defaultSettings';
@@ -6,16 +7,10 @@ import {requestConfig} from './requestConfig';
 import {getLoginUserUsingGet} from "@/services/backend/userController";
 import {useEffect, useState} from "react";
 import AnnouncementModal from '@/components/AnnouncementModal';
-import routes from '../config/routes';
 import BossKeySettings from '@/components/BossKeySettings';
+import routes from '../config/routes';
 
 const loginPath = '/user/login';
-
-interface BossKeyConfig {
-  image: string;
-  title: string;
-  placeholder: string;
-}
 
 /**
  * 监听老板键（Ctrl + Shift + B）切换工作模式
@@ -23,8 +18,8 @@ interface BossKeyConfig {
 const useBossKey = () => {
   const [isBossMode, setIsBossMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [config, setConfig] = useState<BossKeyConfig>({
-    image: '',
+  const [config, setConfig] = useState({
+    image: 'https://www.baidu.com/img/flexible/logo/pc/result.png',
     title: '工作页面',
     placeholder: '百度一下，你就知道'
   });
@@ -153,7 +148,7 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
                 padding: '5px 10px',
                 boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.1)'
               }}>
-                <input type="text" placeholder={config.placeholder}
+                <input type="text" placeholder="百度一下，你就知道"
                        style={{
                          flex: 1,
                          height: '40px',

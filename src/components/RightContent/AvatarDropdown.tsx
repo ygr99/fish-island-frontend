@@ -6,7 +6,7 @@ import {
 } from '@/services/backend/userController';
 import {LockOutlined, LogoutOutlined, SettingOutlined, UserOutlined, EditOutlined} from '@ant-design/icons';
 import {history, useModel} from '@umijs/max';
-import {Avatar, Button, Form, FormProps, Input, message, Modal, Space, Tabs, TimePicker, Tooltip} from 'antd';
+import {Avatar, Button, Form, FormProps, Input, message, Modal, Space, Tabs, TimePicker, Tooltip, Select} from 'antd';
 import type {MenuInfo} from 'rc-menu/lib/interface';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
@@ -223,6 +223,11 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       label: '修改信息',
     },
     {
+      key: 'bossKey',
+      icon: <LockOutlined/>,
+      label: '老板键设置',
+    },
+    {
       key: 'logout',
       icon: <LogoutOutlined/>,
       label: '退出登录',
@@ -251,6 +256,10 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         }
         return;
       }
+      if (key === 'bossKey') {
+        setIsBossKeyOpen(true);
+        return;
+      }
       history.push(`/account/${key}`);
     },
     [setInitialState, currentUser?.userAvatar],
@@ -262,21 +271,21 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     if (moYuData?.endTime && moYuData?.startTime) {
       const interval = setInterval(() => {
         const now = moment();
-        
+
         // 查找最近的节假日
         const upcomingHoliday = holidays
           .filter(h => h.date.isAfter(now))
           .sort((a, b) => a.date.diff(now) - b.date.diff(now))[0];
-        
+
         // 检查是否接近午餐时间（前后120分钟内）
         const lunchTime = moment(moYuData.lunchTime);
         const isNearLunch = Math.abs(now.diff(lunchTime, 'minutes')) <= 120;
-        
+
         // 计算工作日每小时收入
         const workdaysInMonth = 22; // 假设每月22个工作日
         const workHoursPerDay = moment(moYuData.endTime).diff(moment(moYuData.startTime), 'hours');
         const hourlyRate = moYuData.monthlySalary ? (moYuData.monthlySalary / (workdaysInMonth * workHoursPerDay)) : 0;
-        
+
         // 计算已工作时长和收入
         const startTime = moment(moYuData.startTime);
         const workedDuration = moment.duration(now.diff(startTime));
@@ -288,7 +297,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           const hours = Math.max(0, duration.hours());
           const minutes = Math.max(0, duration.minutes());
           const seconds = Math.max(0, duration.seconds());
-          
+
           // 如果所有时间都是0或负数，显示"已到午餐时间"
           if (hours <= 0 && minutes <= 0 && seconds <= 0) {
             setTimeInfo({
@@ -319,7 +328,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           const hours = Math.max(0, duration.hours());
           const minutes = Math.max(0, duration.minutes());
           const seconds = Math.max(0, duration.seconds());
-          
+
           // 如果所有时间都是0或负数，显示"已到下班时间"
           if (hours <= 0 && minutes <= 0 && seconds <= 0) {
             setTimeInfo({
@@ -441,6 +450,29 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       }
     }
   }));
+
+  const [isBossKeyOpen, setIsBossKeyOpen] = useState(false);
+  const [bossKeyConfig, setBossKeyConfig] = useState(() => {
+    const savedConfig = localStorage.getItem('bossKeyConfig');
+    return savedConfig ? JSON.parse(savedConfig) : {
+      key: 'Escape',
+      redirectUrl: 'https://www.deepseek.com/'
+    };
+  });
+
+  // 添加键盘事件监听
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.key === bossKeyConfig.key) {
+        window.location.href = bossKeyConfig.redirectUrl;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [bossKeyConfig]);
 
   if (!currentUser) {
     return (
@@ -666,9 +698,9 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 {timeInfo.type === 'lunch' ? '🍱' : timeInfo.type === 'holiday' ? '🎉' : '🧑‍💻'}
               </div>
               <div>
-                {timeInfo.type === 'holiday' ? 
+                {timeInfo.type === 'holiday' ?
                   `${timeInfo.name}: ${timeInfo.timeRemaining}` :
-                  timeInfo.type === 'lunch' ? 
+                  timeInfo.type === 'lunch' ?
                     `午餐: ${timeInfo.timeRemaining}` :
                     `下班: ${timeInfo.timeRemaining}`
                 }
@@ -887,9 +919,9 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               {timeInfo.type === 'lunch' ? '🍱' : timeInfo.type === 'holiday' ? '🎉' : '🧑‍💻'}
             </div>
             <div>
-              {timeInfo.type === 'holiday' ? 
+              {timeInfo.type === 'holiday' ?
                 `${timeInfo.name}: ${timeInfo.timeRemaining}` :
-                timeInfo.type === 'lunch' ? 
+                timeInfo.type === 'lunch' ?
                   `午餐: ${timeInfo.timeRemaining}` :
                   `下班: ${timeInfo.timeRemaining}`
               }
@@ -900,6 +932,60 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           </div>
         </Button>
       </div>
+
+      {/* 添加老板键设置Modal */}
+      <Modal
+        title="老板键设置"
+        open={isBossKeyOpen}
+        onCancel={() => setIsBossKeyOpen(false)}
+        footer={null}
+      >
+        <Form
+          initialValues={bossKeyConfig}
+          onFinish={(values) => {
+            setBossKeyConfig(values);
+            localStorage.setItem('bossKeyConfig', JSON.stringify(values));
+            message.success('老板键设置已保存');
+            setIsBossKeyOpen(false);
+          }}
+        >
+          <Form.Item
+            label="触发按键"
+            name="key"
+            rules={[{ required: true, message: '请设置触发按键！' }]}
+          >
+            <Select>
+              <Select.Option value="Escape">ESC键</Select.Option>
+              <Select.Option value="F1">F1键</Select.Option>
+              <Select.Option value="F2">F2键</Select.Option>
+              <Select.Option value="F3">F3键</Select.Option>
+              <Select.Option value="F4">F4键</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            label="跳转网址"
+            name="redirectUrl"
+            rules={[
+              { required: true, message: '请输入跳转网址！' },
+              { type: 'url', message: '请输入有效的网址！' }
+            ]}
+          >
+            <Input placeholder="请输入紧急情况下要跳转的网址" />
+          </Form.Item>
+
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                保存设置
+              </Button>
+              <Button onClick={() => setIsBossKeyOpen(false)}>
+                取消
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 };
