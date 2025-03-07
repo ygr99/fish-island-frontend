@@ -60,7 +60,7 @@ export async function getInitialState(): Promise<InitialState> {
     currentUser: undefined,
   };
   const {location} = history;
-  
+
   // 检查当前路由是否需要登录验证
   if (checkNeedAuth(location.pathname)) {
     try {
@@ -151,7 +151,7 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
     waterMarkProps: {
       content: initialState?.currentUser?.userName,
     },
-    footerRender: () => <Footer/>,
+    // footerRender: () => <Footer/>,
     menuHeaderRender: undefined,
     // 自定义 403 页面
     // unAccessible: <div>unAccessible</div>,
