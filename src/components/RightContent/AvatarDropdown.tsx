@@ -285,11 +285,24 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         if (isNearLunch) {
           // 午餐倒计时
           const duration = moment.duration(lunchTime.diff(now));
-          setTimeInfo({
-            type: 'lunch',
-            timeRemaining: `${duration.hours()}:${String(duration.minutes()).padStart(2, '0')}:${String(duration.seconds()).padStart(2, '0')}`,
-            earnedAmount: moYuData.monthlySalary ? earnedAmount : undefined
-          });
+          const hours = Math.max(0, duration.hours());
+          const minutes = Math.max(0, duration.minutes());
+          const seconds = Math.max(0, duration.seconds());
+          
+          // 如果所有时间都是0或负数，显示"已到午餐时间"
+          if (hours <= 0 && minutes <= 0 && seconds <= 0) {
+            setTimeInfo({
+              type: 'lunch',
+              timeRemaining: '已到午餐时间',
+              earnedAmount: moYuData.monthlySalary ? earnedAmount : undefined
+            });
+          } else {
+            setTimeInfo({
+              type: 'lunch',
+              timeRemaining: `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
+              earnedAmount: moYuData.monthlySalary ? earnedAmount : undefined
+            });
+          }
         } else if (upcomingHoliday) {
           // 节假日倒计时
           const duration = moment.duration(upcomingHoliday.date.diff(now));
@@ -303,11 +316,24 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           // 下班倒计时
           const endTime = moment(moYuData.endTime);
           const duration = moment.duration(endTime.diff(now));
-          setTimeInfo({
-            type: 'work',
-            timeRemaining: `${duration.hours()}:${String(duration.minutes()).padStart(2, '0')}:${String(duration.seconds()).padStart(2, '0')}`,
-            earnedAmount: moYuData.monthlySalary ? earnedAmount : undefined
-          });
+          const hours = Math.max(0, duration.hours());
+          const minutes = Math.max(0, duration.minutes());
+          const seconds = Math.max(0, duration.seconds());
+          
+          // 如果所有时间都是0或负数，显示"已到下班时间"
+          if (hours <= 0 && minutes <= 0 && seconds <= 0) {
+            setTimeInfo({
+              type: 'work',
+              timeRemaining: '已到下班时间',
+              earnedAmount: moYuData.monthlySalary ? earnedAmount : undefined
+            });
+          } else {
+            setTimeInfo({
+              type: 'work',
+              timeRemaining: `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
+              earnedAmount: moYuData.monthlySalary ? earnedAmount : undefined
+            });
+          }
         }
       }, 1000);
 

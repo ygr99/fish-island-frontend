@@ -15,6 +15,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
                                                                content = '🎉 欢迎使用摸鱼岛！\n\n' +
                                                                  '💡 小贴士：\n' +
                                                                  '✅  使用 Ctrl + Shift + B 可以快速打开老板键，摸鱼更安全！\n\n' +
+                                                                 '✅  使用 Ctrl + Shift + B 打开老板页面后再 Ctrl + Shift + S 打开设置页面自定义老板页面喔！\n\n' +
                                                                  '🌟 支持我们：\n' +
                                                                  '✅ 如果觉得摸鱼岛不错，欢迎给我们的项目点个 Star：\n' +
                                                                  '   https://github.com/lhccong/fish-island-frontend\n\n' +
@@ -48,13 +49,13 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
   const processContent = (text: string) => {
     // 将换行符转换为 <br> 标签
     let processedText = text.replace(/\n/g, '<br>');
-    
+
     // 将 URL 转换为可点击的链接
     processedText = processedText.replace(
       /(https?:\/\/[^\s]+)/g,
       '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
     );
-    
+
     return processedText;
   };
 
@@ -80,7 +81,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
       ]}
       className={styles.announcementModal}
     >
-      <div 
+      <div
         className={styles.content}
         dangerouslySetInnerHTML={{ __html: processContent(content) }}
       />

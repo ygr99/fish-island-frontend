@@ -1,4 +1,3 @@
-import Footer from '@/components/Footer';
 import type {RunTimeLayoutConfig} from '@umijs/max';
 import {history} from '@umijs/max';
 import defaultSettings from '../config/defaultSettings';
@@ -8,19 +7,40 @@ import {getLoginUserUsingGet} from "@/services/backend/userController";
 import {useEffect, useState} from "react";
 import AnnouncementModal from '@/components/AnnouncementModal';
 import routes from '../config/routes';
+import BossKeySettings from '@/components/BossKeySettings';
 
 const loginPath = '/user/login';
+
+interface BossKeyConfig {
+  image: string;
+  title: string;
+  placeholder: string;
+}
 
 /**
  * 监听老板键（Ctrl + Shift + B）切换工作模式
  */
 const useBossKey = () => {
   const [isBossMode, setIsBossMode] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [config, setConfig] = useState<BossKeyConfig>({
+    image: '',
+    title: '工作页面',
+    placeholder: '百度一下，你就知道'
+  });
 
   useEffect(() => {
+    // 加载保存的配置
+    const savedConfig = localStorage.getItem('bossKeyConfig');
+    if (savedConfig) {
+      setConfig(JSON.parse(savedConfig));
+    }
+
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.ctrlKey && event.shiftKey && event.key === 'B') {
         setIsBossMode(prev => !prev); // 切换老板模式
+      } else if (event.ctrlKey && event.shiftKey && event.key === 'S') {
+        setShowSettings(true); // 打开设置
       }
     };
 
@@ -30,7 +50,7 @@ const useBossKey = () => {
     };
   }, []);
 
-  return isBossMode;
+  return { isBossMode, showSettings, setShowSettings, config, setConfig };
 };
 
 // 检查当前路由是否需要登录验证
@@ -79,65 +99,90 @@ export async function getInitialState(): Promise<InitialState> {
 // ProLayout 支持的api https://procomponents.ant.design/components/layout
 // @ts-ignore
 export const layout: RunTimeLayoutConfig = ({initialState}) => {
-
-  const isBossMode = useBossKey(); // 监听老板键
+  const { isBossMode, showSettings, setShowSettings, config, setConfig } = useBossKey();
   const [showAnnouncement, setShowAnnouncement] = useState(true);
 
   if (isBossMode) {
     // @ts-ignore
     return {
-      waterMarkProps: {content: '工作页面'},
-      footerRender: () => <Footer/>,
-      menuRender: false, // 隐藏左侧菜单
-      rightContentRender: false, // 隐藏右上角菜单
+      waterMarkProps: {content: config.title},
+      footerRender: () => null,
+      menuRender: false,
+      rightContentRender: false,
       childrenRender: () => (
-        <div style={{
-          width: '100%',
-          height: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: '#ffffff'
-        }}>
-          {/* 百度 Logo */}
-          <img src="https://www.baidu.com/img/flexible/logo/pc/result.png" alt="百度"
-               style={{width: '270px', marginBottom: '20px'}}/>
-
-          {/* 搜索框 */}
-          <div style={{
-            width: '500px',
-            display: 'flex',
-            alignItems: 'center',
-            border: '1px solid #ccc',
-            borderRadius: '24px',
-            padding: '5px 10px',
-            boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.1)'
-          }}>
-            <input type="text" placeholder="百度一下，你就知道"
-                   style={{
-                     flex: 1,
-                     height: '40px',
-                     border: 'none',
-                     outline: 'none',
-                     fontSize: '16px',
-                     paddingLeft: '10px'
-                   }}
-            />
-            <button type="button" style={{
-              backgroundColor: '#3385ff',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '20px',
-              width: '100px',
-              height: '36px',
-              fontSize: '16px',
-              cursor: 'pointer'
-            }}>百度一下
-            </button>
-          </div>
-
-        </div>
+        <>
+          {config.image ? (
+            // 如果有自定义图片，显示全屏图片
+            <div style={{
+              width: '100vw',
+              height: '100vh',
+              overflow: 'hidden',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+            }}>
+              <img
+                src={config.image}
+                alt="cover"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+              />
+            </div>
+          ) : (
+            // 如果没有自定义图片，显示默认的百度搜索界面
+            <div style={{
+              width: '100%',
+              height: '100vh',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: '#ffffff'
+            }}>
+              <img src="https://www.baidu.com/img/flexible/logo/pc/result.png" alt="logo"
+                   style={{width: '270px', marginBottom: '20px'}}/>
+              <div style={{
+                width: '500px',
+                display: 'flex',
+                alignItems: 'center',
+                border: '1px solid #ccc',
+                borderRadius: '24px',
+                padding: '5px 10px',
+                boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.1)'
+              }}>
+                <input type="text" placeholder={config.placeholder}
+                       style={{
+                         flex: 1,
+                         height: '40px',
+                         border: 'none',
+                         outline: 'none',
+                         fontSize: '16px',
+                         paddingLeft: '10px'
+                       }}
+                />
+                <button type="button" style={{
+                  backgroundColor: '#3385ff',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '20px',
+                  width: '100px',
+                  height: '36px',
+                  fontSize: '16px',
+                  cursor: 'pointer'
+                }}>搜索
+                </button>
+              </div>
+            </div>
+          )}
+          <BossKeySettings
+            visible={showSettings}
+            onClose={() => setShowSettings(false)}
+            onConfigUpdate={setConfig}
+          />
+        </>
       ),
     };
   }
