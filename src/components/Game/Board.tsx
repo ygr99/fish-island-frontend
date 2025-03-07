@@ -8,10 +8,11 @@ interface BoardProps {
   onMove: (position: Position) => void;
   disabled: boolean;
   lastMove?: Position | null;
+  opponentLastMove?: Position | null;
   winningLine?: WinningLine | null;
 }
 
-export function Board({ board, onMove, disabled, lastMove, winningLine }: BoardProps) {
+export function Board({ board, onMove, disabled, lastMove, opponentLastMove, winningLine }: BoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
   const [cellSize, setCellSize] = useState(40);
 
@@ -80,6 +81,7 @@ export function Board({ board, onMove, disabled, lastMove, winningLine }: BoardP
                 }}
                 isDisabled={disabled}
                 isLastMove={lastMove?.row === rowIndex && lastMove?.col === colIndex}
+                isOpponentLastMove={opponentLastMove?.row === rowIndex && opponentLastMove?.col === colIndex}
                 isWinningPiece={isWinningPiece(rowIndex, colIndex)}
                 size={cellSize}
               />

@@ -6,14 +6,15 @@ interface CellProps {
   onClick: () => void;
   isDisabled: boolean;
   isLastMove?: boolean;
+  isOpponentLastMove?: boolean;
   isWinningPiece?: boolean;
   position: Position;
   size: number;
 }
 
-export function Cell({ value, onClick, isDisabled, isLastMove, isWinningPiece, size }: CellProps) {
+export function Cell({ value, onClick, isDisabled, isLastMove, isOpponentLastMove, isWinningPiece, size }: CellProps) {
   const pieceSize = Math.floor(size * 0.8);
-  const dotSize = Math.floor(size * 0.15);
+  const dotSize = Math.floor(size * 0.2);
 
   return (
     <button
@@ -41,10 +42,10 @@ export function Cell({ value, onClick, isDisabled, isLastMove, isWinningPiece, s
             ${isWinningPiece ? 'ring-2 ring-red-500 ring-offset-2 animate-pulse' : ''}
           `}
         >
-          {isLastMove && (
+          {(isLastMove || isOpponentLastMove) && (
             <div
               style={{ width: dotSize, height: dotSize }}
-              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full bg-red-500"
+              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full bg-red-500 animate-pulse shadow-lg shadow-red-500/50"
             />
           )}
         </div>

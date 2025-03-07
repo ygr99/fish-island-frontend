@@ -29,6 +29,7 @@ function App() {
   const [playerColor, setPlayerColor] = useState<Player>('black');
   const [gameStarted, setGameStarted] = useState(false);
   const [lastMove, setLastMove] = useState<Position | null>(null);
+  const [opponentLastMove, setOpponentLastMove] = useState<Position | null>(null);
   const [winningLine, setWinningLine] = useState<WinningLine | null>(null);
   const [showRestartModal, setShowRestartModal] = useState(false);
   const {initialState, setInitialState} = useModel('@@initialState');
@@ -48,6 +49,7 @@ function App() {
     newBoard[position.row][position.col] = player;
     setBoard(newBoard);
     addMove(position, opponentColor);
+    setOpponentLastMove(position);
 
     // 检查胜利
     const winResult = checkWin(newBoard, position, player);
@@ -248,6 +250,7 @@ function App() {
     setIsThinking(false);
     setMoves([]);
     setLastMove(null);
+    setOpponentLastMove(null);
     setWinningLine(null);
     setShowRestartModal(false);
 
@@ -262,6 +265,7 @@ function App() {
     setIsThinking(false);
     setMoves([]);
     setLastMove(null);
+    setOpponentLastMove(null);
     setWinningLine(null);
     setShowRestartModal(false);
 
@@ -294,6 +298,7 @@ function App() {
     setWinner(null);
     setMoves([]);
     setLastMove(null);
+    setOpponentLastMove(null);
     setWinningLine(null);
 
     if (color === 'white' && gameMode === 'single') {
@@ -537,6 +542,7 @@ function App() {
                   onMove={handleMove}
                   disabled={isThinking || currentPlayer !== playerColor || !!winner}
                   lastMove={lastMove}
+                  opponentLastMove={opponentLastMove}
                   winningLine={winningLine}
                 />
               </div>
