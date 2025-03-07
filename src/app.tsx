@@ -7,6 +7,7 @@ import {requestConfig} from './requestConfig';
 import {getLoginUserUsingGet} from "@/services/backend/userController";
 import {useEffect, useState} from "react";
 import AnnouncementModal from '@/components/AnnouncementModal';
+import routes from '../config/routes';
 
 const loginPath = '/user/login';
 
@@ -32,6 +33,24 @@ const useBossKey = () => {
   return isBossMode;
 };
 
+// 检查当前路由是否需要登录验证
+const checkNeedAuth = (pathname: string) => {
+  const findRoute = (routes: any[], path: string): boolean => {
+    for (const route of routes) {
+      if (route.path === path) {
+        return route.requireAuth !== false;
+      }
+      if (route.routes) {
+        const found = findRoute(route.routes, path);
+        if (found !== undefined) {
+          return found;
+        }
+      }
+    }
+    return true; // 默认需要登录
+  };
+  return findRoute(routes, pathname);
+};
 
 /**
  * @see  https://umijs.org/zh-CN/plugins/plugin-initial-state
@@ -40,23 +59,19 @@ export async function getInitialState(): Promise<InitialState> {
   const initialState: InitialState = {
     currentUser: undefined,
   };
-  // 如果不是登录页面，执行
   const {location} = history;
-  if (location.pathname !== loginPath) {
+  
+  // 检查当前路由是否需要登录验证
+  if (checkNeedAuth(location.pathname)) {
     try {
       const res = await getLoginUserUsingGet();
       initialState.currentUser = res.data;
     } catch (error: any) {
-      // 如果未登录
+      // 如果未登录且需要登录验证，跳转到登录页
+      if (location.pathname !== loginPath) {
+        history.push(loginPath);
+      }
     }
-
-    // 模拟登录用户
-    // const mockUser: API.LoginUserVO = {
-    //   userAvatar: 'https://gw.alipayobjects.com/zos/rmsportal/BiazfanxmamNRoxxVxka.png',
-    //   userName: 'yupi',
-    //   userRole: 'admin',
-    // };
-    // initialState.currentUser = mockUser;
   }
   return initialState;
 }
