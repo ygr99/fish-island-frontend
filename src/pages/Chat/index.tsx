@@ -1,7 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Input, Button, Avatar, Tooltip, message, Popover } from 'antd';
-import { SendOutlined, CrownFilled, MenuFoldOutlined, MenuUnfoldOutlined, SmileOutlined } from '@ant-design/icons';
+import React, {useState, useRef, useEffect} from 'react';
+import {Input, Button, Avatar, Tooltip, message, Popover} from 'antd';
+import {SendOutlined, CrownFilled, MenuFoldOutlined, MenuUnfoldOutlined, SmileOutlined} from '@ant-design/icons';
 import styles from './index.less';
+import {useModel} from "@@/exports";
+import {BACKEND_HOST_WS} from "@/constants";
 
 interface Message {
   id: string;
@@ -19,12 +21,20 @@ interface User {
   status?: string;
 }
 
+// 添加当前用户类型定义
 const ChatRoom: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isEmojiPickerVisible, setIsEmojiPickerVisible] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isUserListCollapsed, setIsUserListCollapsed] = useState(false);
+  const [ws, setWs] = useState<WebSocket | null>(null);
+  const {initialState} = useModel('@@initialState');
+  const {currentUser} = initialState || {};
+  const [messageApi, contextHolder] = message.useMessage();
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const maxReconnectAttempts = 5;
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
   // 模拟在线用户数据
   const onlineUsers: User[] = [
@@ -54,16 +64,6 @@ const ChatRoom: React.FC = () => {
     },
   ];
 
-  // 模拟当前用户
-  const currentUser: User = {
-    id: '1',
-    name: '摸鱼达人',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=1',
-    level: 5,
-    isAdmin: false,
-    status: '摸鱼中'
-  };
-
   // 表情包数据
   const emojis = [
     '😊', '😂', '🤣', '❤️', '😍', '🥰', '😘', '😭', '😅', '😉',
@@ -72,6 +72,83 @@ const ChatRoom: React.FC = () => {
     '🤪', '🤨', '🧐', '😤', '😠', '😡', '🤬', '😈', '👿', '👻',
     '💩', '🤡', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻',
   ];
+
+  // WebSocket连接函数
+  const connectWebSocket = () => {
+    const token = localStorage.getItem('tokenValue');
+    if (!token || !currentUser?.id) {
+      messageApi.error('请先登录！');
+      return;
+    }
+
+    const socket = new WebSocket(BACKEND_HOST_WS + token);
+
+    socket.onopen = () => {
+      console.log('WebSocket连接成功');
+      setReconnectAttempts(0); // 重置重连次数
+      messageApi.success('连接成功！');
+    };
+
+    socket.onclose = () => {
+      console.log('WebSocket连接关闭');
+      setWs(null);
+
+      // 如果重连次数未超过最大值，尝试重连
+      if (reconnectAttempts < maxReconnectAttempts) {
+        const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
+        reconnectTimeoutRef.current = setTimeout(() => {
+          setReconnectAttempts(prev => prev + 1);
+          connectWebSocket();
+        }, timeout);
+      } else {
+        messageApi.error('连接失败，请刷新页面重试');
+      }
+    };
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log('收到服务器消息:', data);
+      if (data.type === 'chat') {
+        console.log('处理聊天消息:', data.message);
+        // 检查消息是否来自其他用户
+        const message = data.message;
+        if (message.sender.id !== String(currentUser?.id)) {
+          setMessages(prev => [...prev, message]);
+        }
+      } else if (data.type === 'message') {
+        console.log('处理普通消息:', data.data);
+        const newMessage = data.data;
+        // 检查消息是否来自其他用户
+        if (newMessage.sender.id !== String(currentUser?.id)) {
+          setMessages(prev => [...prev, newMessage]);
+        }
+      }
+    };
+
+    socket.onerror = (error) => {
+      console.error('WebSocket错误:', error);
+      messageApi.error('连接发生错误');
+    };
+
+    // 定期发送心跳消息
+    const pingInterval = setInterval(() => {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 4, // 心跳消息类型
+        }));
+      }
+    }, 25000);
+
+    setWs(socket);
+
+    return () => {
+      clearInterval(pingInterval);
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      socket.close();
+    };
+  };
 
   useEffect(() => {
     // 初始欢迎消息
@@ -88,10 +165,17 @@ const ChatRoom: React.FC = () => {
       timestamp: new Date(),
     };
     setMessages([welcomeMessage]);
-  }, []);
+
+    // 建立WebSocket连接
+    const cleanup = connectWebSocket();
+
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, [currentUser?.id]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({behavior: 'smooth'});
   };
 
   useEffect(() => {
@@ -104,14 +188,45 @@ const ChatRoom: React.FC = () => {
       return;
     }
 
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      messageApi.error('网络连接已断开，请等待重连');
+      return;
+    }
+
+    if (!currentUser?.id) {
+      messageApi.error('请先登录！');
+      return;
+    }
+
     const newMessage: Message = {
-      id: Date.now().toString(),
+      id: `${Date.now()}`,
       content: inputValue,
-      sender: currentUser,
+      sender: {
+        id: String(currentUser.id),
+        name: currentUser.userName || '游客',
+        avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+        level: 1,
+        isAdmin: currentUser.userRole === 'admin',
+      },
       timestamp: new Date(),
     };
 
-    setMessages(prevMessages => [...prevMessages, newMessage]);
+    // 先添加到本地消息列表
+    setMessages(prev => [...prev, newMessage]);
+
+    // 发送消息到服务器
+    const messageData = {
+      type: 2,
+      data: {
+        type: 'chat',
+        content: {
+          message: newMessage
+        }
+      }
+    };
+    console.log('发送到服务器的数据:', messageData);
+    ws.send(JSON.stringify(messageData));
+
     setInputValue('');
   };
 
@@ -145,25 +260,26 @@ const ChatRoom: React.FC = () => {
 
   return (
     <div className={`${styles.chatRoom} ${isUserListCollapsed ? styles.collapsed : ''}`}>
+      {contextHolder}
       <div className={styles.messageContainer}>
         {messages.map((msg) => (
           <div
             key={msg.id}
             className={`${styles.messageItem} ${
-              msg.sender.id === currentUser.id ? styles.self : ''
+              currentUser?.id && String(msg.sender.id) === String(currentUser.id) ? styles.self : ''
             }`}
           >
             <div className={styles.messageHeader}>
               <div className={styles.avatar}>
                 <Tooltip title={`等级 ${msg.sender.level}`}>
-                  <Avatar src={msg.sender.avatar} size={32} />
+                  <Avatar src={msg.sender.avatar} size={32}/>
                 </Tooltip>
               </div>
               <div className={styles.senderInfo}>
                 <span className={styles.senderName}>
                   {msg.sender.name}
                   {msg.sender.isAdmin && (
-                    <CrownFilled className={styles.adminIcon} />
+                    <CrownFilled className={styles.adminIcon}/>
                   )}
                   <span className={styles.levelBadge}>
                     {getLevelEmoji(msg.sender.level)} {msg.sender.level}
@@ -178,7 +294,7 @@ const ChatRoom: React.FC = () => {
                 </span>
           </div>
         ))}
-        <div ref={messagesEndRef} />
+        <div ref={messagesEndRef}/>
       </div>
 
       <div className={styles.userList}>
@@ -186,18 +302,18 @@ const ChatRoom: React.FC = () => {
           className={styles.collapseButton}
           onClick={() => setIsUserListCollapsed(!isUserListCollapsed)}
         >
-          {isUserListCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          {isUserListCollapsed ? <MenuUnfoldOutlined/> : <MenuFoldOutlined/>}
         </div>
         <div className={styles.userListHeader}>
           在线成员 ({onlineUsers.length})
         </div>
         {onlineUsers.map(user => (
           <div key={user.id} className={styles.userItem}>
-            <Avatar src={user.avatar} size={28} />
+            <Avatar src={user.avatar} size={28}/>
             <div className={styles.userInfo}>
               <div className={styles.userName}>
                 {user.name}
-                {user.isAdmin && <CrownFilled className={styles.adminIcon} />}
+                {user.isAdmin && <CrownFilled className={styles.adminIcon}/>}
               </div>
               <div className={styles.userStatus}>{user.status}</div>
             </div>
@@ -218,7 +334,7 @@ const ChatRoom: React.FC = () => {
           overlayClassName={styles.emojiPopover}
         >
           <Button
-            icon={<SmileOutlined />}
+            icon={<SmileOutlined/>}
             className={styles.emojiButton}
           />
         </Popover>
@@ -234,7 +350,7 @@ const ChatRoom: React.FC = () => {
         </span>
         <Button
           type="text"
-          icon={<SendOutlined />}
+          icon={<SendOutlined/>}
           onClick={handleSend}
         >
           发送
