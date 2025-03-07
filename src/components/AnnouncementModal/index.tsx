@@ -14,8 +14,9 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
                                                                title = '系统公告',
                                                                content = '🎉 欢迎使用摸鱼岛！\n\n' +
                                                                  '💡 小贴士：\n' +
-                                                                 '✅  使用 Ctrl + Shift + B 可以快速打开老板键，摸鱼更安全！\n\n' +
-                                                                 '✅  使用 Ctrl + Shift + B 打开老板页面后再 Ctrl + Shift + S 打开设置页面自定义老板页面喔！\n\n' +
+                                                                 '✅  使用 Ctrl + Shift + B 可以快速打开老板键，摸鱼更安全！\n' +
+                                                                 '✅  使用 Ctrl + Shift + B 打开老板页面后再 Ctrl + Shift + S 打开设置页面自定义老板页面喔！\n' +
+                                                                 '✅  左下角老板键还支持自定义快捷键和页面跳转喔\n' +
                                                                  '🌟 支持我们：\n' +
                                                                  '✅ 如果觉得摸鱼岛不错，欢迎给我们的项目点个 Star：\n' +
                                                                  '   https://github.com/lhccong/fish-island-frontend\n\n' +
