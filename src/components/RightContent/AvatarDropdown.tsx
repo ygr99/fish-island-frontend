@@ -26,20 +26,50 @@ export type GlobalHeaderRightProps = {
   menu?: boolean;
 };
 type MoYuTimeType = {
-  lunchTime?: Moment;
-  goal?: string;
   startTime?: Moment;
   endTime?: Moment;
+  lunchTime?: Moment;
+  monthlySalary?: number;
 };
 
+type Holiday = {
+  name: string;
+  date: Moment;
+};
 
 export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const [moYuData, setMoYuData] = useState<MoYuTimeType>({
-    goal: "365",
     startTime: moment('08:30', 'HH:mm'),
     endTime: moment('17:30', 'HH:mm'),
-    lunchTime: moment('11:30', 'HH:mm'),
+    lunchTime: moment('12:00', 'HH:mm'),
   });
+
+  // 从 localStorage 读取数据
+  useEffect(() => {
+    const savedData = localStorage.getItem('moYuData');
+    if (savedData) {
+      const parsedData = JSON.parse(savedData);
+      setMoYuData({
+        startTime: moment(parsedData.startTime),
+        endTime: moment(parsedData.endTime),
+        lunchTime: moment(parsedData.lunchTime),
+        monthlySalary: parsedData.monthlySalary,
+      });
+    }
+  }, []);
+
+  const [timeInfo, setTimeInfo] = useState<{
+    type: 'work' | 'lunch' | 'holiday';
+    name?: string;
+    timeRemaining: string;
+    earnedAmount?: number;
+  }>({ type: 'work', timeRemaining: '00:00:00' });
+
+  const holidays: Holiday[] = [
+    { name: '端午节', date: moment('2024-06-10') },
+    { name: '中秋节', date: moment('2024-09-17') },
+    { name: '国庆节', date: moment('2024-10-01') },
+  ];
 
   const [type, setType] = useState<string>('account');
   const containerClassName = useEmotionCss(() => {
@@ -53,6 +83,14 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     };
   });
   const onFinishMoYu: FormProps<MoYuTimeType>['onFinish'] = (values) => {
+    // 将 Moment 对象转换为 ISO 字符串格式后存储
+    const dataToSave = {
+      startTime: values.startTime?.format(),
+      endTime: values.endTime?.format(),
+      lunchTime: values.lunchTime?.format(),
+      monthlySalary: values.monthlySalary,
+    };
+    localStorage.setItem('moYuData', JSON.stringify(dataToSave));
     setMoYuData(values);
   };
 
@@ -223,29 +261,59 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   useEffect(() => {
     if (moYuData?.endTime && moYuData?.startTime) {
       const interval = setInterval(() => {
-        // 计算倒计时
         const now = moment();
-        const endTime = moment(moYuData.endTime);
-        const duration = moment.duration(endTime.diff(now));
-        setTimeRemaining(duration.hours() + ':' + String(duration.minutes()).padStart(2, '0') + ':' + String(duration.seconds()).padStart(2, '0'));
-
-        // 计算每天工作时长
+        
+        // 查找最近的节假日
+        const upcomingHoliday = holidays
+          .filter(h => h.date.isAfter(now))
+          .sort((a, b) => a.date.diff(now) - b.date.diff(now))[0];
+        
+        // 检查是否接近午餐时间（前后120分钟内）
+        const lunchTime = moment(moYuData.lunchTime);
+        const isNearLunch = Math.abs(now.diff(lunchTime, 'minutes')) <= 120;
+        
+        // 计算工作日每小时收入
+        const workdaysInMonth = 22; // 假设每月22个工作日
+        const workHoursPerDay = moment(moYuData.endTime).diff(moment(moYuData.startTime), 'hours');
+        const hourlyRate = moYuData.monthlySalary ? (moYuData.monthlySalary / (workdaysInMonth * workHoursPerDay)) : 0;
+        
+        // 计算已工作时长和收入
         const startTime = moment(moYuData.startTime);
-        const endTimeForWork = moment(moYuData.endTime);
-        const workDuration = moment.duration(endTimeForWork.diff(startTime));
-        const workHoursPerDay = workDuration.asHours();  // 每天的工作时长
-
-        // 计算已赚取金额
-        const goalAmount = parseFloat(moYuData.goal ? moYuData.goal : '0'); // 每天的总目标工资
         const workedDuration = moment.duration(now.diff(startTime));
-        const workedHours = workedDuration.asHours(); // 已经工作的小时数
-        const earned = (goalAmount / workHoursPerDay) * workedHours; // 已赚取的金额
-        setEarnedAmount(earned);
-      }, 100); // 每秒更新一次d
+        const earnedAmount = hourlyRate * workedDuration.asHours();
+
+        if (isNearLunch) {
+          // 午餐倒计时
+          const duration = moment.duration(lunchTime.diff(now));
+          setTimeInfo({
+            type: 'lunch',
+            timeRemaining: `${duration.hours()}:${String(duration.minutes()).padStart(2, '0')}:${String(duration.seconds()).padStart(2, '0')}`,
+            earnedAmount: moYuData.monthlySalary ? earnedAmount : undefined
+          });
+        } else if (upcomingHoliday) {
+          // 节假日倒计时
+          const duration = moment.duration(upcomingHoliday.date.diff(now));
+          setTimeInfo({
+            type: 'holiday',
+            name: upcomingHoliday.name,
+            timeRemaining: `${duration.days()}天${duration.hours()}时${duration.minutes()}分`,
+            earnedAmount: moYuData.monthlySalary ? earnedAmount : undefined
+          });
+        } else {
+          // 下班倒计时
+          const endTime = moment(moYuData.endTime);
+          const duration = moment.duration(endTime.diff(now));
+          setTimeInfo({
+            type: 'work',
+            timeRemaining: `${duration.hours()}:${String(duration.minutes()).padStart(2, '0')}:${String(duration.seconds()).padStart(2, '0')}`,
+            earnedAmount: moYuData.monthlySalary ? earnedAmount : undefined
+          });
+        }
+      }, 1000);
 
       return () => clearInterval(interval);
     }
-  }, [moYuData]);
+  }, [moYuData, holidays]);
 
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
   const [isCheckinAnimating, setIsCheckinAnimating] = useState(false);
@@ -517,31 +585,36 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
 
         <div className="App">
           {/* 其他内容 */}
-          <Modal title="下班倒计时设定" footer={null} open={isMoneyOpen} onCancel={() => {
+          <Modal title="工作时间设定" footer={null} open={isMoneyOpen} onCancel={() => {
             setIsMoneyOpen(false);
           }}>
             <div style={{display: "flex", justifyContent: "center", alignItems: "center", height: "100%"}}>
               <Form
                 name="basic"
-                initialValues={{remember: true}}
+                initialValues={{
+                  startTime: moYuData.startTime,
+                  endTime: moYuData.endTime,
+                  lunchTime: moYuData.lunchTime,
+                  monthlySalary: moYuData.monthlySalary,
+                }}
                 onFinish={onFinishMoYu}
                 onFinishFailed={onFinishFailedMoYu}
                 autoComplete="off"
               >
-                <Form.Item label="上班时间" name="startTime" initialValue={moment('08:30', 'HH:mm')}>
+                <Form.Item label="上班时间" name="startTime">
                   <TimePicker format="HH:mm"/>
                 </Form.Item>
 
-                <Form.Item label="下班时间" name="endTime" initialValue={moment('17:30', 'HH:mm')}>
+                <Form.Item label="下班时间" name="endTime">
                   <TimePicker format="HH:mm"/>
                 </Form.Item>
 
-                <Form.Item label="午饭时间" name="lunchTime" initialValue={moment('11:30', 'HH:mm')}>
+                <Form.Item label="午饭时间" name="lunchTime">
                   <TimePicker format="HH:mm"/>
                 </Form.Item>
 
-                <Form.Item label="你的目标" name="goal" initialValue={365}>
-                  <Input placeholder="（设置0则不显示）"/>
+                <Form.Item label="月薪" name="monthlySalary">
+                  <Input placeholder="选填，不填则不显示收入" type="number"/>
                 </Form.Item>
 
                 <Form.Item>
@@ -553,8 +626,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 </Form.Item>
               </Form>
             </div>
-
-
           </Modal>
           <Button
             type="primary"
@@ -565,9 +636,20 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             className="money-button"
           >
             <div className="money-button-content">
-              <div>🧑‍💻💭</div>
-              <div>⏱️️：{timeRemaining}</div>
-              <div>💰：{earnedAmount.toFixed(3)}</div>
+              <div>
+                {timeInfo.type === 'lunch' ? '🍱' : timeInfo.type === 'holiday' ? '🎉' : '🧑‍💻'}
+              </div>
+              <div>
+                {timeInfo.type === 'holiday' ? 
+                  `${timeInfo.name}: ${timeInfo.timeRemaining}` :
+                  timeInfo.type === 'lunch' ? 
+                    `午餐: ${timeInfo.timeRemaining}` :
+                    `下班: ${timeInfo.timeRemaining}`
+                }
+              </div>
+              {timeInfo.earnedAmount !== undefined && (
+                <div>💰：{timeInfo.earnedAmount.toFixed(2)}</div>
+              )}
             </div>
           </Button>
         </div>
@@ -724,31 +806,36 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       </Tooltip>
       <div className="App" style={{marginLeft: 'auto'}}>
         {/* 其他内容 */}
-        <Modal title="下班倒计时设定" footer={null} open={isMoneyOpen} onCancel={() => {
+        <Modal title="工作时间设定" footer={null} open={isMoneyOpen} onCancel={() => {
           setIsMoneyOpen(false);
         }}>
           <div style={{display: "flex", justifyContent: "center", alignItems: "center", height: "100%"}}>
             <Form
               name="basic"
-              initialValues={{remember: true}}
+              initialValues={{
+                startTime: moYuData.startTime,
+                endTime: moYuData.endTime,
+                lunchTime: moYuData.lunchTime,
+                monthlySalary: moYuData.monthlySalary,
+              }}
               onFinish={onFinishMoYu}
               onFinishFailed={onFinishFailedMoYu}
               autoComplete="off"
             >
-              <Form.Item label="上班时间" name="startTime" initialValue={moment('08:30', 'HH:mm')}>
+              <Form.Item label="上班时间" name="startTime">
                 <TimePicker format="HH:mm"/>
               </Form.Item>
 
-              <Form.Item label="下班时间" name="endTime" initialValue={moment('17:30', 'HH:mm')}>
+              <Form.Item label="下班时间" name="endTime">
                 <TimePicker format="HH:mm"/>
               </Form.Item>
 
-              <Form.Item label="午饭时间" name="lunchTime" initialValue={moment('11:30', 'HH:mm')}>
+              <Form.Item label="午饭时间" name="lunchTime">
                 <TimePicker format="HH:mm"/>
               </Form.Item>
 
-              <Form.Item label="你的目标" name="goal" initialValue={365}>
-                <Input placeholder="（设置0则不显示）"/>
+              <Form.Item label="月薪" name="monthlySalary">
+                <Input placeholder="选填，不填则不显示收入" type="number"/>
               </Form.Item>
 
               <Form.Item>
@@ -760,8 +847,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               </Form.Item>
             </Form>
           </div>
-
-
         </Modal>
         <Button
           type="primary"
@@ -772,9 +857,20 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           className="money-button"
         >
           <div className="money-button-content">
-            <div>🧑‍💻💭</div>
-            <div>⏱️️：{timeRemaining}</div>
-            <div>💰：{earnedAmount.toFixed(3)}</div>
+            <div>
+              {timeInfo.type === 'lunch' ? '🍱' : timeInfo.type === 'holiday' ? '🎉' : '🧑‍💻'}
+            </div>
+            <div>
+              {timeInfo.type === 'holiday' ? 
+                `${timeInfo.name}: ${timeInfo.timeRemaining}` :
+                timeInfo.type === 'lunch' ? 
+                  `午餐: ${timeInfo.timeRemaining}` :
+                  `下班: ${timeInfo.timeRemaining}`
+              }
+            </div>
+            {timeInfo.earnedAmount !== undefined && (
+              <div>💰：{timeInfo.earnedAmount.toFixed(2)}</div>
+            )}
           </div>
         </Button>
       </div>
