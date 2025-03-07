@@ -48,7 +48,7 @@ function App() {
     setOpponentColor(player);
     newBoard[position.row][position.col] = player;
     setBoard(newBoard);
-    addMove(position, opponentColor);
+    addMove(position, player);
     setOpponentLastMove(position);
 
     // 检查胜利
