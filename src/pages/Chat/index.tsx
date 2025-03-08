@@ -35,34 +35,17 @@ const ChatRoom: React.FC = () => {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
   const maxReconnectAttempts = 5;
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [onlineUsers, setOnlineUsers] = useState<User[]>([
+    // {
+    //   id: 'admin',
+    //   name: '管理员',
+    //   avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
+    //   level: 99,
+    //   isAdmin: true,
+    //   status: '在线'
+    // }
+  ]);
 
-  // 模拟在线用户数据
-  const onlineUsers: User[] = [
-    {
-      id: 'admin',
-      name: '管理员',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
-      level: 99,
-      isAdmin: true,
-      status: '在线'
-    },
-    {
-      id: '1',
-      name: '摸鱼达人',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=1',
-      level: 5,
-      isAdmin: false,
-      status: '摸鱼中'
-    },
-    {
-      id: '2',
-      name: '快乐星球',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=2',
-      level: 15,
-      isAdmin: false,
-      status: '忙碌'
-    },
-  ];
 
   // 表情包数据
   const emojis = [
@@ -84,9 +67,12 @@ const ChatRoom: React.FC = () => {
     const socket = new WebSocket(BACKEND_HOST_WS + token);
 
     socket.onopen = () => {
+      socket.send(JSON.stringify({
+        type: 1, // 登录连接
+      }));
       console.log('WebSocket连接成功');
       setReconnectAttempts(0); // 重置重连次数
-      messageApi.success('连接成功！');
+      // messageApi.success('连接成功！');
     };
 
     socket.onclose = () => {
@@ -111,18 +97,24 @@ const ChatRoom: React.FC = () => {
       if (data.type === 'chat') {
         console.log('处理聊天消息:', data.message);
         // 检查消息是否来自其他用户
-        const message = data.message;
-        if (message.sender.id !== String(currentUser?.id)) {
-          setMessages(prev => [...prev, message]);
+        const otherUserMessage = data.data.message;
+        console.log('otherUserMessage:', otherUserMessage);
+        if (otherUserMessage.sender.id !== String(currentUser?.id)) {
+          setMessages(prev => [...prev, otherUserMessage]);
         }
-      } else if (data.type === 'message') {
-        console.log('处理普通消息:', data.data);
-        const newMessage = data.data;
-        // 检查消息是否来自其他用户
-        if (newMessage.sender.id !== String(currentUser?.id)) {
-          setMessages(prev => [...prev, newMessage]);
-        }
+      } else if (data.type === 'userOnline') {
+        console.log('处理用户上线消息:', data.data);
+        //合并数组
+        setOnlineUsers(prev => prev.concat(data.data));
       }
+      // else if (data.type === 'message') {
+      //   console.log('处理普通消息:', data.data);
+      //   const newMessage = data.data;
+      //   // 检查消息是否来自其他用户
+      //   if (newMessage.sender.id !== String(currentUser?.id)) {
+      //     setMessages(prev => [...prev, newMessage]);
+      //   }
+      // }
     };
 
     socket.onerror = (error) => {
@@ -189,7 +181,7 @@ const ChatRoom: React.FC = () => {
     }
 
     if (!ws || ws.readyState !== WebSocket.OPEN) {
-      messageApi.error('网络连接已断开，请等待重连');
+      // messageApi.error('网络连接已断开，请等待重连');
       return;
     }
 
@@ -217,6 +209,7 @@ const ChatRoom: React.FC = () => {
     // 发送消息到服务器
     const messageData = {
       type: 2,
+      userId: -1,
       data: {
         type: 'chat',
         content: {

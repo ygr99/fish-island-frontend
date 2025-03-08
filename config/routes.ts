@@ -5,7 +5,7 @@ export default [
   ]},
   { path: '/index', icon: 'smile', component: './Index', name: '最新', requireAuth: false },
   { path: '/todo', icon: 'CalendarOutlined', component: './TODO', name: '每日待办', requireAuth: true },
-  // { path: '/chat', icon: 'MessageOutlined', component: './Chat', name: '摸鱼室', requireAuth: true },
+  { path: '/chat', icon: 'MessageOutlined', component: './Chat', name: '摸鱼室', requireAuth: true },
   {
     path: '/game',
     icon: 'DesktopOutlined',
