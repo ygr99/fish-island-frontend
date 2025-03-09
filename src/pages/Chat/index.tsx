@@ -104,8 +104,15 @@ const ChatRoom: React.FC = () => {
         }
       } else if (data.type === 'userOnline') {
         console.log('处理用户上线消息:', data.data);
-        //合并数组
-        setOnlineUsers(prev => prev.concat(data.data));
+        //合并数组如果有重复则不添加
+        const isUserExist = onlineUsers.some(user => user.id === data.data.id);
+        if (!isUserExist) {
+          setOnlineUsers(prev => prev.concat(data.data));
+        }
+      } else if (data.type === 'userOffline') {
+        console.log('处理用户下线消息:', data.data);
+        // 过滤掉下线的用户
+        setOnlineUsers(prev => prev.filter(user => user.id !== data.data));
       }
       // else if (data.type === 'message') {
       //   console.log('处理普通消息:', data.data);
