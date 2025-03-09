@@ -41,6 +41,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponsePageRoomMessageVo_ = {
+    code?: number;
+    data?: PageRoomMessageVo_;
+    message?: string;
+  };
+
   type BaseResponsePageUser_ = {
     code?: number;
     data?: PageUser_;
@@ -103,7 +109,6 @@ declare namespace API {
   };
 
   type HotPostDataVO = {
-    excerpt?: string;
     followerCount?: number;
     title?: string;
     url?: string;
@@ -129,6 +134,25 @@ declare namespace API {
     userName?: string;
     userProfile?: string;
     userRole?: string;
+  };
+
+  type Message = {
+    content?: string;
+    id?: string;
+    sender?: Sender;
+    timestamp?: string;
+  };
+
+  type MessageQueryRequest = {
+    current?: number;
+    pageSize?: number;
+    roomId?: number;
+    sortField?: string;
+    sortOrder?: string;
+  };
+
+  type MessageWrapper = {
+    message?: Message;
   };
 
   type OrderItem = {
@@ -157,6 +181,19 @@ declare namespace API {
     orders?: OrderItem[];
     pages?: number;
     records?: PostVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageRoomMessageVo_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: RoomMessageVo[];
     searchCount?: boolean;
     size?: number;
     total?: number;
@@ -269,6 +306,13 @@ declare namespace API {
     userId?: number;
   };
 
+  type RoomMessageVo = {
+    id?: number;
+    messageWrapper?: MessageWrapper;
+    roomId?: number;
+    userId?: number;
+  };
+
   type SaTokenInfo = {
     isLogin?: boolean;
     loginDevice?: string;
@@ -286,6 +330,14 @@ declare namespace API {
   type SaveTodoDto = {
     /** Todo data */
     todoData: Record<string, any>[];
+  };
+
+  type Sender = {
+    avatar?: string;
+    id?: string;
+    isAdmin?: boolean;
+    level?: number;
+    name?: string;
   };
 
   type TokenLoginUserVo = {

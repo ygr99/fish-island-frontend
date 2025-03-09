@@ -2,6 +2,7 @@
 /* eslint-disable */
 // API 更新时间：
 // API 唯一标识：
+import * as chatController from './chatController';
 import * as fileController from './fileController';
 import * as hotPostController from './hotPostController';
 import * as postController from './postController';
@@ -11,6 +12,7 @@ import * as restAuthController from './restAuthController';
 import * as todoController from './todoController';
 import * as userController from './userController';
 export default {
+  chatController,
   fileController,
   hotPostController,
   restAuthController,
