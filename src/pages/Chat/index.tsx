@@ -1,6 +1,6 @@
 import React, {useState, useRef, useEffect} from 'react';
-import {Input, Button, Avatar, Tooltip, message, Popover, Spin} from 'antd';
-import {SendOutlined, CrownFilled, MenuFoldOutlined, MenuUnfoldOutlined, SmileOutlined} from '@ant-design/icons';
+import {Input, Button, Avatar, Tooltip, message, Popover, Spin, Alert} from 'antd';
+import {SendOutlined, CrownFilled, MenuFoldOutlined, MenuUnfoldOutlined, SmileOutlined, SoundOutlined} from '@ant-design/icons';
 import styles from './index.less';
 import {useModel} from "@@/exports";
 import {BACKEND_HOST_WS} from "@/constants";
@@ -49,6 +49,9 @@ const ChatRoom: React.FC = () => {
 
   // 添加已加载消息ID的集合
   const [loadedMessageIds] = useState<Set<string>>(new Set());
+
+  const [announcement, setAnnouncement] = useState<string>('欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~');
+  const [showAnnouncement, setShowAnnouncement] = useState<boolean>(true);
 
   // 获取在线用户列表
   const fetchOnlineUsers = async () => {
@@ -416,6 +419,21 @@ const ChatRoom: React.FC = () => {
   return (
     <div className={`${styles.chatRoom} ${isUserListCollapsed ? styles.collapsed : ''}`}>
       {contextHolder}
+      {showAnnouncement && (
+        <Alert
+          message={
+            <div className={styles.announcementContent}>
+              <SoundOutlined className={styles.announcementIcon} />
+              <span>{announcement}</span>
+            </div>
+          }
+          type="info"
+          showIcon={false}
+          closable
+          onClose={() => setShowAnnouncement(false)}
+          className={styles.announcement}
+        />
+      )}
       <div className={styles['floating-fish'] + ' ' + styles.fish1}>🐟</div>
       <div className={styles['floating-fish'] + ' ' + styles.fish2}>🐠</div>
       <div className={styles['floating-fish'] + ' ' + styles.fish3}>🐡</div>
