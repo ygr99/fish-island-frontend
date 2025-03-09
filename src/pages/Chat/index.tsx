@@ -5,6 +5,7 @@ import styles from './index.less';
 import {useModel} from "@@/exports";
 import {BACKEND_HOST_WS} from "@/constants";
 import {getOnlineUserListUsingGet, listMessageVoByPageUsingPost} from "@/services/backend/chatController";
+import MessageContent from '@/components/MessageContent';
 
 interface Message {
   id: string;
@@ -415,6 +416,11 @@ const ChatRoom: React.FC = () => {
   return (
     <div className={`${styles.chatRoom} ${isUserListCollapsed ? styles.collapsed : ''}`}>
       {contextHolder}
+      <div className={styles['floating-fish'] + ' ' + styles.fish1}>🐟</div>
+      <div className={styles['floating-fish'] + ' ' + styles.fish2}>🐠</div>
+      <div className={styles['floating-fish'] + ' ' + styles.fish3}>🐡</div>
+      <div className={styles['floating-fish'] + ' ' + styles.bubble1}>💭</div>
+      <div className={styles['floating-fish'] + ' ' + styles.bubble2}>💭</div>
       <div
         className={styles.messageContainer}
         ref={messageContainerRef}
@@ -436,21 +442,26 @@ const ChatRoom: React.FC = () => {
               </div>
               <div className={styles.senderInfo}>
                 <span className={styles.senderName}>
-                  {msg.sender.name}
-                  {msg.sender.isAdmin && (
-                    <CrownFilled className={styles.adminIcon}/>
+                  {currentUser?.id && String(msg.sender.id) === String(currentUser.id) ? null : (
+                    <>
+                      {msg.sender.name}
+                      {msg.sender.isAdmin && (
+                        <CrownFilled className={styles.adminIcon}/>
+                      )}
+                      <span className={styles.levelBadge}>
+                        {getLevelEmoji(msg.sender.level)} {msg.sender.level}
+                      </span>
+                    </>
                   )}
-                  <span className={styles.levelBadge}>
-                    {getLevelEmoji(msg.sender.level)} {msg.sender.level}
-                  </span>
                 </span>
-
               </div>
             </div>
-            <div className={styles.messageContent}>{msg.content}</div>
+            <div className={styles.messageContent}>
+              <MessageContent content={msg.content} />
+            </div>
             <span className={styles.timestamp}>
-                  {new Date(msg.timestamp).toLocaleTimeString()}
-                </span>
+              {new Date(msg.timestamp).toLocaleTimeString()}
+            </span>
           </div>
         ))}
         <div ref={messagesEndRef}/>
@@ -520,3 +531,4 @@ const ChatRoom: React.FC = () => {
 };
 
 export default ChatRoom;
+
