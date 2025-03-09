@@ -17,6 +17,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseListUserChatResponse_ = {
+    code?: number;
+    data?: UserChatResponse[];
+    message?: string;
+  };
+
   type BaseResponseLoginUserVO_ = {
     code?: number;
     data?: LoginUserVO;
@@ -375,6 +381,21 @@ declare namespace API {
     userAvatar?: string;
     userName?: string;
     userRole?: string;
+  };
+
+  type UserChatResponse = {
+    /** 用户头像 */
+    avatar?: string;
+    /** 用户 ID */
+    id?: string;
+    /** 是否是管理员 */
+    isAdmin?: boolean;
+    /** 用户等级 */
+    level?: number;
+    /** 用户名称 */
+    name?: string;
+    /** 用户状态 */
+    status?: string;
   };
 
   type userLoginByGithubUsingPOSTParams = {

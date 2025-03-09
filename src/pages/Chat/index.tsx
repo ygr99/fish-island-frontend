@@ -4,7 +4,7 @@ import {SendOutlined, CrownFilled, MenuFoldOutlined, MenuUnfoldOutlined, SmileOu
 import styles from './index.less';
 import {useModel} from "@@/exports";
 import {BACKEND_HOST_WS} from "@/constants";
-import {listMessageVoByPageUsingPost} from "@/services/backend/chatController";
+import {getOnlineUserListUsingGet, listMessageVoByPageUsingPost} from "@/services/backend/chatController";
 
 interface Message {
   id: string;
@@ -48,6 +48,46 @@ const ChatRoom: React.FC = () => {
 
   // 添加已加载消息ID的集合
   const [loadedMessageIds] = useState<Set<string>>(new Set());
+
+  // 获取在线用户列表
+  const fetchOnlineUsers = async () => {
+    try {
+      const response = await getOnlineUserListUsingGet();
+      if (response.data) {
+        const onlineUsersList = response.data.map(user => ({
+          id: String(user.id),
+          name: user.name || '未知用户',
+          avatar: user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+          level: user.level || 1,
+          isAdmin: user.isAdmin || false,
+          status: '在线'
+        }));
+
+        // 如果当前用户已登录且不在列表中，将其添加到列表
+        if (currentUser?.id && !onlineUsersList.some(user => user.id === String(currentUser.id))) {
+          onlineUsersList.push({
+            id: String(currentUser.id),
+            name: currentUser.userName || '未知用户',
+            avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+            level: 1,  // 默认等级为1
+            isAdmin: currentUser.userRole === 'admin',
+            status: '在线'
+          });
+        }
+
+        setOnlineUsers(onlineUsersList);
+      }
+    } catch (error) {
+      console.error('获取在线用户列表失败:', error);
+      messageApi.error('获取在线用户列表失败');
+    }
+  };
+
+  // 初始化时获取在线用户列表
+  useEffect(() => {
+    fetchOnlineUsers();
+  }, []);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({behavior: 'smooth'});
   };

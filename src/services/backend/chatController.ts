@@ -16,3 +16,11 @@ export async function listMessageVoByPageUsingPost(
     ...(options || {}),
   });
 }
+
+/** 获取在线用户列表 GET /api/chat/online/user */
+export async function getOnlineUserListUsingGet(options?: { [key: string]: any }) {
+  return request<API.BaseResponseListUserChatResponse_>('/api/chat/online/user', {
+    method: 'GET',
+    ...(options || {}),
+  });
+}
