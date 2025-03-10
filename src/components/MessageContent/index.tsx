@@ -28,6 +28,8 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
   const [codefatherPosts, setCodefatherPosts] = useState<Record<string, CodefatherPostInfo>>({});
   // URL匹配正则表达式
   const urlRegex = /(https?:\/\/[^\s]+)/g;
+  // 图片标签匹配正则表达式
+  const imgRegex = /\[img\](.*?)\[\/img\]/g;
 
   // 截断文本到指定长度
   const truncateText = (text: string, maxLength: number = 20) => {
@@ -70,6 +72,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
       setLoading(prev => ({...prev, [url]: false}));
     }
   };
+
   const extractCodefatherId = (url: string): string | null => {
     const match = url.match(/post\/(\d+)/);
     return match ? match[1] : null;
@@ -107,127 +110,158 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
       setLoading(prev => ({...prev, [url]: false}));
     }
   };
+
   // 解析消息内容
   const parseContent = () => {
-    const parts = content.split(urlRegex);
+    // 先处理图片标签
+    const parts = content.split(imgRegex);
+    const result = [];
+    let index = 0;
 
-    return parts.map((part, index) => {
-      // 检查是否是URL
-      if (part.match(urlRegex)) {
-        const url = part.trim();
-
-        // 检查是否是B站链接
-        if (url.includes('bilibili.com')) {
-          if (!bilibiliVideos[url] && !loading[url]) {
-            fetchBilibiliMetadata(url);
-          }
-
-          return (
-            <Card
-              key={index}
-              className={styles.linkCard}
-              size="small"
-              hoverable
-            >
-              <div className={styles.linkContent}>
-                <BilibiliOutlined className={styles.linkIcon}/>
-                <div className={styles.linkInfo}>
-                  {bilibiliVideos[url] ? (
-                    <>
-                      <div className={styles.videoTitle}>{bilibiliVideos[url].title === '出错啦! - bilibili.com'? 'Bilibili 视频(解析好像被墙了🥺)' : bilibiliVideos[url].title}</div>
-                      {/*<div className={styles.videoDescription}>*/}
-                      {/*  {truncateText(bilibiliVideos[url].description)}*/}
-                      {/*</div>*/}
-                      <a href={url} target="_blank" rel="noopener noreferrer" className={styles.linkText}>
-                        {url}
-                      </a>
-                    </>
-                  ) : (
-                    <a href={url} target="_blank" rel="noopener noreferrer" className={styles.linkText}>
-                      {url}
-                    </a>
-                  )}
-                </div>
-              </div>
-            </Card>
-          );
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (i % 2 === 0) {
+        // 非图片内容，继续处理URL
+        if (part) {
+          const urlParts = part.split(urlRegex);
+          urlParts.forEach((urlPart, urlIndex) => {
+            if (urlPart.match(urlRegex)) {
+              // 处理URL
+              result.push(renderUrl(urlPart, `${index}-${urlIndex}`));
+            } else if (urlPart) {
+              // 普通文本
+              result.push(<span key={`${index}-${urlIndex}`}>{urlPart}</span>);
+            }
+          });
         }
+      } else {
+        // 图片内容
+        result.push(
+          <img
+            key={`img-${index}`}
+            src={part}
+            alt="emoticon"
+            className={styles.messageImage}
+            style={{ maxWidth: '200px', borderRadius: '8px' }}
+          />
+        );
+      }
+      index++;
+    }
 
-        // 检查是否是抖音链接
-        if (url.includes('douyin.com')) {
-          return (
-            <Card
-              key={index}
-              className={styles.linkCard}
-              size="small"
-              hoverable
-            >
-              <div className={styles.linkContent}>
-                <img src={DOUYIN_ICON} alt="抖音" className={styles.linkIcon} style={{width: '16px', height: '16px'}}/>
+    return result;
+  };
+
+  // 渲染URL内容
+  const renderUrl = (url: string, key: string) => {
+    // 检查是否是B站链接
+    if (url.includes('bilibili.com')) {
+      if (!bilibiliVideos[url] && !loading[url]) {
+        fetchBilibiliMetadata(url);
+      }
+
+      return (
+        <Card
+          key={key}
+          className={styles.linkCard}
+          size="small"
+          hoverable
+        >
+          <div className={styles.linkContent}>
+            <BilibiliOutlined className={styles.linkIcon}/>
+            <div className={styles.linkInfo}>
+              {bilibiliVideos[url] ? (
+                <>
+                  <div className={styles.videoTitle}>
+                    {bilibiliVideos[url].title === '出错啦! - bilibili.com'
+                      ? 'Bilibili 视频(解析好像被墙了🥺)'
+                      : bilibiliVideos[url].title}
+                  </div>
+                  <a href={url} target="_blank" rel="noopener noreferrer" className={styles.linkText}>
+                    {url}
+                  </a>
+                </>
+              ) : (
                 <a href={url} target="_blank" rel="noopener noreferrer" className={styles.linkText}>
                   {url}
                 </a>
-              </div>
-            </Card>
-          );
-        }
-
-        //检查是否是编程导航链接
-        if (url.includes('codefather.cn/post/')) {
-          if (!codefatherPosts[url] && !loading[url]) {
-            fetchCodefatherMetadata(url);
-          }
-
-          return (
-            <Card
-              key={index}
-              className={styles.linkCard}
-              size="small"
-              hoverable
-            >
-              <div className={styles.linkContent}>
-                <img src={CODEFATHER_ICON} alt="编程导航" className={styles.linkIcon}
-                     style={{width: '16px', height: '16px'}}/>
-                <div className={styles.linkInfo}>
-                  {codefatherPosts[url] ? (
-                    <>
-                      <div className={styles.videoTitle}>{codefatherPosts[url].title}</div>
-                      <a href={url} target="_blank" rel="noopener noreferrer" className={styles.linkText}>
-                        {truncateText(url, 30)}
-                      </a>
-                    </>
-                  ) : (
-                    <a href={url} target="_blank" rel="noopener noreferrer" className={styles.linkText}>
-                      {truncateText(url, 30)}
-                    </a>
-                  )}
-                </div>
-              </div>
-            </Card>
-          );
-        }
-
-        // 其他URL显示为普通链接
-        return (
-          <Card
-            key={index}
-            className={styles.linkCard}
-            size="small"
-            hoverable
-          >
-            <div className={styles.linkContent}>
-              <LinkOutlined className={styles.linkIcon}/>
-              <a href={url} target="_blank" rel="noopener noreferrer" className={styles.linkText}>
-                {url}
-              </a>
+              )}
             </div>
-          </Card>
-        );
+          </div>
+        </Card>
+      );
+    }
+
+    // 检查是否是抖音链接
+    if (url.includes('douyin.com')) {
+      return (
+        <Card
+          key={key}
+          className={styles.linkCard}
+          size="small"
+          hoverable
+        >
+          <div className={styles.linkContent}>
+            <img src={DOUYIN_ICON} alt="抖音" className={styles.linkIcon} style={{width: '16px', height: '16px'}}/>
+            <a href={url} target="_blank" rel="noopener noreferrer" className={styles.linkText}>
+              {url}
+            </a>
+          </div>
+        </Card>
+      );
+    }
+
+    // 检查是否是编程导航链接
+    if (url.includes('codefather.cn/post/')) {
+      if (!codefatherPosts[url] && !loading[url]) {
+        fetchCodefatherMetadata(url);
       }
 
-      // 非URL内容直接显示
-      return <span key={index}>{part}</span>;
-    });
+      return (
+        <Card
+          key={key}
+          className={styles.linkCard}
+          size="small"
+          hoverable
+        >
+          <div className={styles.linkContent}>
+            <img src={CODEFATHER_ICON} alt="编程导航" className={styles.linkIcon}
+                 style={{width: '16px', height: '16px'}}/>
+            <div className={styles.linkInfo}>
+              {codefatherPosts[url] ? (
+                <>
+                  <div className={styles.videoTitle}>{codefatherPosts[url].title}</div>
+                  <a href={url} target="_blank" rel="noopener noreferrer" className={styles.linkText}>
+                    {truncateText(url, 30)}
+                  </a>
+                </>
+              ) : (
+                <a href={url} target="_blank" rel="noopener noreferrer" className={styles.linkText}>
+                  {truncateText(url, 30)}
+                </a>
+              )}
+            </div>
+          </div>
+        </Card>
+      );
+    }
+
+    // 其他URL显示为普通链接
+    return (
+      <Card
+        key={key}
+        className={styles.linkCard}
+        size="small"
+        hoverable
+      >
+        <div className={styles.linkContent}>
+          <LinkOutlined className={styles.linkIcon}/>
+          <a href={url} target="_blank" rel="noopener noreferrer" className={styles.linkText}>
+            {url}
+          </a>
+        </div>
+      </Card>
+    );
   };
 
   return <div className={styles.messageContent}>{parseContent()}</div>;

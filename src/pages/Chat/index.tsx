@@ -1,11 +1,12 @@
 import React, {useState, useRef, useEffect} from 'react';
-import {Input, Button, Avatar, Tooltip, message, Popover, Spin, Alert, Modal} from 'antd';
+import {Input, Button, Avatar, Tooltip, message, Popover, Spin, Alert} from 'antd';
 import {SendOutlined, CrownFilled, MenuFoldOutlined, MenuUnfoldOutlined, SmileOutlined, SoundOutlined, PictureOutlined} from '@ant-design/icons';
 import styles from './index.less';
 import {useModel} from "@@/exports";
 import {BACKEND_HOST_WS} from "@/constants";
 import {getOnlineUserListUsingGet, listMessageVoByPageUsingPost} from "@/services/backend/chatController";
 import MessageContent from '@/components/MessageContent';
+import EmoticonPicker from '@/components/EmoticonPicker';
 
 interface Message {
   id: string;
@@ -27,6 +28,7 @@ const ChatRoom: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isEmojiPickerVisible, setIsEmojiPickerVisible] = useState(false);
+  const [isEmoticonPickerVisible, setIsEmoticonPickerVisible] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const [isUserListCollapsed, setIsUserListCollapsed] = useState(false);
@@ -52,11 +54,6 @@ const ChatRoom: React.FC = () => {
 
   const [announcement, setAnnouncement] = useState<string>('欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~');
   const [showAnnouncement, setShowAnnouncement] = useState<boolean>(true);
-
-  const [isImagePickerVisible, setIsImagePickerVisible] = useState(false);
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
 
   // 获取在线用户列表
   const fetchOnlineUsers = async () => {
@@ -212,6 +209,8 @@ const ChatRoom: React.FC = () => {
       return () => container.removeEventListener('scroll', handleScroll);
     }
   }, [loading, hasMore, current]);
+
+
 
   const handleSend = () => {
     if (!inputValue.trim()) {
@@ -419,66 +418,12 @@ const ChatRoom: React.FC = () => {
     </div>
   );
 
-  // 搜索表情包
-  const searchEmojis = async (keyword: string) => {
-    if (!keyword.trim()) return;
-
-    setIsSearching(true);
-    try {
-      const response = await fetch(`https://fish.codebug.icu/sogou-api/napi/wap/emoji/searchlist?keyword=${encodeURIComponent(keyword)}&spver=&rcer=&tag=0&routeName=emosearch`);
-      const data = await response.json();
-      if (data.status === 0 && data.data.emotions) {
-        setSearchResults(data.data.emotions);
-      }
-    } catch (error) {
-      console.error('搜索表情包失败:', error);
-      messageApi.error('搜索表情包失败');
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  // 发送图片消息
-  const handleImageSend = (imageUrl: string) => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      return;
-    }
-
-    if (!currentUser?.id) {
-      messageApi.error('请先登录！');
-      return;
-    }
-
-    const newMessage: Message = {
-      id: `${Date.now()}`,
-      content: `[img]${imageUrl}[/img]`,
-      sender: {
-        id: String(currentUser.id),
-        name: currentUser.userName || '游客',
-        avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-        level: 1,
-        isAdmin: currentUser.userRole === 'admin',
-      },
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, newMessage]);
-    setTotal(prev => prev + 1);
-    setHasMore(true);
-
-    const messageData = {
-      type: 2,
-      userId: -1,
-      data: {
-        type: 'chat',
-        content: {
-          message: newMessage
-        }
-      }
-    };
-    ws.send(JSON.stringify(messageData));
-    setIsImagePickerVisible(false);
-    setTimeout(scrollToBottom, 100);
+  const handleEmoticonSelect = (url: string) => {
+    // 将图片URL作为消息内容发送
+    setInputValue(`[img]${url}[/img]`);
+    setIsEmoticonPickerVisible(false);
+    // 自动发送消息
+    handleSend();
   };
 
   return (
@@ -591,11 +536,19 @@ const ChatRoom: React.FC = () => {
             className={styles.emojiButton}
           />
         </Popover>
-        <Button
-          icon={<PictureOutlined />}
-          className={styles.imageButton}
-          onClick={() => setIsImagePickerVisible(true)}
-        />
+        <Popover
+          content={<EmoticonPicker onSelect={handleEmoticonSelect} />}
+          trigger="click"
+          visible={isEmoticonPickerVisible}
+          onVisibleChange={setIsEmoticonPickerVisible}
+          placement="topLeft"
+          overlayClassName={styles.emoticonPopover}
+        >
+          <Button
+            icon={<PictureOutlined/>}
+            className={styles.emoticonButton}
+          />
+        </Popover>
         <Input
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
@@ -614,45 +567,6 @@ const ChatRoom: React.FC = () => {
           发送
         </Button>
       </div>
-
-      <Modal
-        title="搜索表情包"
-        open={isImagePickerVisible}
-        onCancel={() => setIsImagePickerVisible(false)}
-        footer={null}
-        width={800}
-      >
-        <div className={styles.imageSearchContainer}>
-          <Input.Search
-            placeholder="输入关键词搜索表情包..."
-            value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
-            onSearch={searchEmojis}
-            enterButton
-            style={{ marginBottom: 16 }}
-          />
-          <div className={styles.imageResults}>
-            {isSearching ? (
-              <div className={styles.searchLoading}>
-                <Spin />
-                <p>搜索中...</p>
-              </div>
-            ) : (
-              <div className={styles.imageGrid}>
-                {searchResults.map((image, index) => (
-                  <div
-                    key={index}
-                    className={styles.imageItem}
-                    onClick={() => handleImageSend(image.thumbSrc)}
-                  >
-                    <img src={image.thumbSrc} alt={`表情包${index + 1}`} />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 };

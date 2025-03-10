@@ -1,6 +1,20 @@
 .messageContent {
   word-break: break-all;
   white-space: pre-wrap;
+
+  .messageImage {
+    display: block;
+    max-width: 200px;
+    border-radius: 8px;
+    margin: 4px 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+    cursor: pointer;
+
+    &:hover {
+      transform: scale(1.02);
+    }
+  }
 }
 
 .linkCard {
