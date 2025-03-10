@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Alert, Avatar, Button, Input, message, Popover, Spin, Tooltip} from 'antd';
+import {Alert, Avatar, Button, Input, message, Popover, Spin, Tooltip, Popconfirm} from 'antd';
 import {
   CrownFilled,
   MenuFoldOutlined,
@@ -7,7 +7,8 @@ import {
   PictureOutlined,
   SendOutlined,
   SmileOutlined,
-  SoundOutlined
+  SoundOutlined,
+  DeleteOutlined
 } from '@ant-design/icons';
 import styles from './index.less';
 import {useModel} from "@@/exports";
@@ -122,7 +123,7 @@ const ChatRoom: React.FC = () => {
       if (response.data?.records) {
         const historyMessages = response.data.records
           .map(record => ({
-            id: String(record.id),
+            id: String(record.messageWrapper?.message?.id),
             content: record.messageWrapper?.message?.content || '',
             sender: {
               id: String(record.userId),
@@ -350,6 +351,13 @@ const ChatRoom: React.FC = () => {
             setTimeout(scrollToBottom, 100);
           }
         }
+      } else if (data.type === 'userMessageRevoke') {
+        console.log('处理消息撤回:', data.data);
+        // 从消息列表中移除被撤回的消息
+        setMessages(prev => prev.filter(msg => msg.id !== data.data));
+        // 更新总消息数
+        setTotal(prev => Math.max(0, prev - 1));
+        // messageApi.info('一条消息已被撤回');
       } else if (data.type === 'userOnline') {
         console.log('处理用户上线消息:', data.data);
         setOnlineUsers(prev => [
@@ -392,11 +400,11 @@ const ChatRoom: React.FC = () => {
   useEffect(() => {
     setIsComponentMounted(true);
     isManuallyClosedRef.current = false;
-    
+
     // 只有当用户已登录时才建立WebSocket连接
     if (currentUser?.id) {
       const cleanup = connectWebSocket();
-      
+
       return () => {
         setIsComponentMounted(false);
         isManuallyClosedRef.current = true;  // 标记为手动关闭
@@ -492,6 +500,25 @@ const ChatRoom: React.FC = () => {
     setTimeout(scrollToBottom, 100);
   };
 
+  // 添加撤回消息的处理函数
+  const handleRevokeMessage = (messageId: string) => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      messageApi.error('连接已断开，无法撤回消息');
+      return;
+    }
+
+    const messageData = {
+      type: 2,
+      userId: -1,
+      data: {
+        type: 'userMessageRevoke',
+        content:  messageId
+      }
+    };
+
+    ws.send(JSON.stringify(messageData));
+  };
+
   return (
     <div className={`${styles.chatRoom} ${isUserListCollapsed ? styles.collapsed : ''}`}>
       {contextHolder}
@@ -530,7 +557,7 @@ const ChatRoom: React.FC = () => {
           >
             <div className={styles.messageHeader}>
               <div className={styles.avatar}>
-                <Tooltip title={`等级 ${msg.sender.level}`}>
+                <Tooltip title={`等级 ${msg.sender.level}}`}>
                   <Avatar src={msg.sender.avatar} size={32}/>
                 </Tooltip>
               </div>
@@ -553,9 +580,21 @@ const ChatRoom: React.FC = () => {
             <div className={styles.messageContent}>
               <MessageContent content={msg.content}/>
             </div>
-            <span className={styles.timestamp}>
-              {new Date(msg.timestamp).toLocaleTimeString()}
-            </span>
+            <div className={styles.messageFooter}>
+              <span className={styles.timestamp}>
+                {new Date(msg.timestamp).toLocaleTimeString()}
+              </span>
+              {currentUser?.id && String(msg.sender.id) === String(currentUser.id) && (
+                <Popconfirm
+                  title={`确定要撤回这条消息吗？${JSON.stringify(msg)}`}
+                  onConfirm={() => handleRevokeMessage(msg.id)}
+                  okText="确定"
+                  cancelText="取消"
+                >
+                  <span className={styles.revokeText}>撤回</span>
+                </Popconfirm>
+              )}
+            </div>
           </div>
         ))}
         <div ref={messagesEndRef}/>
