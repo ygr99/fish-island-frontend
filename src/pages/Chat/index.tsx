@@ -427,6 +427,19 @@ const ChatRoom: React.FC = () => {
     return '🌱';
   };
 
+  // 新增管理员标识函数
+  const getAdminTag = () => {
+    // 随机选择一个摸鱼表情
+    const fishEmojis = ['🐟', '🐠', '🐡', '🎣'];
+    const randomFish = fishEmojis[Math.floor(Math.random() * fishEmojis.length)];
+    return (
+      <span className={styles.adminTag}>
+        {randomFish}
+        <span className={styles.adminText}>摸鱼官</span>
+      </span>
+    );
+  };
+
   const handleEmojiClick = (emoji: string) => {
     setInputValue(prev => prev + emoji);
     setIsEmojiPickerVisible(false);
@@ -520,6 +533,33 @@ const ChatRoom: React.FC = () => {
     messageApi.info('消息已撤回');
   };
 
+  const UserInfoCard: React.FC<{ user: User }> = ({ user }) => {
+    return (
+      <div className={styles.userInfoCard}>
+        <div className={styles.userInfoCardHeader}>
+          <div className={styles.avatarWrapper}>
+            <Avatar src={user.avatar} size={48} />
+            <div className={styles.floatingFish}>🐟</div>
+          </div>
+          <div className={styles.userInfoCardTitle}>
+            <div className={styles.userInfoCardNameRow}>
+              <span className={styles.userInfoCardName}>{user.name}</span>
+              <span className={styles.userInfoCardLevel}>
+                <span className={styles.levelEmoji}>{getLevelEmoji(user.level)}</span>
+                <span className={styles.levelText}>{user.level}</span>
+              </span>
+            </div>
+            {user.isAdmin && (
+              <div className={styles.userInfoCardAdminTag}>
+                {getAdminTag()}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className={`${styles.chatRoom} ${isUserListCollapsed ? styles.collapsed : ''}`}>
       {contextHolder}
@@ -558,18 +598,24 @@ const ChatRoom: React.FC = () => {
           >
             <div className={styles.messageHeader}>
               <div className={styles.avatar}>
-                <Tooltip title={`等级 ${msg.sender.level}}`}>
+                <Popover 
+                  content={<UserInfoCard user={msg.sender} />} 
+                  trigger="hover"
+                  placement="top"
+                >
                   <Avatar src={msg.sender.avatar} size={32}/>
-                </Tooltip>
+                </Popover>
+                {msg.sender.isAdmin && (
+                  <div className={styles.adminTagWrapper}>
+                    {getAdminTag()}
+                  </div>
+                )}
               </div>
               <div className={styles.senderInfo}>
                 <span className={styles.senderName}>
                   {currentUser?.id && String(msg.sender.id) === String(currentUser.id) ? null : (
                     <>
                       {msg.sender.name}
-                      {msg.sender.isAdmin && (
-                        <CrownFilled className={styles.adminIcon}/>
-                      )}
                       <span className={styles.levelBadge}>
                         {getLevelEmoji(msg.sender.level)} {msg.sender.level}
                       </span>
@@ -613,11 +659,23 @@ const ChatRoom: React.FC = () => {
         </div>
         {onlineUsers.map(user => (
           <div key={user.id} className={styles.userItem}>
-            <Avatar src={user.avatar} size={28}/>
+            <div className={styles.avatarWrapper}>
+              <Popover 
+                content={<UserInfoCard user={user} />} 
+                trigger="hover"
+                placement="right"
+              >
+                <Avatar src={user.avatar} size={28}/>
+              </Popover>
+              {user.isAdmin && (
+                <div className={styles.adminTagWrapper}>
+                  {getAdminTag()}
+                </div>
+              )}
+            </div>
             <div className={styles.userInfo}>
               <div className={styles.userName}>
                 {user.name}
-                {user.isAdmin && <CrownFilled className={styles.adminIcon}/>}
               </div>
               <div className={styles.userStatus}>{user.status}</div>
             </div>
