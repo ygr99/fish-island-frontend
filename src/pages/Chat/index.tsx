@@ -357,7 +357,6 @@ const ChatRoom: React.FC = () => {
         setMessages(prev => prev.filter(msg => msg.id !== data.data));
         // 更新总消息数
         setTotal(prev => Math.max(0, prev - 1));
-        // messageApi.info('一条消息已被撤回');
       } else if (data.type === 'userOnline') {
         console.log('处理用户上线消息:', data.data);
         setOnlineUsers(prev => [
@@ -517,6 +516,8 @@ const ChatRoom: React.FC = () => {
     };
 
     ws.send(JSON.stringify(messageData));
+
+    messageApi.info('消息已撤回');
   };
 
   return (
@@ -586,7 +587,7 @@ const ChatRoom: React.FC = () => {
               </span>
               {currentUser?.id && String(msg.sender.id) === String(currentUser.id) && (
                 <Popconfirm
-                  title={`确定要撤回这条消息吗？${JSON.stringify(msg)}`}
+                  title={`确定要撤回这条消息吗`}
                   onConfirm={() => handleRevokeMessage(msg.id)}
                   okText="确定"
                   cancelText="取消"
