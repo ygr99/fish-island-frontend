@@ -20,7 +20,6 @@ interface BilibiliVideoInfo {
 interface CodefatherPostInfo {
   title: string;
   url: string;
-  cover?: string;
 }
 
 const MessageContent: React.FC<MessageContentProps> = ({content}) => {
@@ -91,8 +90,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
           ...prev,
           [url]: {
             title: data.data.title,
-            url,
-            cover: data.data.cover
+            url
           }
         }));
       }
@@ -188,16 +186,9 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
               hoverable
             >
               <div className={styles.linkContent}>
-                {codefatherPosts[url]?.cover && (
-                  <img 
-                    src={codefatherPosts[url].cover} 
-                    alt={codefatherPosts[url].title}
-                    className={styles.coverImage}
-                  />
-                )}
+                <img src={CODEFATHER_ICON} alt="编程导航" className={styles.linkIcon}
+                     style={{width: '16px', height: '16px'}}/>
                 <div className={styles.linkInfo}>
-                  <img src={CODEFATHER_ICON} alt="编程导航" className={styles.linkIcon}
-                       style={{width: '16px', height: '16px'}}/>
                   {codefatherPosts[url] ? (
                     <>
                       <div className={styles.videoTitle}>{codefatherPosts[url].title}</div>
