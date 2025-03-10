@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {Card} from 'antd';
+import {Card, Image} from 'antd';
 import {BilibiliOutlined, LinkOutlined} from '@ant-design/icons';
 import styles from './index.less';
 
@@ -137,12 +137,13 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
       } else {
         // 图片内容
         result.push(
-          <img
+          <Image
             key={`img-${index}`}
             src={part}
             alt="emoticon"
             className={styles.messageImage}
             style={{ maxWidth: '200px', borderRadius: '8px' }}
+            preview={true}
           />
         );
       }
