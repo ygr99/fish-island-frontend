@@ -39,7 +39,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
   const fetchBilibiliMetadata = async (url: string) => {
     setLoading(prev => ({...prev, [url]: true}));
     try {
-      const proxyUrl = `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(url)}`;
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
       const response = await fetch(proxyUrl);
       const html = await response.text();
 
@@ -60,8 +60,8 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
       setBilibiliVideos(prev => ({
         ...prev,
         [url]: {
-          title: 'Bilibili 视频',
-          description: '这是一个 Bilibili 视频链接',
+          title: 'Bilibili',
+          description: '解析功能暂时失效啦',
           icon: 'https://www.bilibili.com/favicon.ico',
           url
         }
@@ -134,10 +134,10 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
                 <div className={styles.linkInfo}>
                   {bilibiliVideos[url] ? (
                     <>
-                      <div className={styles.videoTitle}>{bilibiliVideos[url].title}</div>
-                      <div className={styles.videoDescription}>
-                        {truncateText(bilibiliVideos[url].description)}
-                      </div>
+                      <div className={styles.videoTitle}>{bilibiliVideos[url].title === '出错啦! - bilibili.com'? 'Bilibili 视频(解析好像被墙了🥺)' : bilibiliVideos[url].title}</div>
+                      {/*<div className={styles.videoDescription}>*/}
+                      {/*  {truncateText(bilibiliVideos[url].description)}*/}
+                      {/*</div>*/}
                       <a href={url} target="_blank" rel="noopener noreferrer" className={styles.linkText}>
                         {url}
                       </a>
