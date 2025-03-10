@@ -16,6 +16,7 @@ import {
   Calendar,
   Badge,
   Card,
+  Checkbox,
 } from "antd"
 import {PlusOutlined, CalendarOutlined, CheckOutlined, DeleteOutlined} from "@ant-design/icons"
 import dayjs from "dayjs"
@@ -80,6 +81,7 @@ export default function TodoList() {
   const [selectedDate, setSelectedDate] = useState(dayjs())
   const [form] = Form.useForm()
   const [viewMode, setViewMode] = useState("list") // 'list' 或 'calendar'
+  const [showMonthView, setShowMonthView] = useState(false)
   const isMobile = useWindowSize();
 
   // 加载任务数据
@@ -216,11 +218,17 @@ export default function TodoList() {
   }
 
   // 按日期筛选任务
-  const filteredTasks = tasks.filter(
-    (task: {
-      date: string | number | dayjs.Dayjs | Date | null | undefined
-    }) => dayjs(task.date).format("YYYY-MM-DD") === selectedDate.format("YYYY-MM-DD"),
-  )
+  const filteredTasks = tasks.filter((task: {
+    date: string | number | dayjs.Dayjs | Date | null | undefined
+  }) => {
+    if (showMonthView) {
+      const taskDate = dayjs(task.date);
+      const startOfMonth = selectedDate.startOf('month');
+      const endOfMonth = selectedDate.endOf('month');
+      return taskDate.isAfter(startOfMonth) && taskDate.isBefore(endOfMonth);
+    }
+    return dayjs(task.date).format("YYYY-MM-DD") === selectedDate.format("YYYY-MM-DD");
+  });
 
   // 日历数据处理
   const getListData = (value: { format: (arg0: string) => any }) => {
@@ -328,15 +336,24 @@ export default function TodoList() {
               marginBottom: 20
             }}>
               <Title level={4} style={{margin: 0, fontSize: isMobile ? "18px" : "20px"}}>
-                <CalendarOutlined/> {selectedDate.format("YYYY年MM月DD日")} 的任务
+                <CalendarOutlined/> {showMonthView ? `${selectedDate.format("YYYY年MM月")} 的任务` : `${selectedDate.format("YYYY年MM月DD日")} 的任务`}
               </Title>
-              <DatePicker 
-                value={selectedDate} 
-                onChange={setSelectedDate} 
-                locale={locale} 
-                allowClear={false}
-                style={{ width: isMobile ? "100%" : "auto" }}
-              />
+              <Space style={{ width: isMobile ? "100%" : "auto" }}>
+                <DatePicker 
+                  value={selectedDate} 
+                  onChange={setSelectedDate} 
+                  locale={locale} 
+                  allowClear={false}
+                  style={{ width: isMobile ? "100%" : "auto" }}
+                />
+                <Checkbox 
+                  checked={showMonthView}
+                  onChange={(e) => setShowMonthView(e.target.checked)}
+                  style={{ marginLeft: isMobile ? "0" : "8px" }}
+                >
+                  显示整月任务
+                </Checkbox>
+              </Space>
             </div>
 
             <Divider/>
@@ -411,9 +428,8 @@ export default function TodoList() {
                       title={
                         <div style={{
                           display: "flex",
-                          flexDirection: isMobile ? "column" : "row",
-                          gap: isMobile ? "8px" : "12px",
-                          alignItems: isMobile ? "flex-start" : "center",
+                          flexDirection: "column",
+                          gap: "4px",
                           width: "100%"
                         }}>
                           <div style={{
@@ -437,13 +453,6 @@ export default function TodoList() {
                               </span>
                             )}
                             <span style={{ wordBreak: "break-all" }}>{task.title}</span>
-                          </div>
-                          <div style={{
-                            display: "flex",
-                            gap: "8px",
-                            flexWrap: "wrap",
-                            marginTop: isMobile ? "4px" : 0
-                          }}>
                             <Tag
                               color={priorityConfig[task.priority].color}
                               style={{
@@ -470,6 +479,15 @@ export default function TodoList() {
                               {taskStatus[task.status].text}
                             </Tag>
                           </div>
+                          {showMonthView && (
+                            <span style={{ 
+                              color: "#8c8c8c", 
+                              fontSize: isMobile ? "12px" : "14px",
+                              marginLeft: "26px"
+                            }}>
+                              {dayjs(task.date).format("YYYY-MM-DD")}
+                            </span>
+                          )}
                         </div>
                       }
                       description={
