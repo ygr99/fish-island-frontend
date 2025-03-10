@@ -172,11 +172,11 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
 
   // 默认头像列表
   const defaultAvatars = [
-    'https://img1.baidu.com/it/u=3014707936,92115294&fm=253&app=120&size=w931&n=0&f=JPEG&fmt=auto?sec=1741366800&t=1e39c948763f0da7919f2da645dfd933',
+    'https://img2.baidu.com/it/u=3757990320,1019789652&fm=253&fmt=auto&app=120&f=JPEG?w=800&h=800',
     'https://img0.baidu.com/it/u=2218138162,227420128&fm=253&fmt=auto&app=138&f=JPEG?w=607&h=607',
-    'https://img2.baidu.com/it/u=1855636951,3171633874&fm=253&fmt=auto?w=800&h=800',
-    'https://img2.baidu.com/it/u=1130909076,1175412011&fm=253&app=138&size=w931&n=0&f=JPEG&fmt=auto?sec=1741366800&t=a777374386780f063fd0b0d8423474cd',
-    'https://img2.baidu.com/it/u=4235829091,920344249&fm=253&app=138&size=w931&n=0&f=JPEG&fmt=auto?sec=1741366800&t=f7a30e0458cdb1ef78ba4562d5e3a07b',
+    'https://img2.baidu.com/it/u=2695396371,803611298&fm=253&fmt=auto&app=120&f=JPEG?w=800&h=800',
+    'https://img1.baidu.com/it/u=648366534,1664954226&fm=253&fmt=auto&app=120&f=JPEG?w=800&h=800',
+    'https://img0.baidu.com/it/u=925856458,2747676088&fm=253&fmt=auto?w=800&h=800',
   ];
 
   const handleEditProfile = async (values: any) => {
