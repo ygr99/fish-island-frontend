@@ -22,6 +22,28 @@
     0 0 0 1px rgba(255, 255, 255, 0.1) inset,
     0 0 0 1px rgba(255, 255, 255, 0.2) inset;
 
+  .announcement {
+    grid-area: announcement;
+    margin: 10px;
+    border-radius: 12px;
+    
+    :global(.ant-alert) {
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.9);
+    }
+    
+    .announcementContent {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      
+      .announcementIcon {
+        font-size: 16px;
+        color: #1890ff;
+      }
+    }
+  }
+
   // 添加漂浮的摸鱼元素
   .floating-fish {
     position: absolute;
@@ -173,6 +195,10 @@
     grid-template-areas:
       "messages"
       "input";
+
+    .announcement {
+      display: none;
+    }
 
     &::before {
       display: none;
@@ -592,29 +618,6 @@
 
       .inputCounter {
         right: 100px;
-      }
-    }
-  }
-
-  .announcement {
-    grid-area: announcement;
-    margin: 10px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
-    border: none;
-    box-shadow: 0 4px 12px rgba(255, 154, 158, 0.2);
-
-    .announcementContent {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: white;
-      font-size: 14px;
-      padding: 8px 16px;
-
-      .announcementIcon {
-        font-size: 18px;
-        color: white;
       }
     }
   }
