@@ -39,7 +39,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
   const fetchBilibiliMetadata = async (url: string) => {
     setLoading(prev => ({...prev, [url]: true}));
     try {
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+      const proxyUrl = `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(url)}`;
       const response = await fetch(proxyUrl);
       const html = await response.text();
 
