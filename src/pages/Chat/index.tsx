@@ -1,6 +1,14 @@
-import React, {useState, useRef, useEffect} from 'react';
-import {Input, Button, Avatar, Tooltip, message, Popover, Spin, Alert} from 'antd';
-import {SendOutlined, CrownFilled, MenuFoldOutlined, MenuUnfoldOutlined, SmileOutlined, SoundOutlined, PictureOutlined} from '@ant-design/icons';
+import React, {useEffect, useRef, useState} from 'react';
+import {Alert, Avatar, Button, Input, message, Popover, Spin, Tooltip} from 'antd';
+import {
+  CrownFilled,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  PictureOutlined,
+  SendOutlined,
+  SmileOutlined,
+  SoundOutlined
+} from '@ant-design/icons';
 import styles from './index.less';
 import {useModel} from "@@/exports";
 import {BACKEND_HOST_WS} from "@/constants";
@@ -41,6 +49,7 @@ const ChatRoom: React.FC = () => {
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
   const [isNearBottom, setIsNearBottom] = useState(true);
+  const isManuallyClosedRef = useRef(false);
 
   // 分页相关状态
   const [current, setCurrent] = useState<number>(1);
@@ -48,12 +57,13 @@ const ChatRoom: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const pageSize = 10;
-
   // 添加已加载消息ID的集合
   const [loadedMessageIds] = useState<Set<string>>(new Set());
 
   const [announcement, setAnnouncement] = useState<string>('欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~');
   const [showAnnouncement, setShowAnnouncement] = useState<boolean>(true);
+
+  const [isComponentMounted, setIsComponentMounted] = useState(true);
 
   // 获取在线用户列表
   const fetchOnlineUsers = async () => {
@@ -213,7 +223,7 @@ const ChatRoom: React.FC = () => {
   const handleSend = () => {
     // 检查是否是图片消息
     const isImageMessage = inputValue.match(/^\[img\].*\[\/img\]$/);
-    
+
     if (!isImageMessage && !inputValue.trim()) {
       message.warning('请输入消息内容');
       return;
@@ -283,6 +293,11 @@ const ChatRoom: React.FC = () => {
       return;
     }
 
+    // 如果是手动关闭的，不要重新连接
+    if (isManuallyClosedRef.current) {
+      return;
+    }
+
     const socket = new WebSocket(BACKEND_HOST_WS + token);
 
     socket.onopen = () => {
@@ -291,22 +306,19 @@ const ChatRoom: React.FC = () => {
       }));
       console.log('WebSocket连接成功');
       setReconnectAttempts(0); // 重置重连次数
-      // messageApi.success('连接成功！');
     };
 
     socket.onclose = () => {
       console.log('WebSocket连接关闭');
       setWs(null);
 
-      // 如果重连次数未超过最大值，尝试重连
-      if (reconnectAttempts < maxReconnectAttempts) {
+      // 只有在组件仍然挂载且非主动关闭的情况下才尝试重连
+      if (isComponentMounted && !isManuallyClosedRef.current && reconnectAttempts < maxReconnectAttempts) {
         const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
         reconnectTimeoutRef.current = setTimeout(() => {
           setReconnectAttempts(prev => prev + 1);
           connectWebSocket();
         }, timeout);
-      } else {
-        messageApi.error('连接失败，请刷新页面重试');
       }
     };
 
@@ -314,13 +326,23 @@ const ChatRoom: React.FC = () => {
       const data = JSON.parse(event.data);
       console.log('收到服务器消息:', data);
       if (data.type === 'chat') {
-        console.log('处理聊天消息:', data.message);
+        console.log('处理聊天消息:', data.data.message);
         // 检查消息是否来自其他用户
         const otherUserMessage = data.data.message;
         console.log('otherUserMessage:', otherUserMessage);
+        console.log('senderId:', otherUserMessage.sender.id);
+        console.log('currentId:', String(currentUser?.id));
+        console.log('equals:', otherUserMessage.sender.id !== String(currentUser?.id));
         if (otherUserMessage.sender.id !== String(currentUser?.id)) {
+          console.log("当前 messages 状态:", messages);
+          console.log("消息进来啦")
           // 接收到的新消息添加到列表末尾
-          setMessages(prev => [...prev, otherUserMessage]);
+          setMessages(prev => {
+            console.log("消息处理", prev);
+            return [...prev, { ...otherUserMessage }]; // 创建新对象，避免 React 认为没变
+          });
+
+          console.log(messages.length);
           // 更新总消息数
           setTotal(prev => prev + 1);
           // 如果用户正在查看底部，则自动滚动到底部
@@ -368,27 +390,25 @@ const ChatRoom: React.FC = () => {
   };
 
   useEffect(() => {
-    // 初始欢迎消息
-    // const welcomeMessage: Message = {
-    //   id: '1',
-    //   content: '欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~',
-    //   sender: {
-    //     id: 'admin',
-    //     name: '摸鱼小助手',
-    //     avatar: 'https://img1.baidu.com/it/u=2985996956,1440216669&fm=253&fmt=auto&app=120&f=GIF?w=285&h=285',
-    //     level: 99,
-    //     isAdmin: true,
-    //   },
-    //   timestamp: new Date(),
-    // };
-    // setMessages([welcomeMessage]);
-
-    // 建立WebSocket连接
-    const cleanup = connectWebSocket();
-
-    return () => {
-      if (cleanup) cleanup();
-    };
+    setIsComponentMounted(true);
+    isManuallyClosedRef.current = false;
+    
+    // 只有当用户已登录时才建立WebSocket连接
+    if (currentUser?.id) {
+      const cleanup = connectWebSocket();
+      
+      return () => {
+        setIsComponentMounted(false);
+        isManuallyClosedRef.current = true;  // 标记为手动关闭
+        if (cleanup) cleanup();
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+        }
+        if (ws) {
+          ws.close();
+        }
+      };
+    }
   }, [currentUser?.id]);
 
   const getLevelEmoji = (level: number) => {
@@ -423,7 +443,7 @@ const ChatRoom: React.FC = () => {
     // 将图片URL作为消息内容发送
     const imageMessage = `[img]${url}[/img]`;
     setInputValue(imageMessage);
-    
+
     // 直接使用新的消息内容发送，而不是依赖 inputValue 的状态更新
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       return;
@@ -479,7 +499,7 @@ const ChatRoom: React.FC = () => {
         <Alert
           message={
             <div className={styles.announcementContent}>
-              <SoundOutlined className={styles.announcementIcon} />
+              <SoundOutlined className={styles.announcementIcon}/>
               <span>{announcement}</span>
             </div>
           }
@@ -500,7 +520,7 @@ const ChatRoom: React.FC = () => {
         ref={messageContainerRef}
         onScroll={handleScroll}
       >
-        {loading && <div className={styles.loadingWrapper}><Spin /></div>}
+        {loading && <div className={styles.loadingWrapper}><Spin/></div>}
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -531,7 +551,7 @@ const ChatRoom: React.FC = () => {
               </div>
             </div>
             <div className={styles.messageContent}>
-              <MessageContent content={msg.content} />
+              <MessageContent content={msg.content}/>
             </div>
             <span className={styles.timestamp}>
               {new Date(msg.timestamp).toLocaleTimeString()}
@@ -583,7 +603,7 @@ const ChatRoom: React.FC = () => {
           />
         </Popover>
         <Popover
-          content={<EmoticonPicker onSelect={handleEmoticonSelect} />}
+          content={<EmoticonPicker onSelect={handleEmoticonSelect}/>}
           trigger="click"
           visible={isEmoticonPickerVisible}
           onVisibleChange={setIsEmoticonPickerVisible}
