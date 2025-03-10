@@ -210,10 +210,11 @@ const ChatRoom: React.FC = () => {
     }
   }, [loading, hasMore, current]);
 
-
-
   const handleSend = () => {
-    if (!inputValue.trim()) {
+    // 检查是否是图片消息
+    const isImageMessage = inputValue.match(/^\[img\].*\[\/img\]$/);
+    
+    if (!isImageMessage && !inputValue.trim()) {
       message.warning('请输入消息内容');
       return;
     }
@@ -420,10 +421,55 @@ const ChatRoom: React.FC = () => {
 
   const handleEmoticonSelect = (url: string) => {
     // 将图片URL作为消息内容发送
-    setInputValue(`[img]${url}[/img]`);
+    const imageMessage = `[img]${url}[/img]`;
+    setInputValue(imageMessage);
+    
+    // 直接使用新的消息内容发送，而不是依赖 inputValue 的状态更新
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    if (!currentUser?.id) {
+      messageApi.error('请先登录！');
+      return;
+    }
+
+    const newMessage: Message = {
+      id: `${Date.now()}`,
+      content: imageMessage,
+      sender: {
+        id: String(currentUser.id),
+        name: currentUser.userName || '游客',
+        avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+        level: 1,
+        isAdmin: currentUser.userRole === 'admin',
+      },
+      timestamp: new Date(),
+    };
+
+    // 新发送的消息添加到列表末尾
+    setMessages(prev => [...prev, newMessage]);
+    // 更新总消息数和分页状态
+    setTotal(prev => prev + 1);
+    setHasMore(true);
+
+    // 发送消息到服务器
+    const messageData = {
+      type: 2,
+      userId: -1,
+      data: {
+        type: 'chat',
+        content: {
+          message: newMessage
+        }
+      }
+    };
+    ws.send(JSON.stringify(messageData));
+
+    setInputValue('');
     setIsEmoticonPickerVisible(false);
-    // 自动发送消息
-    handleSend();
+    // 发送消息后滚动到底部
+    setTimeout(scrollToBottom, 100);
   };
 
   return (
