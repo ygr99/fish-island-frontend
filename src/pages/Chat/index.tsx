@@ -285,7 +285,7 @@ const ChatRoom: React.FC = () => {
 
       // 设置预览图片
       setPendingImageUrl(url);
-      
+
     } catch (error) {
       messageApi.error(`上传失败：${error}`);
     } finally {
@@ -316,7 +316,7 @@ const ChatRoom: React.FC = () => {
   // 修改 handleSend 函数
   const handleSend = (customContent?: string) => {
     let content = customContent || inputValue;
-    
+
     // 如果有待发送的图片，将其添加到消息内容中
     if (pendingImageUrl) {
       content = `[img]${pendingImageUrl}[/img]${content}`;
@@ -372,7 +372,7 @@ const ChatRoom: React.FC = () => {
     setInputValue('');
     setPendingImageUrl(null);
     setQuotedMessage(null);
-    
+
     // 滚动到底部
     setTimeout(scrollToBottom, 100);
   };
@@ -533,16 +533,51 @@ const ChatRoom: React.FC = () => {
   };
 
   // 新增管理员标识函数
-  const getAdminTag = () => {
-    // 随机选择一个摸鱼表情
-    const fishEmojis = ['🐟', '🐠', '🐡', '🎣'];
-    const randomFish = fishEmojis[Math.floor(Math.random() * fishEmojis.length)];
-    return (
-      <span className={styles.adminTag}>
-        {randomFish}
-        <span className={styles.adminText}>摸鱼官</span>
-      </span>
-    );
+  const getAdminTag = (isAdmin: boolean, level: number) => {
+    if (isAdmin) {
+      // 随机选择一个摸鱼表情
+      const fishEmojis = ['🐟', '🐠', '🐡', '🎣'];
+      const randomFish = fishEmojis[Math.floor(Math.random() * fishEmojis.length)];
+      return (
+        <span className={styles.adminTag}>
+          {randomFish}
+          <span className={styles.adminText}>摸鱼官</span>
+        </span>
+      );
+    } else {
+      // 根据等级返回不同的标签
+      let tagText = '';
+      let tagEmoji = '';
+      let tagClass = '';
+      if (level >= 50) {
+        tagText = '摸鱼达人';
+        tagEmoji = '🏆';
+        tagClass = styles.levelTagMaster;
+      } else if (level >= 30) {
+        tagText = '摸鱼高手';
+        tagEmoji = '💎';
+        tagClass = styles.levelTagExpert;
+      } else if (level >= 20) {
+        tagText = '摸鱼专家';
+        tagEmoji = '🌙';
+        tagClass = styles.levelTagPro;
+      } else if (level >= 10) {
+        tagText = '摸鱼新手';
+        tagEmoji = '⭐';
+        tagClass = styles.levelTagBeginner;
+      } else {
+        tagText = '摸鱼小白';
+        tagEmoji = '🐟';
+        tagClass = styles.levelTagNewbie;
+      }
+
+      return (
+        <span className={`${styles.adminTag} ${tagClass}`}>
+          {tagEmoji}
+          <span className={styles.adminText}>{tagText}</span>
+        </span>
+      );
+    }
   };
 
   const handleEmojiClick = (emoji: string) => {
@@ -654,11 +689,9 @@ const ChatRoom: React.FC = () => {
                 <span className={styles.levelText}>{user.level}</span>
               </span>
             </div>
-            {user.isAdmin && (
-              <div className={styles.userInfoCardAdminTag}>
-                {getAdminTag()}
-              </div>
-            )}
+            <div className={styles.userInfoCardAdminTag}>
+              {getAdminTag(user.isAdmin, user.level)}
+            </div>
           </div>
         </div>
       </div>
@@ -715,17 +748,13 @@ const ChatRoom: React.FC = () => {
                 >
                   <Avatar src={msg.sender.avatar} size={32}/>
                 </Popover>
-                {msg.sender.isAdmin && (
-                  <div className={styles.adminTagWrapper}>
-                    {getAdminTag()}
-                  </div>
-                )}
               </div>
               <div className={styles.senderInfo}>
                 <span className={styles.senderName}>
                   {currentUser?.id && String(msg.sender.id) === String(currentUser.id) ? null : (
                     <>
                       {msg.sender.name}
+                      {getAdminTag(msg.sender.isAdmin, msg.sender.level)}
                       <span className={styles.levelBadge}>
                         {getLevelEmoji(msg.sender.level)} {msg.sender.level}
                       </span>
@@ -764,8 +793,8 @@ const ChatRoom: React.FC = () => {
                   <span className={styles.revokeText}>撤回</span>
                 </Popconfirm>
               ) : (
-                <span 
-                  className={styles.quoteText} 
+                <span
+                  className={styles.quoteText}
                   onClick={() => handleQuoteMessage(msg)}
                 >
                   引用
@@ -797,11 +826,6 @@ const ChatRoom: React.FC = () => {
               >
                 <Avatar src={user.avatar} size={28}/>
               </Popover>
-              {user.isAdmin && (
-                <div className={styles.adminTagWrapper}>
-                  {getAdminTag()}
-                </div>
-              )}
             </div>
             <div className={styles.userInfo}>
               <div className={styles.userName}>
@@ -825,9 +849,9 @@ const ChatRoom: React.FC = () => {
                 <MessageContent content={quotedMessage.content} />
               </span>
             </div>
-            <Button 
-              type="text" 
-              icon={<DeleteOutlined />} 
+            <Button
+              type="text"
+              icon={<DeleteOutlined />}
               className={styles.removeQuote}
               onClick={handleCancelQuote}
             />
@@ -836,18 +860,18 @@ const ChatRoom: React.FC = () => {
         {pendingImageUrl && (
           <div className={styles.imagePreview}>
             <div className={styles.previewWrapper}>
-              <img 
-                src={pendingImageUrl} 
-                alt="预览图片" 
+              <img
+                src={pendingImageUrl}
+                alt="预览图片"
                 className={styles.previewImage}
                 onClick={() => {
                   setPreviewImage(pendingImageUrl);
                   setIsPreviewVisible(true);
                 }}
               />
-              <Button 
-                type="text" 
-                icon={<DeleteOutlined />} 
+              <Button
+                type="text"
+                icon={<DeleteOutlined />}
                 className={styles.removeImage}
                 onClick={handleRemoveImage}
               />

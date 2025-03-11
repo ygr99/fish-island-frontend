@@ -751,9 +751,22 @@
       color: #1890ff;
       cursor: pointer;
       font-size: 12px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
       
       &:hover {
         text-decoration: underline;
+      }
+    }
+  }
+
+  .messageItem {
+    &:hover {
+      .messageFooter {
+        .revokeText,
+        .quoteText {
+          opacity: 1;
+        }
       }
     }
   }
@@ -897,19 +910,21 @@
 .adminTag {
   display: inline-flex;
   align-items: center;
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   border-radius: 6px;
-  padding: 1px 4px;
-  margin-left: 4px;
+  padding: 2px 8px;
+  margin-left: 6px;
   font-size: 10px;
   color: #fff;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
-  box-shadow: 0 1px 2px rgba(79, 172, 254, 0.2);
-  animation: float 3s ease-in-out infinite;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+  animation: slideInFromLeft 0.5s ease-out;
   transform-origin: center;
   transform: scale(0.9);
   position: relative;
   overflow: hidden;
+
+  // 摸鱼官的默认样式
+  background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
+  box-shadow: 0 2px 4px rgba(255, 71, 87, 0.3);
 
   &::before {
     content: '';
@@ -921,28 +936,53 @@
     background: linear-gradient(
       90deg,
       transparent,
-      rgba(255, 255, 255, 0.2),
+      rgba(255, 255, 255, 0.3),
       transparent
     );
     animation: shine 2s infinite;
   }
 
   .adminText {
-    margin-left: 2px;
+    margin-left: 4px;
     font-weight: 500;
-    letter-spacing: 0.2px;
+    letter-spacing: 0.5px;
+  }
+
+  // 为不同等级的标签添加不同的渐变色
+  &.levelTagMaster {
+    background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);
+    box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
+  }
+
+  &.levelTagExpert {
+    background: linear-gradient(135deg, #00bfff 0%, #1e90ff 100%);
+    box-shadow: 0 2px 4px rgba(0, 191, 255, 0.3);
+  }
+
+  &.levelTagPro {
+    background: linear-gradient(135deg, #9370db 0%, #8a2be2 100%);
+    box-shadow: 0 2px 4px rgba(147, 112, 219, 0.3);
+  }
+
+  &.levelTagBeginner {
+    background: linear-gradient(135deg, #98fb98 0%, #3cb371 100%);
+    box-shadow: 0 2px 4px rgba(152, 251, 152, 0.3);
+  }
+
+  &.levelTagNewbie {
+    background: linear-gradient(135deg, #87ceeb 0%, #b0e0e6 100%);
+    box-shadow: 0 2px 4px rgba(135, 206, 235, 0.3);
   }
 }
 
-@keyframes float {
+@keyframes slideInFromLeft {
   0% {
-    transform: translateY(0px) scale(0.9);
-  }
-  50% {
-    transform: translateY(-1px) scale(0.9);
+    opacity: 0;
+    transform: translateX(-10px) scale(0.9);
   }
   100% {
-    transform: translateY(0px) scale(0.9);
+    opacity: 1;
+    transform: translateX(0) scale(0.9);
   }
 }
 
