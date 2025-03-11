@@ -95,6 +95,7 @@ export async function getInitialState(): Promise<InitialState> {
 // @ts-ignore
 export const layout: RunTimeLayoutConfig = ({initialState}) => {
   const { isBossMode, showSettings, setShowSettings, config, setConfig } = useBossKey();
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [showAnnouncement, setShowAnnouncement] = useState(true);
 
   if (isBossMode) {
@@ -191,7 +192,7 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
     waterMarkProps: {
       content: initialState?.currentUser?.userName,
     },
-    // footerRender: () => <Footer/>,
+    footerRender: () => <Footer/>,
     menuHeaderRender: undefined,
     // 自定义 403 页面
     // unAccessible: <div>unAccessible</div>,
