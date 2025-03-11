@@ -24,6 +24,7 @@ interface Message {
   content: string;
   sender: User;
   timestamp: Date;
+  quotedMessage?: Message;
 }
 
 interface User {
@@ -73,6 +74,8 @@ const ChatRoom: React.FC = () => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const [pendingImageUrl, setPendingImageUrl] = useState<string | null>(null);
+
+  const [quotedMessage, setQuotedMessage] = useState<Message | null>(null);
 
   // 获取在线用户列表
   const fetchOnlineUsers = async () => {
@@ -293,7 +296,12 @@ const ChatRoom: React.FC = () => {
     }
   };
 
-  // 处理发送消息
+  // 在 handleSend 函数之前添加取消引用的函数
+  const handleCancelQuote = () => {
+    setQuotedMessage(null);
+  };
+
+  // 修改 handleSend 函数
   const handleSend = (customContent?: string) => {
     let content = customContent || inputValue;
     
@@ -327,6 +335,7 @@ const ChatRoom: React.FC = () => {
         isAdmin: currentUser.userRole === 'admin',
       },
       timestamp: new Date(),
+      quotedMessage: quotedMessage || undefined,
     };
 
     // 发送消息到服务器
@@ -347,9 +356,10 @@ const ChatRoom: React.FC = () => {
     setTotal(prev => prev + 1);
     setHasMore(true);
 
-    // 清空输入框和预览图片
+    // 清空输入框、预览图片和引用消息
     setInputValue('');
     setPendingImageUrl(null);
+    setQuotedMessage(null);
     
     // 滚动到底部
     setTimeout(scrollToBottom, 100);
@@ -643,6 +653,11 @@ const ChatRoom: React.FC = () => {
     );
   };
 
+  // 在 return 语句之前添加引用消息的处理函数
+  const handleQuoteMessage = (message: Message) => {
+    setQuotedMessage(message);
+  };
+
   return (
     <div className={`${styles.chatRoom} ${isUserListCollapsed ? styles.collapsed : ''}`}>
       {contextHolder}
@@ -708,13 +723,26 @@ const ChatRoom: React.FC = () => {
               </div>
             </div>
             <div className={styles.messageContent}>
+              {msg.quotedMessage && (
+                <div className={styles.quotedMessage}>
+                  <div className={styles.quotedMessageHeader}>
+                    <span className={styles.quotedMessageSender}>{msg.quotedMessage.sender.name}</span>
+                    <span className={styles.quotedMessageTime}>
+                      {new Date(msg.quotedMessage.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <div className={styles.quotedMessageContent}>
+                    <MessageContent content={msg.quotedMessage.content} />
+                  </div>
+                </div>
+              )}
               <MessageContent content={msg.content}/>
             </div>
             <div className={styles.messageFooter}>
               <span className={styles.timestamp}>
                 {new Date(msg.timestamp).toLocaleTimeString()}
               </span>
-              {currentUser?.id && String(msg.sender.id) === String(currentUser.id) && (
+              {currentUser?.id && String(msg.sender.id) === String(currentUser.id) ? (
                 <Popconfirm
                   title={`确定要撤回这条消息吗`}
                   onConfirm={() => handleRevokeMessage(msg.id)}
@@ -723,6 +751,13 @@ const ChatRoom: React.FC = () => {
                 >
                   <span className={styles.revokeText}>撤回</span>
                 </Popconfirm>
+              ) : (
+                <span 
+                  className={styles.quoteText} 
+                  onClick={() => handleQuoteMessage(msg)}
+                >
+                  引用
+                </span>
               )}
             </div>
           </div>
@@ -770,6 +805,22 @@ const ChatRoom: React.FC = () => {
       </div>
 
       <div className={styles.inputArea}>
+        {quotedMessage && (
+          <div className={styles.quotePreview}>
+            <div className={styles.quotePreviewContent}>
+              <span className={styles.quotePreviewSender}>{quotedMessage.sender.name}:</span>
+              <span className={styles.quotePreviewText}>
+                <MessageContent content={quotedMessage.content} />
+              </span>
+            </div>
+            <Button 
+              type="text" 
+              icon={<DeleteOutlined />} 
+              className={styles.removeQuote}
+              onClick={handleCancelQuote}
+            />
+          </div>
+        )}
         {pendingImageUrl && (
           <div className={styles.imagePreview}>
             <div className={styles.previewWrapper}>
