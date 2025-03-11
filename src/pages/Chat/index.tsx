@@ -821,7 +821,13 @@ const ChatRoom: React.FC = () => {
           <Input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onPressEnter={() => handleSend()}
+            onPressEnter={(e) => {
+              // 检查是否是输入法组合键
+              if (e.nativeEvent.isComposing) {
+                return;
+              }
+              handleSend();
+            }}
             onPaste={handlePaste}
             placeholder={uploading ? "正在上传图片..." : "输入消息或粘贴图片..."}
             maxLength={200}

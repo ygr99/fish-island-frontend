@@ -1,18 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, Form, Upload, Button, Image } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
-import type { UploadFile } from 'antd/es/upload/interface';
+import React, {useState, useEffect} from 'react';
+import {Modal, Form, Upload, Button, Image} from 'antd';
+import {UploadOutlined} from '@ant-design/icons';
+import type {UploadFile} from 'antd/es/upload/interface';
 
 interface BossKeySettingsProps {
-  visible: boolean;
-  onClose: () => void;
+  visible: boolean,
+  onClose: () => void,
+  onConfigUpdate?: (value: (((prevState: { image: string; placeholder: string; title: string }) => {
+    image: string;
+    placeholder: string;
+    title: string
+  }) | { image: string; placeholder: string; title: string })) => void
 }
 
 interface BossKeyConfig {
   image: string;
 }
 
-const BossKeySettings: React.FC<BossKeySettingsProps> = ({ visible, onClose }) => {
+const BossKeySettings: React.FC<BossKeySettingsProps> = ({visible, onClose, onConfigUpdate}) => {
   const [form] = Form.useForm();
   const [previewImage, setPreviewImage] = useState<string>('');
   const [fileList, setFileList] = useState<UploadFile[]>([]);
@@ -53,7 +58,7 @@ const BossKeySettings: React.FC<BossKeySettingsProps> = ({ visible, onClose }) =
     });
   };
 
-  const handleChange = async ({ fileList: newFileList }: any) => {
+  const handleChange = async ({fileList: newFileList}: any) => {
     if (newFileList.length > 0) {
       const file = newFileList[0].originFileObj;
       if (file) {
@@ -91,7 +96,7 @@ const BossKeySettings: React.FC<BossKeySettingsProps> = ({ visible, onClose }) =
             beforeUpload={() => false}
             maxCount={1}
           >
-            {fileList.length === 0 && <UploadOutlined />}
+            {fileList.length === 0 && <UploadOutlined/>}
           </Upload>
           <div className="text-gray-500 text-sm mt-2">
             提示：上传图片后，按下老板键将全屏显示此图片。不上传图片则显示默认的百度搜索页面。
@@ -100,11 +105,11 @@ const BossKeySettings: React.FC<BossKeySettingsProps> = ({ visible, onClose }) =
 
         {previewImage && (
           <Form.Item label="预览效果">
-            <div style={{ textAlign: 'center' }}>
+            <div style={{textAlign: 'center'}}>
               <Image
                 src={previewImage}
                 alt="预览"
-                style={{ maxWidth: '100%', maxHeight: '300px', objectFit: 'contain' }}
+                style={{maxWidth: '100%', maxHeight: '300px', objectFit: 'contain'}}
               />
             </div>
           </Form.Item>
@@ -120,4 +125,4 @@ const BossKeySettings: React.FC<BossKeySettingsProps> = ({ visible, onClose }) =
   );
 };
 
-export default BossKeySettings; 
+export default BossKeySettings;
