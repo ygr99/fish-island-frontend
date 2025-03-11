@@ -4,9 +4,10 @@ import {
   userLogoutUsingPost,
   userRegisterUsingPost
 } from '@/services/backend/userController';
-import {LockOutlined, LogoutOutlined, SettingOutlined, UserOutlined, EditOutlined} from '@ant-design/icons';
+import { uploadFileUsingPost } from '@/services/backend/fileController';
+import {LockOutlined, LogoutOutlined, SettingOutlined, UserOutlined, EditOutlined, UploadOutlined} from '@ant-design/icons';
 import {history, useModel} from '@umijs/max';
-import {Avatar, Button, Form, FormProps, Input, message, Modal, Space, Tabs, TimePicker, Tooltip, Select} from 'antd';
+import {Avatar, Button, Form, FormProps, Input, message, Modal, Space, Tabs, TimePicker, Tooltip, Select, Upload} from 'antd';
 import type {MenuInfo} from 'rc-menu/lib/interface';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
@@ -21,6 +22,8 @@ import './app.css';
 import styles from "@/pages/User/Register/index.less";
 import {Captcha} from "aj-captcha-react";
 import {BACKEND_HOST_CODE} from "@/constants";
+import {UploadFile} from "antd/lib/upload/interface";
+import {RcFile} from "antd/lib/upload";
 
 export type GlobalHeaderRightProps = {
   menu?: boolean;
@@ -478,6 +481,28 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     };
   }, [bossKeyConfig]);
 
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (file: RcFile) => {
+    try {
+      setUploading(true);
+      const res = await uploadFileUsingPost(
+        { biz: 'user_avatar' },
+        {},
+        file
+      );
+      if (res.code === 0 && res.data) {
+        return res.data;
+      }
+      throw new Error(res.message || '上传失败');
+    } catch (error: any) {
+      message.error(`上传失败：${error.message}`);
+      return '';
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (!currentUser) {
     return (
       <>
@@ -777,9 +802,25 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           <Form.Item
             label="头像选择"
             name="userAvatar"
-            help="可以输入在线图片地址，或者选择下方默认头像"
+            help="可以上传图片，输入在线图片地址，或者选择下方默认头像"
           >
-            <div style={{display: 'flex', gap: '8px', alignItems: 'flex-start'}}>
+            <div style={{display: 'flex', gap: '8px', alignItems: 'flex-start', flexWrap: 'wrap'}}>
+              <Upload
+                accept="image/*"
+                showUploadList={false}
+                beforeUpload={async (file) => {
+                  const url = await handleUpload(file);
+                  if (url) {
+                    setPreviewAvatar(url);
+                    editProfileForm.setFieldValue('userAvatar', url);
+                  }
+                  return false;
+                }}
+              >
+                <Button icon={<UploadOutlined />} loading={uploading}>
+                  上传头像
+                </Button>
+              </Upload>
               <Input
                 placeholder="请输入头像地址（选填）"
                 onChange={(e) => {
@@ -801,10 +842,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                   <Avatar
                     src={previewAvatar || editProfileForm.getFieldValue('userAvatar')}
                     size={64}
-                    onError={() => {
-                      message.error('图片加载失败，请检查地址是否正确');
-                      return false;
-                    }}
                   />
                 </div>
               )}
