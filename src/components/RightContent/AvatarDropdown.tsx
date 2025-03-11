@@ -50,9 +50,9 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     if (savedData) {
       const parsedData = JSON.parse(savedData);
       setMoYuData({
-        startTime: moment(parsedData.startTime),
-        endTime: moment(parsedData.endTime),
-        lunchTime: moment(parsedData.lunchTime),
+        startTime: moment(parsedData.startTime, 'HH:mm'),
+        endTime: moment(parsedData.endTime, 'HH:mm'),
+        lunchTime: moment(parsedData.lunchTime, 'HH:mm'),
         monthlySalary: parsedData.monthlySalary,
       });
     }
@@ -85,13 +85,19 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const onFinishMoYu: FormProps<MoYuTimeType>['onFinish'] = (values) => {
     // 将 Moment 对象转换为 ISO 字符串格式后存储
     const dataToSave = {
-      startTime: values.startTime?.format(),
-      endTime: values.endTime?.format(),
-      lunchTime: values.lunchTime?.format(),
+      startTime: values.startTime?.format('HH:mm'),
+      endTime: values.endTime?.format('HH:mm'),
+      lunchTime: values.lunchTime?.format('HH:mm'),
       monthlySalary: values.monthlySalary,
     };
     localStorage.setItem('moYuData', JSON.stringify(dataToSave));
-    setMoYuData(values);
+    // 转换回 Moment 对象后设置
+    setMoYuData({
+      startTime: moment(values.startTime?.format('HH:mm'), 'HH:mm'),
+      endTime: moment(values.endTime?.format('HH:mm'), 'HH:mm'),
+      lunchTime: moment(values.lunchTime?.format('HH:mm'), 'HH:mm'),
+      monthlySalary: values.monthlySalary,
+    });
   };
 
   const onFinishFailedMoYu: FormProps<MoYuTimeType>['onFinishFailed'] = (errorInfo) => {
@@ -128,8 +134,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const loginOut = async () => {
     await userLogoutUsingPost();
   };
-  const [timeRemaining, setTimeRemaining] = useState<string>('00:00:00');
-  const [earnedAmount, setEarnedAmount] = useState<number>(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMoneyOpen, setIsMoneyOpen] = useState(false);
   const [valueData, setValueData] = useState<API.UserRegisterRequest>();
