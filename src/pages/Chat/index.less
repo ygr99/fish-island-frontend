@@ -554,7 +554,7 @@
   .inputArea {
     grid-area: input;
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 8px;
     padding: 16px;
     background: rgba(255, 255, 255, 0.9);
@@ -564,73 +564,127 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     position: relative;
 
-    .ant-input {
-      background: rgba(255, 255, 255, 0.8);
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      border-radius: 20px;
-      padding: 8px 16px;
-      transition: all 0.3s ease;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    .imagePreview {
+      padding: 4px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      margin-bottom: 8px;
 
-      &:hover, &:focus {
-        border-color: #40a9ff;
-        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+      .previewWrapper {
+        position: relative;
+        display: inline-block;
+
+        .previewImage {
+          width: 64px;
+          height: 64px;
+          object-fit: cover;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          border: 2px solid rgba(255, 255, 255, 0.8);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+          &:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          }
+        }
+
+        .removeImage {
+          position: absolute;
+          top: -8px;
+          right: -8px;
+          padding: 4px;
+          color: #ff4d4f;
+          background: #fff;
+          border-radius: 50%;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          transition: all 0.3s ease;
+          
+          &:hover {
+            color: #fff;
+            background: #ff4d4f;
+            transform: scale(1.1);
+          }
+        }
       }
     }
 
-    .emojiButton,
-    .emoticonButton {
-      margin-right: 8px;
-    }
-
-    .emoticonPopover {
-      :global(.ant-popover-inner-content) {
-        padding: 0;
-      }
-    }
-
-    .ant-btn {
-      border: none;
-      background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-      color: white;
-      border-radius: 18px;
-      padding: 0 20px;
-      height: 36px;
+    .inputRow {
       display: flex;
       align-items: center;
-      gap: 4px;
-      transition: all 0.3s ease;
-      box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+      gap: 8px;
+      width: 100%;
 
-      &:hover {
-        background: linear-gradient(135deg, #40a9ff 0%, #69c0ff 100%);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+      .ant-input {
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        border-radius: 20px;
+        padding: 8px 16px;
+        transition: all 0.3s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+
+        &:hover, &:focus {
+          border-color: #40a9ff;
+          box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+        }
       }
 
-      .anticon {
-        font-size: 16px;
+      .emojiButton,
+      .emoticonButton {
+        margin-right: 4px;
       }
-    }
 
-    .inputCounter {
-      position: absolute;
-      right: 120px;
-      color: #999;
-      font-size: 12px;
-      pointer-events: none;
+      .emoticonPopover {
+        :global(.ant-popover-inner-content) {
+          padding: 0;
+        }
+      }
+
+      .ant-btn {
+        border: none;
+        background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+        color: white;
+        border-radius: 18px;
+        padding: 0 20px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+
+        &:hover {
+          background: linear-gradient(135deg, #40a9ff 0%, #69c0ff 100%);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+        }
+
+        .anticon {
+          font-size: 16px;
+        }
+      }
+
+      .inputCounter {
+        position: absolute;
+        right: 120px;
+        color: #999;
+        font-size: 12px;
+        pointer-events: none;
+      }
     }
 
     @media screen and (max-width: 768px) {
       margin: 8px;
       padding: 12px;
 
-      .ant-btn {
-        padding: 0 16px;
-      }
+      .inputRow {
+        .ant-btn {
+          padding: 0 16px;
+        }
 
-      .inputCounter {
-        right: 100px;
+        .inputCounter {
+          right: 100px;
+        }
       }
     }
   }

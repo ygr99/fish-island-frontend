@@ -2,6 +2,21 @@
 /* eslint-disable */
 import { request } from '@umijs/max';
 
+/** 获取cos临时凭证 GET /api/file/cos/credential */
+export async function getCosCredentialUsingGet(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getCosCredentialUsingGETParams,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseCosCredentialVo_>('/api/file/cos/credential', {
+    method: 'GET',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  });
+}
+
 /** 文件上传 POST /api/file/upload */
 export async function uploadFileUsingPost(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)

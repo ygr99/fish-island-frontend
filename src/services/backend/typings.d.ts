@@ -5,6 +5,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseCosCredentialVo_ = {
+    code?: number;
+    data?: CosCredentialVo;
+    message?: string;
+  };
+
   type BaseResponseInt_ = {
     code?: number;
     data?: number;
@@ -95,8 +101,30 @@ declare namespace API {
     message?: string;
   };
 
+  type CosCredentialVo = {
+    /** 桶名称 */
+    bucket?: string;
+    /** 文件地址 */
+    key?: string;
+    /** 区域 */
+    region?: string;
+    response?: Response;
+  };
+
+  type Credentials = {
+    sessionToken?: string;
+    tmpSecretId?: string;
+    tmpSecretKey?: string;
+    token?: string;
+  };
+
   type DeleteRequest = {
     id?: number;
+  };
+
+  type getCosCredentialUsingGETParams = {
+    /** fileName */
+    fileName?: string;
   };
 
   type getPostVoByIdUsingGETParams = {
@@ -310,6 +338,14 @@ declare namespace API {
     updateTime?: string;
     user?: UserVO;
     userId?: number;
+  };
+
+  type Response = {
+    credentials?: Credentials;
+    expiration?: string;
+    expiredTime?: number;
+    requestId?: string;
+    startTime?: number;
   };
 
   type RoomMessageVo = {

@@ -1,5 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Alert, Avatar, Button, Input, message, Popover, Spin, Tooltip, Popconfirm} from 'antd';
+import {Alert, Avatar, Button, Input, message, Popover, Spin, Tooltip, Popconfirm, Modal} from 'antd';
+import COS from 'cos-js-sdk-v5';
 import {
   CrownFilled,
   MenuFoldOutlined,
@@ -16,6 +17,7 @@ import {BACKEND_HOST_WS} from "@/constants";
 import {getOnlineUserListUsingGet, listMessageVoByPageUsingPost} from "@/services/backend/chatController";
 import MessageContent from '@/components/MessageContent';
 import EmoticonPicker from '@/components/EmoticonPicker';
+import {getCosCredentialUsingGet} from "@/services/backend/fileController";
 
 interface Message {
   id: string;
@@ -61,10 +63,16 @@ const ChatRoom: React.FC = () => {
   // 添加已加载消息ID的集合
   const [loadedMessageIds] = useState<Set<string>>(new Set());
 
-  const [announcement, setAnnouncement] = useState<string>('欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~');
+  const [announcement, setAnnouncement] = useState<string>('欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢：感谢玄德大佬赞助的对象存储服务🌟');
   const [showAnnouncement, setShowAnnouncement] = useState<boolean>(true);
 
   const [isComponentMounted, setIsComponentMounted] = useState(true);
+
+  const [uploading, setUploading] = useState(false);
+
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const [pendingImageUrl, setPendingImageUrl] = useState<string | null>(null);
 
   // 获取在线用户列表
   const fetchOnlineUsers = async () => {
@@ -221,11 +229,80 @@ const ChatRoom: React.FC = () => {
     }
   }, [loading, hasMore, current]);
 
-  const handleSend = () => {
-    // 检查是否是图片消息
-    const isImageMessage = inputValue.match(/^\[img\].*\[\/img\]$/);
+  // 处理图片上传
+  const handleImageUpload = async (file: File) => {
+    try {
+      setUploading(true);
+      const res = await getCosCredentialUsingGet({
+        fileName: file.name || `paste_${Date.now()}.png`
+      });
+      console.log('getKeyAndCredentials:', res);
+      const data = res.data;
+      const cos = new COS({
+        SecretId: data?.response?.credentials?.tmpSecretId,
+        SecretKey: data?.response?.credentials?.tmpSecretKey,
+        SecurityToken: data?.response?.credentials?.sessionToken,
+        StartTime: data?.response?.startTime,
+        ExpiredTime: data?.response?.expiredTime,
+      });
 
-    if (!isImageMessage && !inputValue.trim()) {
+      // 使用 Promise 包装 COS 上传
+      const url = await new Promise<string>((resolve, reject) => {
+        cos.uploadFile({
+          Bucket: data?.bucket as string,
+          Region: data?.region as string,
+          Key: data?.key as string,
+          Body: file,
+          onProgress: function (progressData) {
+            console.log('上传进度：', progressData);
+          }
+        }, function (err, data) {
+          if (err) {
+            reject(err);
+            return;
+          }
+          console.log('上传结束', data);
+          const url = "https://" + data.Location;
+          console.log("图片地址：", url);
+          resolve(url);
+        });
+      });
+
+      // 设置预览图片
+      setPendingImageUrl(url);
+      
+    } catch (error) {
+      messageApi.error(`上传失败：${error}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // 处理粘贴事件
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        e.preventDefault();
+        const file = items[i].getAsFile();
+        if (file) {
+          await handleImageUpload(file);
+        }
+        break;
+      }
+    }
+  };
+
+  // 处理发送消息
+  const handleSend = (customContent?: string) => {
+    let content = customContent || inputValue;
+    
+    // 如果有待发送的图片，将其添加到消息内容中
+    if (pendingImageUrl) {
+      content = `[img]${pendingImageUrl}[/img]${content}`;
+    }
+
+    if (!content.trim() && !pendingImageUrl) {
       message.warning('请输入消息内容');
       return;
     }
@@ -241,7 +318,7 @@ const ChatRoom: React.FC = () => {
 
     const newMessage: Message = {
       id: `${Date.now()}`,
-      content: inputValue,
+      content: content,
       sender: {
         id: String(currentUser.id),
         name: currentUser.userName || '游客',
@@ -251,12 +328,6 @@ const ChatRoom: React.FC = () => {
       },
       timestamp: new Date(),
     };
-
-    // 新发送的消息添加到列表末尾
-    setMessages(prev => [...prev, newMessage]);
-    // 更新总消息数和分页状态
-    setTotal(prev => prev + 1);
-    setHasMore(true); // 有新消息时重置hasMore状态
 
     // 发送消息到服务器
     const messageData = {
@@ -269,12 +340,24 @@ const ChatRoom: React.FC = () => {
         }
       }
     };
-    console.log('发送到服务器的数据:', messageData);
     ws.send(JSON.stringify(messageData));
 
+    // 更新消息列表
+    setMessages(prev => [...prev, newMessage]);
+    setTotal(prev => prev + 1);
+    setHasMore(true);
+
+    // 清空输入框和预览图片
     setInputValue('');
-    // 发送消息后滚动到底部
+    setPendingImageUrl(null);
+    
+    // 滚动到底部
     setTimeout(scrollToBottom, 100);
+  };
+
+  // 移除待发送的图片
+  const handleRemoveImage = () => {
+    setPendingImageUrl(null);
   };
 
   // 表情包数据
@@ -598,8 +681,8 @@ const ChatRoom: React.FC = () => {
           >
             <div className={styles.messageHeader}>
               <div className={styles.avatar}>
-                <Popover 
-                  content={<UserInfoCard user={msg.sender} />} 
+                <Popover
+                  content={<UserInfoCard user={msg.sender} />}
                   trigger="hover"
                   placement="top"
                 >
@@ -660,8 +743,8 @@ const ChatRoom: React.FC = () => {
         {onlineUsers.map(user => (
           <div key={user.id} className={styles.userItem}>
             <div className={styles.avatarWrapper}>
-              <Popover 
-                content={<UserInfoCard user={user} />} 
+              <Popover
+                content={<UserInfoCard user={user} />}
                 trigger="hover"
                 placement="right"
               >
@@ -687,50 +770,84 @@ const ChatRoom: React.FC = () => {
       </div>
 
       <div className={styles.inputArea}>
-        <Popover
-          content={emojiPickerContent}
-          trigger="click"
-          visible={isEmojiPickerVisible}
-          onVisibleChange={setIsEmojiPickerVisible}
-          placement="topLeft"
-          overlayClassName={styles.emojiPopover}
-        >
-          <Button
-            icon={<SmileOutlined/>}
-            className={styles.emojiButton}
+        {pendingImageUrl && (
+          <div className={styles.imagePreview}>
+            <div className={styles.previewWrapper}>
+              <img 
+                src={pendingImageUrl} 
+                alt="预览图片" 
+                className={styles.previewImage}
+                onClick={() => {
+                  setPreviewImage(pendingImageUrl);
+                  setIsPreviewVisible(true);
+                }}
+              />
+              <Button 
+                type="text" 
+                icon={<DeleteOutlined />} 
+                className={styles.removeImage}
+                onClick={handleRemoveImage}
+              />
+            </div>
+          </div>
+        )}
+        <div className={styles.inputRow}>
+          <Popover
+            content={emojiPickerContent}
+            trigger="click"
+            visible={isEmojiPickerVisible}
+            onVisibleChange={setIsEmojiPickerVisible}
+            placement="topLeft"
+            overlayClassName={styles.emojiPopover}
+          >
+            <Button
+              icon={<SmileOutlined/>}
+              className={styles.emojiButton}
+            />
+          </Popover>
+          <Popover
+            content={<EmoticonPicker onSelect={handleEmoticonSelect}/>}
+            trigger="click"
+            visible={isEmoticonPickerVisible}
+            onVisibleChange={setIsEmoticonPickerVisible}
+            placement="topLeft"
+            overlayClassName={styles.emoticonPopover}
+          >
+            <Button
+              icon={<PictureOutlined/>}
+              className={styles.emoticonButton}
+            />
+          </Popover>
+          <Input
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onPressEnter={() => handleSend()}
+            onPaste={handlePaste}
+            placeholder={uploading ? "正在上传图片..." : "输入消息或粘贴图片..."}
+            maxLength={200}
+            disabled={uploading}
           />
-        </Popover>
-        <Popover
-          content={<EmoticonPicker onSelect={handleEmoticonSelect}/>}
-          trigger="click"
-          visible={isEmoticonPickerVisible}
-          onVisibleChange={setIsEmoticonPickerVisible}
-          placement="topLeft"
-          overlayClassName={styles.emoticonPopover}
-        >
+          <span className={styles.inputCounter}>
+            {inputValue.length}/200
+          </span>
           <Button
-            icon={<PictureOutlined/>}
-            className={styles.emoticonButton}
-          />
-        </Popover>
-        <Input
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onPressEnter={handleSend}
-          placeholder="输入消息..."
-          maxLength={200}
-        />
-        <span className={styles.inputCounter}>
-          {inputValue.length}/200
-        </span>
-        <Button
-          type="text"
-          icon={<SendOutlined/>}
-          onClick={handleSend}
-        >
-          发送
-        </Button>
+            type="text"
+            icon={<SendOutlined/>}
+            onClick={() => handleSend()}
+            disabled={uploading}
+          >
+            发送
+          </Button>
+        </div>
       </div>
+
+      <Modal
+        visible={isPreviewVisible}
+        footer={null}
+        onCancel={() => setIsPreviewVisible(false)}
+      >
+        {previewImage && <img alt="预览" style={{ width: '100%' }} src={previewImage} />}
+      </Modal>
     </div>
   );
 };

@@ -4,10 +4,31 @@ import {
   userLogoutUsingPost,
   userRegisterUsingPost
 } from '@/services/backend/userController';
-import { uploadFileUsingPost } from '@/services/backend/fileController';
-import {LockOutlined, LogoutOutlined, SettingOutlined, UserOutlined, EditOutlined, UploadOutlined} from '@ant-design/icons';
+import {getCosCredentialUsingGet} from '@/services/backend/fileController';
+import {
+  LockOutlined,
+  LogoutOutlined,
+  SettingOutlined,
+  UserOutlined,
+  EditOutlined,
+  UploadOutlined
+} from '@ant-design/icons';
 import {history, useModel} from '@umijs/max';
-import {Avatar, Button, Form, FormProps, Input, message, Modal, Space, Tabs, TimePicker, Tooltip, Select, Upload} from 'antd';
+import {
+  Avatar,
+  Button,
+  Form,
+  FormProps,
+  Input,
+  message,
+  Modal,
+  Space,
+  Tabs,
+  TimePicker,
+  Tooltip,
+  Select,
+  Upload
+} from 'antd';
 import type {MenuInfo} from 'rc-menu/lib/interface';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
@@ -22,8 +43,8 @@ import './app.css';
 import styles from "@/pages/User/Register/index.less";
 import {Captcha} from "aj-captcha-react";
 import {BACKEND_HOST_CODE} from "@/constants";
-import {UploadFile} from "antd/lib/upload/interface";
 import {RcFile} from "antd/lib/upload";
+import COS from 'cos-js-sdk-v5';
 
 export type GlobalHeaderRightProps = {
   menu?: boolean;
@@ -66,12 +87,12 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     name?: string;
     timeRemaining: string;
     earnedAmount?: number;
-  }>({ type: 'work', timeRemaining: '00:00:00' });
+  }>({type: 'work', timeRemaining: '00:00:00'});
 
   const holidays: Holiday[] = [
-    { name: '端午节', date: moment('2024-06-10') },
-    { name: '中秋节', date: moment('2024-09-17') },
-    { name: '国庆节', date: moment('2024-10-01') },
+    {name: '端午节', date: moment('2024-06-10')},
+    {name: '中秋节', date: moment('2024-09-17')},
+    {name: '国庆节', date: moment('2024-10-01')},
   ];
 
   const [type, setType] = useState<string>('account');
@@ -486,17 +507,42 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const handleUpload = async (file: RcFile) => {
     try {
       setUploading(true);
-      const res = await uploadFileUsingPost(
-        { biz: 'user_avatar' },
-        {},
-        file
+      const res = await getCosCredentialUsingGet(
+        {fileName: file.name}
       );
-      if (res.code === 0 && res.data) {
-        return res.data;
-      }
-      throw new Error(res.message || '上传失败');
-    } catch (error: any) {
-      message.error(`上传失败：${error.message}`);
+      console.log('getKeyAndCredentials:', res);
+      const data = res.data;
+      const cos = new COS({
+        SecretId: data?.response?.credentials?.tmpSecretId,
+        SecretKey: data?.response?.credentials?.tmpSecretKey,
+        SecurityToken: data?.response?.credentials?.sessionToken,
+        StartTime: data?.response?.startTime,
+        ExpiredTime: data?.response?.expiredTime,
+      });
+
+      // 使用 Promise 包装 COS 上传
+      return new Promise((resolve, reject) => {
+        cos.uploadFile({
+          Bucket: data?.bucket as string,
+          Region: data?.region as string,
+          Key: data?.key as string,
+          Body: file,
+          onProgress: function (progressData) {
+            console.log('上传进度：', progressData);
+          }
+        }, function (err, data) {
+          if (err) {
+            reject(err);
+            return;
+          }
+          console.log('上传结束', data);
+          const url = "https://" + data.Location;
+          console.log("用户头像地址：", url);
+          resolve(url);
+        });
+      });
+    } catch (error) {
+      message.error(`上传失败：${error}`);
       return '';
     } finally {
       setUploading(false);
@@ -811,13 +857,13 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 beforeUpload={async (file) => {
                   const url = await handleUpload(file);
                   if (url) {
-                    setPreviewAvatar(url);
+                    setPreviewAvatar(url as any);
                     editProfileForm.setFieldValue('userAvatar', url);
                   }
                   return false;
                 }}
               >
-                <Button icon={<UploadOutlined />} loading={uploading}>
+                <Button icon={<UploadOutlined/>} loading={uploading}>
                   上传头像
                 </Button>
               </Upload>
@@ -993,7 +1039,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           <Form.Item
             label="触发按键"
             name="key"
-            rules={[{ required: true, message: '请设置触发按键！' }]}
+            rules={[{required: true, message: '请设置触发按键！'}]}
           >
             <Select>
               <Select.Option value="Escape">ESC键</Select.Option>
@@ -1008,11 +1054,11 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             label="跳转网址"
             name="redirectUrl"
             rules={[
-              { required: true, message: '请输入跳转网址！' },
-              { type: 'url', message: '请输入有效的网址！' }
+              {required: true, message: '请输入跳转网址！'},
+              {type: 'url', message: '请输入有效的网址！'}
             ]}
           >
-            <Input placeholder="请输入紧急情况下要跳转的网址" />
+            <Input placeholder="请输入紧急情况下要跳转的网址"/>
           </Form.Item>
 
           <Form.Item>
