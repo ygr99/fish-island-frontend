@@ -144,6 +144,18 @@ const ChatRoom: React.FC = () => {
               isAdmin: record.messageWrapper?.message?.sender?.isAdmin || false,
             },
             timestamp: new Date(record.messageWrapper?.message?.timestamp || Date.now()),
+            quotedMessage: record.messageWrapper?.message?.quotedMessage ? {
+              id: String(record.messageWrapper.message.quotedMessage.id),
+              content: record.messageWrapper.message.quotedMessage.content || '',
+              sender: {
+                id: String(record.messageWrapper.message.quotedMessage.sender?.id),
+                name: record.messageWrapper.message.quotedMessage.sender?.name || '未知用户',
+                avatar: record.messageWrapper.message.quotedMessage.sender?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+                level: record.messageWrapper.message.quotedMessage.sender?.level || 1,
+                isAdmin: record.messageWrapper.message.quotedMessage.sender?.isAdmin || false,
+              },
+              timestamp: new Date(record.messageWrapper.message.quotedMessage.timestamp || Date.now()),
+            } : undefined
           }))
           // 过滤掉已经加载过的消息
           .filter(msg => !loadedMessageIds.has(msg.id));

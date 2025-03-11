@@ -173,6 +173,7 @@ declare namespace API {
   type Message = {
     content?: string;
     id?: string;
+    quotedMessage?: Message;
     sender?: Sender;
     timestamp?: string;
   };
