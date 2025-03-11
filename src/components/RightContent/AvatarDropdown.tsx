@@ -316,7 +316,10 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
 
         // 计算已工作时长和收入
         const startTime = moment(moYuData.startTime);
-        const workedDuration = moment.duration(now.diff(startTime));
+        const endTime = moment(moYuData.endTime);
+        const workedDuration = moment.duration(
+          now.isAfter(endTime) ? endTime.diff(startTime) : now.diff(startTime)
+        );
         const earnedAmount = hourlyRate * workedDuration.asHours();
 
         if (isNearLunch) {
@@ -351,7 +354,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           });
         } else {
           // 下班倒计时
-          const endTime = moment(moYuData.endTime);
           const duration = moment.duration(endTime.diff(now));
           const hours = Math.max(0, duration.hours());
           const minutes = Math.max(0, duration.minutes());
