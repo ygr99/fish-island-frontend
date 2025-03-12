@@ -25,6 +25,7 @@ interface Message {
   sender: User;
   timestamp: Date;
   quotedMessage?: Message;
+  mentionedUsers?: User[];
 }
 
 interface User {
@@ -76,6 +77,8 @@ const ChatRoom: React.FC = () => {
   const [pendingImageUrl, setPendingImageUrl] = useState<string | null>(null);
 
   const [quotedMessage, setQuotedMessage] = useState<Message | null>(null);
+
+  const [notifications, setNotifications] = useState<Message[]>([]);
 
   // 获取在线用户列表
   const fetchOnlineUsers = async () => {
@@ -336,6 +339,18 @@ const ChatRoom: React.FC = () => {
       return;
     }
 
+    // 解析@用户
+    const mentionedUsers: User[] = [];
+    const mentionRegex = /@([^@\s]+)/g;
+    let match;
+    while ((match = mentionRegex.exec(content)) !== null) {
+      const mentionedName = match[1];
+      const mentionedUser = onlineUsers.find(user => user.name === mentionedName);
+      if (mentionedUser) {
+        mentionedUsers.push(mentionedUser);
+      }
+    }
+
     const newMessage: Message = {
       id: `${Date.now()}`,
       content: content,
@@ -348,6 +363,7 @@ const ChatRoom: React.FC = () => {
       },
       timestamp: new Date(),
       quotedMessage: quotedMessage || undefined,
+      mentionedUsers: mentionedUsers.length > 0 ? mentionedUsers : undefined,
     };
 
     // 发送消息到服务器
@@ -380,6 +396,35 @@ const ChatRoom: React.FC = () => {
   // 移除待发送的图片
   const handleRemoveImage = () => {
     setPendingImageUrl(null);
+  };
+
+  // 添加滚动到指定消息的函数
+  const scrollToMessage = (messageId: string) => {
+    const messageElement = document.getElementById(`message-${messageId}`);
+    if (messageElement) {
+      messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // 添加高亮效果
+      messageElement.classList.add(styles.highlighted);
+      setTimeout(() => {
+        messageElement.classList.remove(styles.highlighted);
+      }, 2000);
+    }
+  };
+
+  // 添加处理@消息的函数
+  const handleMentionNotification = (message: Message) => {
+    if (message.mentionedUsers?.some(user => user.id === String(currentUser?.id))) {
+      messageApi.info({
+        content: (
+          <div onClick={() => scrollToMessage(message.id)}>
+            {message.sender.name} 在消息中提到了你
+          </div>
+        ),
+        duration: 5,
+        key: message.id,
+      });
+      setNotifications(prev => [...prev, message]);
+    }
   };
 
   // 表情包数据
@@ -433,25 +478,15 @@ const ChatRoom: React.FC = () => {
       console.log('收到服务器消息:', data);
       if (data.type === 'chat') {
         console.log('处理聊天消息:', data.data.message);
-        // 检查消息是否来自其他用户
         const otherUserMessage = data.data.message;
-        console.log('otherUserMessage:', otherUserMessage);
-        console.log('senderId:', otherUserMessage.sender.id);
-        console.log('currentId:', String(currentUser?.id));
-        console.log('equals:', otherUserMessage.sender.id !== String(currentUser?.id));
         if (otherUserMessage.sender.id !== String(currentUser?.id)) {
-          console.log("当前 messages 状态:", messages);
-          console.log("消息进来啦")
-          // 接收到的新消息添加到列表末尾
           setMessages(prev => {
-            console.log("消息处理", prev);
-            return [...prev, { ...otherUserMessage }]; // 创建新对象，避免 React 认为没变
+            const newMessages = [...prev, { ...otherUserMessage }];
+            // 检查是否有@当前用户
+            handleMentionNotification(otherUserMessage);
+            return newMessages;
           });
 
-          console.log(messages.length);
-          // 更新总消息数
-          setTotal(prev => prev + 1);
-          // 如果用户正在查看底部，则自动滚动到底部
           if (isNearBottom) {
             setTimeout(scrollToBottom, 100);
           }
@@ -559,7 +594,7 @@ const ChatRoom: React.FC = () => {
         tagClass = styles.levelTagExpert;
       } else if (level >= 20) {
         tagText = '摸鱼专家';
-        tagEmoji = '🌙';
+        tagEmoji = '🌟';
         tagClass = styles.levelTagPro;
       } else if (level >= 10) {
         tagText = '摸鱼新手';
@@ -673,11 +708,29 @@ const ChatRoom: React.FC = () => {
     messageApi.info('消息已撤回');
   };
 
+  // 添加@用户的处理函数
+  const handleMentionUser = (user: User) => {
+    const mentionText = `@${user.name} `;
+    setInputValue(prev => {
+      // 如果当前输入框已经有这个@，就不重复添加
+      if (prev.includes(mentionText)) {
+        return prev;
+      }
+      return prev + mentionText;
+    });
+  };
+
   const UserInfoCard: React.FC<{ user: User }> = ({ user }) => {
     return (
       <div className={styles.userInfoCard}>
         <div className={styles.userInfoCardHeader}>
-          <div className={styles.avatarWrapper}>
+          <div
+            className={styles.avatarWrapper}
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              handleMentionUser(user);
+            }}
+          >
             <Avatar src={user.avatar} size={48} />
             <div className={styles.floatingFish}>🐟</div>
           </div>
@@ -702,6 +755,8 @@ const ChatRoom: React.FC = () => {
   const handleQuoteMessage = (message: Message) => {
     setQuotedMessage(message);
   };
+
+
 
   return (
     <div className={`${styles.chatRoom} ${isUserListCollapsed ? styles.collapsed : ''}`}>
@@ -735,12 +790,17 @@ const ChatRoom: React.FC = () => {
         {messages.map((msg) => (
           <div
             key={msg.id}
+            id={`message-${msg.id}`}
             className={`${styles.messageItem} ${
               currentUser?.id && String(msg.sender.id) === String(currentUser.id) ? styles.self : ''
-            }`}
+            } ${notifications.some(n => n.id === msg.id) ? styles.mentioned : ''}`}
           >
             <div className={styles.messageHeader}>
-              <div className={styles.avatar}>
+              <div
+                className={styles.avatar}
+                onClick={() => handleMentionUser(msg.sender)}
+                style={{ cursor: 'pointer' }}
+              >
                 <Popover
                   content={<UserInfoCard user={msg.sender} />}
                   trigger="hover"
@@ -785,7 +845,7 @@ const ChatRoom: React.FC = () => {
               </span>
               {currentUser?.id && String(msg.sender.id) === String(currentUser.id) ? (
                 <Popconfirm
-                  title={`确定要撤回这条消息吗`}
+                  title="确定要撤回这条消息吗？"
                   onConfirm={() => handleRevokeMessage(msg.id)}
                   okText="确定"
                   cancelText="取消"

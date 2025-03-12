@@ -24,6 +24,7 @@ const SideAnnouncement: React.FC = () => {
       title: 'V1.2.0 版本更新',
       content: [
         { emoji: '✨', text: '新增聊天引用功能' },
+        { emoji: '✨', text: '新增聊天 @ 功能' },
         { emoji: '🔧', text: '修复输入法下回车英文的异常' },
         { emoji: '🐛', text: '修复了一些已知问题' },
         { emoji: '💄', text: '更新了用户称号功能' },
@@ -35,8 +36,8 @@ const SideAnnouncement: React.FC = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        !isCollapsed && 
-        announcementRef.current && 
+        !isCollapsed &&
+        announcementRef.current &&
         !announcementRef.current.contains(event.target as Node)
       ) {
         setIsCollapsed(true);
