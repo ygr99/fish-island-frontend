@@ -1,6 +1,8 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {Alert, Avatar, Button, Input, message, Popover, Spin, Tooltip, Popconfirm, Modal} from 'antd';
 import COS from 'cos-js-sdk-v5';
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -426,15 +428,6 @@ const ChatRoom: React.FC = () => {
     }
   };
 
-  // 表情包数据
-  const emojis = [
-    '😊', '😂', '🤣', '❤️', '😍', '🥰', '😘', '😭', '😅', '😉',
-    '🤔', '🤗', '🤫', '🤐', '😴', '🥱', '😪', '😇', '🥳', '😎',
-    '🤓', '🧐', '🤠', '🤡', '🤑', '🤤', '😋', '😛', '😜', '😝',
-    '🤪', '🤨', '🧐', '😤', '😠', '😡', '🤬', '😈', '👿', '👻',
-    '💩', '🤡', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻',
-  ];
-
   // WebSocket连接函数
   const connectWebSocket = () => {
     const token = localStorage.getItem('tokenValue');
@@ -614,22 +607,21 @@ const ChatRoom: React.FC = () => {
     }
   };
 
-  const handleEmojiClick = (emoji: string) => {
-    setInputValue(prev => prev + emoji);
+  const handleEmojiClick = (emoji: any) => {
+    setInputValue(prev => prev + emoji.native);
     setIsEmojiPickerVisible(false);
   };
 
   const emojiPickerContent = (
     <div className={styles.emojiPicker}>
-      {emojis.map((emoji, index) => (
-        <span
-          key={index}
-          className={styles.emojiItem}
-          onClick={() => handleEmojiClick(emoji)}
-        >
-          {emoji}
-        </span>
-      ))}
+      <Picker 
+        data={data} 
+        onEmojiSelect={handleEmojiClick}
+        theme="light"
+        locale="zh"
+        previewPosition="none"
+        skinTonePosition="none"
+      />
     </div>
   );
 
