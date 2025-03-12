@@ -8,6 +8,7 @@ import {getLoginUserUsingGet} from "@/services/backend/userController";
 import {useEffect, useState} from "react";
 import AnnouncementModal from '@/components/AnnouncementModal';
 import BossKeySettings from '@/components/BossKeySettings';
+import SideAnnouncement from '@/components/SideAnnouncement';
 import routes from '../config/routes';
 
 const loginPath = '/user/login';
@@ -201,6 +202,7 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
       return (
         <>
           {children}
+          <SideAnnouncement />
           <AnnouncementModal
             visible={showAnnouncement}
             onClose={() => setShowAnnouncement(false)}

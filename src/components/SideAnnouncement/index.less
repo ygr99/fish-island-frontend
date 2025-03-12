@@ -1,0 +1,137 @@
+.sideAnnouncement {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 280px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 100;
+  background-color: #fff7e6;
+  border-radius: 0 8px 8px 0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+
+  &.collapsed {
+    transform: translateX(-280px) translateY(-50%);
+
+    .toggleButton {
+      right: -24px;
+    }
+  }
+}
+
+.toggleButton {
+  position: absolute;
+  right: -24px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    transform: translateY(-50%) scale(1.2);
+  }
+}
+
+.card {
+  border-radius: 0 8px 8px 0;
+  background-color: #fff7e6;
+  
+  :global(.ant-card-head) {
+    padding: 0 16px;
+    min-height: 48px;
+    background-color: #fa8c16;
+    border-bottom: 1px solid #ffe7ba;
+    border-radius: 0 8px 0 0;
+    
+    :global(.ant-card-head-title) {
+      padding: 8px 0;
+      color: white;
+      font-size: 15px;
+      font-weight: 500;
+    }
+  }
+
+  :global(.ant-card-body) {
+    padding: 16px;
+    max-height: 60vh;
+    overflow-y: auto;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: #ffa940;
+      border-radius: 2px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background-color: #ffe7ba;
+    }
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+
+  h3 {
+    margin: 0;
+    font-size: 14px;
+    color: #d46b08;
+    font-weight: 500;
+  }
+}
+
+.date {
+  font-size: 12px;
+  color: #8c8c8c;
+  background-color: #fff1d6;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.updateList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    font-size: 13px;
+    color: #595959;
+    margin-bottom: 8px;
+    line-height: 1.5;
+    display: flex;
+    align-items: flex-start;
+    padding-left: 4px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.emoji {
+  margin-right: 6px;
+  font-size: 14px;
+}
+
+.announcementItem {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #ffe7ba;
+
+  &:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+} 
