@@ -38,10 +38,10 @@ const SideAnnouncement: React.FC = () => {
         { emoji: '✨', text: '优化查看历史消息自动下滑' },
         { emoji: '✨', text: '优化聊天 emoji 表情包样式' },
         { emoji: '🔧', text: '优化薪资计算机部分屏幕隐藏问题' },
-        { emoji: '🐛', text: '修复了一些已知问题' },
-        { emoji: '💄', text: '更新了用户称号功能' },
+        { emoji: '🐛', text: '优化用户签到问题' },
+        { emoji: '💄', text: '优化用户查看历史记录问题' },
       ],
-      date: '2025-03-12',
+      date: '2025-03-13',
     }
   ]);
 
