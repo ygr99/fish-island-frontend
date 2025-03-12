@@ -36,6 +36,7 @@ interface User {
   level: number;
   isAdmin: boolean;
   status?: string;
+  points?: number;
 }
 
 const ChatRoom: React.FC = () => {
@@ -92,7 +93,8 @@ const ChatRoom: React.FC = () => {
           avatar: user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
           level: user.level || 1,
           isAdmin: user.isAdmin || false,
-          status: '在线'
+          status: '在线',
+          points: user.points || 0
         }));
 
         // 如果当前用户已登录且不在列表中，将其添加到列表
@@ -103,7 +105,8 @@ const ChatRoom: React.FC = () => {
             avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
             level: 1,  // 默认等级为1
             isAdmin: currentUser.userRole === 'admin',
-            status: '在线'
+            status: '在线',
+            points: currentUser.points || 0
           });
         }
 
@@ -145,6 +148,7 @@ const ChatRoom: React.FC = () => {
               name: record.messageWrapper?.message?.sender?.name || '未知用户',
               avatar: record.messageWrapper?.message?.sender?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
               level: record.messageWrapper?.message?.sender?.level || 1,
+              points: record.messageWrapper?.message?.sender?.points || 0,
               isAdmin: record.messageWrapper?.message?.sender?.isAdmin || false,
             },
             timestamp: new Date(record.messageWrapper?.message?.timestamp || Date.now()),
@@ -156,6 +160,7 @@ const ChatRoom: React.FC = () => {
                 name: record.messageWrapper.message.quotedMessage.sender?.name || '未知用户',
                 avatar: record.messageWrapper.message.quotedMessage.sender?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
                 level: record.messageWrapper.message.quotedMessage.sender?.level || 1,
+                points: record.messageWrapper.message.quotedMessage.sender?.points || 0,
                 isAdmin: record.messageWrapper.message.quotedMessage.sender?.isAdmin || false,
               },
               timestamp: new Date(record.messageWrapper.message.quotedMessage.timestamp || Date.now()),
@@ -360,6 +365,7 @@ const ChatRoom: React.FC = () => {
         name: currentUser.userName || '游客',
         avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
         level: currentUser.level || 1,
+        points: currentUser.points || 0,
         isAdmin: currentUser.userRole === 'admin',
       },
       timestamp: new Date(),
@@ -742,6 +748,10 @@ const ChatRoom: React.FC = () => {
             </div>
             <div className={styles.userInfoCardAdminTag}>
               {getAdminTag(user.isAdmin, user.level)}
+            </div>
+            <div className={styles.userInfoCardPoints}>
+              <span className={styles.pointsEmoji}>✨</span>
+              <span className={styles.pointsText}>积分: {user.points || 0}</span>
             </div>
           </div>
         </div>

@@ -386,6 +386,7 @@ declare namespace API {
     isAdmin?: boolean;
     level?: number;
     name?: string;
+    points?: number;
   };
 
   type TokenLoginUserVo = {
@@ -440,6 +441,8 @@ declare namespace API {
     level?: number;
     /** 用户名称 */
     name?: string;
+    /** 用户积分 */
+    points?: number;
     /** 用户状态 */
     status?: string;
   };
