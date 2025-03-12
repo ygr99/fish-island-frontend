@@ -37,6 +37,7 @@ const SideAnnouncement: React.FC = () => {
       content: [
         { emoji: '✨', text: '优化查看历史消息自动下滑' },
         { emoji: '✨', text: '优化聊天 emoji 表情包样式' },
+        { emoji: '✨', text: '新增用户卡片积分显示' },
         { emoji: '🔧', text: '优化薪资计算机部分屏幕隐藏问题' },
         { emoji: '🐛', text: '优化用户签到问题' },
         { emoji: '💄', text: '优化用户查看历史记录问题' },
