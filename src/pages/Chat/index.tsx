@@ -206,14 +206,14 @@ const ChatRoom: React.FC = () => {
     }
   };
 
-  // 检查是否在底部附近
+  // 检查是否在底部
   const checkIfNearBottom = () => {
     const container = messageContainerRef.current;
     if (!container) return;
 
-    const threshold = 100; // 距离底部100px以内都认为是在底部
-    const isNear = container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
-    setIsNearBottom(isNear);
+    // 只有完全在底部时才返回true
+    const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight === 0;
+    setIsNearBottom(isAtBottom);
   };
 
   // 监听滚动事件
@@ -359,7 +359,7 @@ const ChatRoom: React.FC = () => {
         id: String(currentUser.id),
         name: currentUser.userName || '游客',
         avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-        level: 1,
+        level: currentUser.level || 1,
         isAdmin: currentUser.userRole === 'admin',
       },
       timestamp: new Date(),
@@ -403,7 +403,7 @@ const ChatRoom: React.FC = () => {
   const scrollToMessage = (messageId: string) => {
     const messageElement = document.getElementById(`message-${messageId}`);
     if (messageElement) {
-      messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      messageElement.scrollIntoView({behavior: 'smooth', block: 'center'});
       // 添加高亮效果
       messageElement.classList.add(styles.highlighted);
       setTimeout(() => {
@@ -473,14 +473,21 @@ const ChatRoom: React.FC = () => {
         const otherUserMessage = data.data.message;
         if (otherUserMessage.sender.id !== String(currentUser?.id)) {
           setMessages(prev => {
-            const newMessages = [...prev, { ...otherUserMessage }];
+            const newMessages = [...prev, {...otherUserMessage}];
             // 检查是否有@当前用户
             handleMentionNotification(otherUserMessage);
             return newMessages;
           });
 
-          if (isNearBottom) {
-            setTimeout(scrollToBottom, 100);
+          // 实时检查是否在底部
+          const container = messageContainerRef.current;
+          if (container) {
+            const threshold = 30; // 30px的阈值，在底部附近就会自动滚动
+            const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+            // 当距离底部很近时才自动滚动
+            if (distanceFromBottom <= threshold) {
+              setTimeout(scrollToBottom, 100);
+            }
           }
         }
       } else if (data.type === 'userMessageRevoke') {
@@ -614,8 +621,8 @@ const ChatRoom: React.FC = () => {
 
   const emojiPickerContent = (
     <div className={styles.emojiPicker}>
-      <Picker 
-        data={data} 
+      <Picker
+        data={data}
         onEmojiSelect={handleEmojiClick}
         theme="light"
         locale="zh"
@@ -647,7 +654,7 @@ const ChatRoom: React.FC = () => {
         id: String(currentUser.id),
         name: currentUser.userName || '游客',
         avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-        level: 1,
+        level: currentUser.level || 1,
         isAdmin: currentUser.userRole === 'admin',
       },
       timestamp: new Date(),
@@ -690,7 +697,7 @@ const ChatRoom: React.FC = () => {
       userId: -1,
       data: {
         type: 'userMessageRevoke',
-        content:  messageId
+        content: messageId
       }
     };
 
@@ -711,7 +718,7 @@ const ChatRoom: React.FC = () => {
     });
   };
 
-  const UserInfoCard: React.FC<{ user: User }> = ({ user }) => {
+  const UserInfoCard: React.FC<{ user: User }> = ({user}) => {
     return (
       <div className={styles.userInfoCard}>
         <div className={styles.userInfoCardHeader}>
@@ -722,7 +729,7 @@ const ChatRoom: React.FC = () => {
               handleMentionUser(user);
             }}
           >
-            <Avatar src={user.avatar} size={48} />
+            <Avatar src={user.avatar} size={48}/>
             <div className={styles.floatingFish}>🐟</div>
           </div>
           <div className={styles.userInfoCardTitle}>
@@ -746,7 +753,6 @@ const ChatRoom: React.FC = () => {
   const handleQuoteMessage = (message: Message) => {
     setQuotedMessage(message);
   };
-
 
 
   return (
@@ -790,10 +796,10 @@ const ChatRoom: React.FC = () => {
               <div
                 className={styles.avatar}
                 onClick={() => handleMentionUser(msg.sender)}
-                style={{ cursor: 'pointer' }}
+                style={{cursor: 'pointer'}}
               >
                 <Popover
-                  content={<UserInfoCard user={msg.sender} />}
+                  content={<UserInfoCard user={msg.sender}/>}
                   trigger="hover"
                   placement="top"
                 >
@@ -824,7 +830,7 @@ const ChatRoom: React.FC = () => {
                     </span>
                   </div>
                   <div className={styles.quotedMessageContent}>
-                    <MessageContent content={msg.quotedMessage.content} />
+                    <MessageContent content={msg.quotedMessage.content}/>
                   </div>
                 </div>
               )}
@@ -871,7 +877,7 @@ const ChatRoom: React.FC = () => {
           <div key={user.id} className={styles.userItem}>
             <div className={styles.avatarWrapper}>
               <Popover
-                content={<UserInfoCard user={user} />}
+                content={<UserInfoCard user={user}/>}
                 trigger="hover"
                 placement="right"
               >
@@ -897,12 +903,12 @@ const ChatRoom: React.FC = () => {
             <div className={styles.quotePreviewContent}>
               <span className={styles.quotePreviewSender}>{quotedMessage.sender.name}:</span>
               <span className={styles.quotePreviewText}>
-                <MessageContent content={quotedMessage.content} />
+                <MessageContent content={quotedMessage.content}/>
               </span>
             </div>
             <Button
               type="text"
-              icon={<DeleteOutlined />}
+              icon={<DeleteOutlined/>}
               className={styles.removeQuote}
               onClick={handleCancelQuote}
             />
@@ -922,7 +928,7 @@ const ChatRoom: React.FC = () => {
               />
               <Button
                 type="text"
-                icon={<DeleteOutlined />}
+                icon={<DeleteOutlined/>}
                 className={styles.removeImage}
                 onClick={handleRemoveImage}
               />
@@ -990,7 +996,7 @@ const ChatRoom: React.FC = () => {
         footer={null}
         onCancel={() => setIsPreviewVisible(false)}
       >
-        {previewImage && <img alt="预览" style={{ width: '100%' }} src={previewImage} />}
+        {previewImage && <img alt="预览" style={{width: '100%'}} src={previewImage}/>}
       </Modal>
     </div>
   );

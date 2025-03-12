@@ -45,6 +45,8 @@ import {Captcha} from "aj-captcha-react";
 import {BACKEND_HOST_CODE} from "@/constants";
 import {RcFile} from "antd/lib/upload";
 import COS from 'cos-js-sdk-v5';
+import {signInUsingPost} from "@/services/backend/userController";
+import {getLoginUserUsingGet} from "@/services/backend/userController";
 
 export type GlobalHeaderRightProps = {
   menu?: boolean;
@@ -383,60 +385,44 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
   const [isCheckinAnimating, setIsCheckinAnimating] = useState(false);
 
-  // 签到动画的样式
-  const checkinButtonStyle = useEmotionCss(() => ({
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    display: 'inline-flex',
-    alignItems: 'center',
-    padding: '4px 8px',
-    borderRadius: '16px',
-    background: hasCheckedIn
-      ? 'linear-gradient(135deg, #40a9ff 0%, #1890ff 100%)'
-      : 'linear-gradient(135deg, #f5f5f5 0%, #fafafa 100%)',
-    boxShadow: hasCheckedIn
-      ? '0 2px 4px rgba(24, 144, 255, 0.2)'
-      : '0 1px 3px rgba(0, 0, 0, 0.05)',
-    border: `1px solid ${hasCheckedIn ? '#1890ff' : '#e8e8e8'}`,
-    '&:hover': {
-      transform: 'scale(1.03)',
-      background: hasCheckedIn
-        ? 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)'
-        : 'linear-gradient(135deg, #f0f0f0 0%, #f5f5f5 100%)',
-      boxShadow: hasCheckedIn
-        ? '0 3px 6px rgba(24, 144, 255, 0.3)'
-        : '0 2px 4px rgba(0, 0, 0, 0.1)',
-    },
-    '.checkin-emoji': {
-      fontSize: '16px',
-      marginRight: '4px',
-      transition: 'all 0.5s ease',
-      transform: isCheckinAnimating ? 'scale(1.2) rotate(360deg)' : 'scale(1)',
-      display: 'inline-flex',
-      alignItems: 'center',
-      filter: hasCheckedIn ? 'brightness(1.1)' : 'none',
-    },
-    '.checkin-text': {
-      fontSize: '13px',
-      fontWeight: 500,
-      color: hasCheckedIn ? '#ffffff' : '#595959',
-      textShadow: hasCheckedIn ? '0 1px 1px rgba(0, 0, 0, 0.1)' : 'none',
-    },
-  }));
+  // 检查今日是否已签到
+  useEffect(() => {
+    if (currentUser?.lastSignInDate) {
+      const lastSignIn = moment(currentUser.lastSignInDate);
+      const today = moment().startOf('day');
+      setHasCheckedIn(lastSignIn.isSame(today, 'day'));
+    }
+  }, [currentUser?.lastSignInDate]);
 
   // 处理签到
-  const handleCheckin = () => {
+  const handleCheckin = async () => {
     if (hasCheckedIn) {
       message.info('今天已经摸鱼打卡啦！明天继续加油 🐟');
       return;
     }
 
-    setIsCheckinAnimating(true);
-    setTimeout(() => {
-      setHasCheckedIn(true);
+    try {
+      setIsCheckinAnimating(true);
+      const res = await signInUsingPost();
+      if (res.code === 0) {
+        setHasCheckedIn(true);
+        message.success('摸鱼打卡成功！获得 10 积分 🎣');
+        // 更新用户信息
+        const userInfo = await getLoginUserUsingGet();
+        if (userInfo.data) {
+          setInitialState((s) => ({
+            ...s,
+            currentUser: userInfo.data,
+          }));
+        }
+      } else {
+        message.error('签到失败，请稍后重试');
+      }
+    } catch (error) {
+      message.error('签到失败，请稍后重试');
+    } finally {
       setIsCheckinAnimating(false);
-      message.success('摸鱼打卡成功！获得 10 积分 🎣');
-    }, 500);
+    }
   };
 
   // VIP 标识动画样式
@@ -550,6 +536,47 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       setUploading(false);
     }
   };
+
+  // 签到按钮的样式
+  const checkinButtonStyle = useEmotionCss(() => ({
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '4px 8px',
+    borderRadius: '16px',
+    background: hasCheckedIn
+      ? 'linear-gradient(135deg, #40a9ff 0%, #1890ff 100%)'
+      : 'linear-gradient(135deg, #f5f5f5 0%, #fafafa 100%)',
+    boxShadow: hasCheckedIn
+      ? '0 2px 4px rgba(24, 144, 255, 0.2)'
+      : '0 1px 3px rgba(0, 0, 0, 0.05)',
+    border: `1px solid ${hasCheckedIn ? '#1890ff' : '#e8e8e8'}`,
+    '&:hover': {
+      transform: 'scale(1.03)',
+      background: hasCheckedIn
+        ? 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)'
+        : 'linear-gradient(135deg, #f0f0f0 0%, #f5f5f5 100%)',
+      boxShadow: hasCheckedIn
+        ? '0 3px 6px rgba(24, 144, 255, 0.3)'
+        : '0 2px 4px rgba(0, 0, 0, 0.1)',
+    },
+    '.checkin-emoji': {
+      fontSize: '16px',
+      marginRight: '4px',
+      transition: 'all 0.5s ease',
+      transform: isCheckinAnimating ? 'scale(1.2) rotate(360deg)' : 'scale(1)',
+      display: 'inline-flex',
+      alignItems: 'center',
+      filter: hasCheckedIn ? 'brightness(1.1)' : 'none',
+    },
+    '.checkin-text': {
+      fontSize: '13px',
+      fontWeight: 500,
+      color: hasCheckedIn ? '#ffffff' : '#595959',
+      textShadow: hasCheckedIn ? '0 1px 1px rgba(0, 0, 0, 0.1)' : 'none',
+    },
+  }));
 
   if (!currentUser) {
     return (

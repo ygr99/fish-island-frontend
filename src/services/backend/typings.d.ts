@@ -163,7 +163,11 @@ declare namespace API {
   type LoginUserVO = {
     createTime?: string;
     id?: number;
+    lastSignInDate?: string;
+    level?: number;
+    points?: number;
     updateTime?: string;
+    usedPoints?: number;
     userAvatar?: string;
     userName?: string;
     userProfile?: string;
@@ -387,8 +391,12 @@ declare namespace API {
   type TokenLoginUserVo = {
     createTime?: string;
     id?: number;
+    lastSignInDate?: string;
+    level?: number;
+    points?: number;
     saTokenInfo?: SaTokenInfo;
     updateTime?: string;
+    usedPoints?: number;
     userAvatar?: string;
     userName?: string;
     userProfile?: string;
