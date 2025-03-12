@@ -2,7 +2,6 @@ import React, {useEffect, useRef, useState} from 'react';
 import {Alert, Avatar, Button, Input, message, Popover, Spin, Tooltip, Popconfirm, Modal} from 'antd';
 import COS from 'cos-js-sdk-v5';
 import {
-  CrownFilled,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   PictureOutlined,

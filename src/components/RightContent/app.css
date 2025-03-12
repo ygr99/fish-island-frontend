@@ -14,13 +14,6 @@
   }
 }
 
-/* 在屏幕宽度小于 20 寸时隐藏按钮 */
-@media (max-width: 1600px) {
-  .money-button {
-    display: none;
-  }
-}
-
 /* 按钮样式 */
 .money-button {
   width: 110px !important;
@@ -32,6 +25,25 @@
   background-color: white !important;
   color: black !important;
   border: 1px solid #d9d9d9 !important;
+}
+
+/* 响应式按钮样式 */
+@media (max-width: 1024px) {
+  .money-button {
+    width: 90px !important;
+    height: 90px !important;
+  }
+  
+  .money-button-content {
+    font-size: 0.9em;
+  }
+}
+
+/* 在小屏设备上隐藏按钮 */
+@media (max-width: 720px) {
+  .money-button {
+    display: none !important;
+  }
 }
 
 .money-button-content {
