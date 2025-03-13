@@ -301,30 +301,42 @@
         padding-right: 40px;
 
         .messageHeader {
+          display: flex;
           flex-direction: row-reverse;
-          text-align: right;
+          align-items: center;
+          position: relative;
           width: 100%;
-          justify-content: flex-end;
           margin-bottom: 4px;
 
           .avatar {
             position: absolute;
-            right: 0;
+            right: -40px;
             top: 0;
+            width: 32px;
+            height: 32px;
           }
 
           .senderInfo {
-            align-items: flex-end;
-            margin-right: 8px;
+            margin-right: 0;
+            margin-left: 8px;
+            text-align: right;
+          }
+
+          .senderName {
+            display: flex;
+            flex-direction: row-reverse;
+            align-items: center;
+            gap: 4px;
           }
         }
 
         .messageContent {
+          margin-top: 4px;
           background: linear-gradient(135deg, #ffa768 0%, #ffcba4 100%);
           color: white;
           border-radius: 12px 4px 12px 12px;
           box-shadow: 0 2px 8px rgba(255, 167, 104, 0.15);
-          margin: 0;
+          margin-right: 0;
           align-self: flex-end;
         }
 
@@ -332,6 +344,11 @@
           text-align: right;
           margin: 2px 0 0 0;
           align-self: flex-end;
+        }
+
+        .messageFooter {
+          margin-right: 0;
+          justify-content: flex-end;
         }
       }
 
@@ -345,10 +362,12 @@
         .avatar {
           position: relative;
           flex-shrink: 0;
+          width: 32px;
+          height: 32px;
 
           .ant-avatar {
-            width: 24px;
-            height: 24px;
+            width: 32px;
+            height: 32px;
           }
 
           .levelBadge {
@@ -382,6 +401,7 @@
           align-items: center;
           gap: 4px;
           line-height: 1;
+          white-space: nowrap;
 
           .adminIcon {
             font-size: 12px;
@@ -396,6 +416,7 @@
       }
 
       .messageContent {
+        margin-top: 4px;
         background: white;
         padding: 8px 12px;
         border-radius: 4px 12px 12px 12px;
@@ -405,8 +426,7 @@
         word-break: break-word;
         width: fit-content;
         font-size: 13px;
-        margin: 0;
-        margin-left: 30px;
+        margin-left: 40px;
 
         .quotedMessage {
           margin-bottom: 8px;
@@ -448,7 +468,7 @@
         font-size: 10px;
         color: #bbb;
         padding: 0 4px;
-        margin: 2px 0 0 30px;
+        margin: 2px 0 0 40px;
       }
 
       &:hover {

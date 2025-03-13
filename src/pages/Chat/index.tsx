@@ -101,7 +101,7 @@ const ChatRoom: React.FC = () => {
         const botUser = {
           id: '-1',
           name: '摸鱼助手',
-          avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=bot',
+          avatar: 'https://img1.baidu.com/it/u=3014707936,92115294&fm=253&fmt=auto&app=120&f=JPEG?w=500&h=500',
           level: 7,
           isAdmin: false,
           status: '在线',
@@ -580,84 +580,84 @@ const ChatRoom: React.FC = () => {
       case 7:
         return '👑';  // 最高级
       case 6:
-        return '🌟';
+        return '🛏';
       case 5:
-        return '💎';
+        return '🏖';
       case 4:
-        return '🌙';
+        return '🎣';
       case 3:
         return '⭐';
       case 2:
-        return '🌱';
+        return '🐣';
       case 1:
-        return '🐟';
+        return '💦';
       default:
-        return '🐟';  // 默认显示
+        return '💦';  // 默认显示
     }
   };
 
   // 新增管理员标识函数
   const getAdminTag = (isAdmin: boolean, level: number) => {
-    if (isAdmin) {
-      // 随机选择一个摸鱼表情
-      const fishEmojis = ['🐟', '🐠', '🐡', '🎣'];
-      const randomFish = fishEmojis[Math.floor(Math.random() * fishEmojis.length)];
-      return (
-        <span className={styles.adminTag}>
-          {randomFish}
-          <span className={styles.adminText}>摸鱼官</span>
-        </span>
-      );
-    } else {
-      // 根据等级返回不同的标签
-      let tagText = '';
-      let tagEmoji = '';
-      let tagClass = '';
+    // if (isAdmin) {
+    //   // 随机选择一个摸鱼表情
+    //   const fishEmojis = ['🐟', '🐠', '🐡', '🎣'];
+    //   const randomFish = fishEmojis[Math.floor(Math.random() * fishEmojis.length)];
+    //   return (
+    //     <span className={styles.adminTag}>
+    //       {randomFish}
+    //       <span className={styles.adminText}>摸鱼官</span>
+    //     </span>
+    //   );
+    // } else {
+    // 根据等级返回不同的标签
+    let tagText = '';
+    let tagEmoji = '';
+    let tagClass = '';
 
-      switch (level) {
-        case 7:
-          tagText = '摸鱼皇帝';
-          tagEmoji = '👑';
-          tagClass = styles.levelTagMaster;
-          break;
-        case 6:
-          tagText = '摸鱼达人';
-          tagEmoji = '🌟';
-          tagClass = styles.levelTagExpert;
-          break;
-        case 5:
-          tagText = '摸鱼高手';
-          tagEmoji = '💎';
-          tagClass = styles.levelTagPro;
-          break;
-        case 4:
-          tagText = '摸鱼专家';
-          tagEmoji = '🌙';
-          tagClass = styles.levelTagAdvanced;
-          break;
-        case 3:
-          tagText = '摸鱼新手';
-          tagEmoji = '⭐';
-          tagClass = styles.levelTagBeginner;
-          break;
-        case 2:
-          tagText = '摸鱼学徒';
-          tagEmoji = '🌱';
-          tagClass = styles.levelTagNewbie;
-          break;
-        default:
-          tagText = '摸鱼小白';
-          tagEmoji = '🐟';
-          tagClass = styles.levelTagNewbie;
-      }
-
-      return (
-        <span className={`${styles.adminTag} ${tagClass}`}>
-          {tagEmoji}
-          <span className={styles.adminText}>{tagText}</span>
-        </span>
-      );
+    switch (level) {
+      case 7:
+        tagText = '摸鱼皇帝';
+        tagEmoji = '👑';
+        tagClass = styles.levelTagMaster;
+        break;
+      case 6:
+        tagText = '躺平宗师';
+        tagEmoji = '🛏';
+        tagClass = styles.levelTagExpert;
+        break;
+      case 5:
+        tagText = '摆烂大师';
+        tagEmoji = '🏖️';
+        tagClass = styles.levelTagPro;
+        break;
+      case 4:
+        tagText = '摸鱼专家 ';
+        tagEmoji = '🎣';
+        tagClass = styles.levelTagAdvanced;
+        break;
+      case 3:
+        tagText = '水群达人';
+        tagEmoji = '⭐';
+        tagClass = styles.levelTagBeginner;
+        break;
+      case 2:
+        tagText = '摸鱼学徒';
+        tagEmoji = '🐣';
+        tagClass = styles.levelTagNewbie;
+        break;
+      default:
+        tagText = '划水新秀';
+        tagEmoji = '💦';
+        tagClass = styles.levelTagNewbie;
     }
+
+    return (
+      <span className={`${styles.adminTag} ${tagClass}`}>
+          {tagEmoji}
+        <span className={styles.adminText}>{tagText}</span>
+        </span>
+    );
+    // }
   };
 
   const handleEmojiClick = (emoji: any) => {
@@ -858,15 +858,11 @@ const ChatRoom: React.FC = () => {
               </div>
               <div className={styles.senderInfo}>
                 <span className={styles.senderName}>
-                  {currentUser?.id && String(msg.sender.id) === String(currentUser.id) ? null : (
-                    <>
-                      {msg.sender.name}
-                      {getAdminTag(msg.sender.isAdmin, msg.sender.level)}
-                      <span className={styles.levelBadge}>
-                        {getLevelEmoji(msg.sender.level)} {msg.sender.level}
-                      </span>
-                    </>
-                  )}
+                  {msg.sender.name}
+                  {getAdminTag(msg.sender.isAdmin, msg.sender.level)}
+                  <span className={styles.levelBadge}>
+                    {getLevelEmoji(msg.sender.level)} {msg.sender.level}
+                  </span>
                 </span>
               </div>
             </div>
