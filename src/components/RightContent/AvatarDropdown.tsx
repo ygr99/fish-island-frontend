@@ -197,6 +197,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   };
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [editProfileForm] = Form.useForm();
+  const [siteConfigForm] = Form.useForm();
   const [selectedAvatar, setSelectedAvatar] = useState<string>('');
   const [previewAvatar, setPreviewAvatar] = useState<string>('');
 
@@ -207,6 +208,12 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     'https://img2.baidu.com/it/u=2695396371,803611298&fm=253&fmt=auto&app=120&f=JPEG?w=800&h=800',
     'https://img1.baidu.com/it/u=648366534,1664954226&fm=253&fmt=auto&app=120&f=JPEG?w=800&h=800',
     'https://img0.baidu.com/it/u=925856458,2747676088&fm=253&fmt=auto?w=800&h=800',
+  ];
+
+  // 网站默认图标列表
+  const defaultSiteIcons = [
+    'https://www.baidu.com/favicon.ico',
+    'https://g.csdnimg.cn/static/logo/favicon32.ico',
   ];
 
   const handleEditProfile = async (values: any) => {
@@ -228,6 +235,15 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       message.error(`修改失败，${error.message}`);
     }
   };
+
+  const [isSiteConfigOpen, setIsSiteConfigOpen] = useState(false);
+  const [siteConfig, setSiteConfig] = useState(() => {
+    const savedConfig = localStorage.getItem('siteConfig');
+    return savedConfig ? JSON.parse(savedConfig) : {
+      siteName: '摸鱼岛',
+      siteIcon: 'https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png'
+    };
+  });
 
   const menuItems = [
     ...(menu
@@ -256,6 +272,11 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       key: 'bossKey',
       icon: <LockOutlined/>,
       label: '老板键设置',
+    },
+    {
+      key: 'siteConfig',
+      icon: <SettingOutlined/>,
+      label: '网站设置',
     },
     {
       key: 'logout',
@@ -288,6 +309,10 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       }
       if (key === 'bossKey') {
         setIsBossKeyOpen(true);
+        return;
+      }
+      if (key === 'siteConfig') {
+        setIsSiteConfigOpen(true);
         return;
       }
       history.push(`/account/${key}`);
@@ -1107,6 +1132,122 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 保存设置
               </Button>
               <Button onClick={() => setIsBossKeyOpen(false)}>
+                取消
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="网站设置"
+        open={isSiteConfigOpen}
+        onCancel={() => setIsSiteConfigOpen(false)}
+        footer={null}
+      >
+        <Form
+          form={siteConfigForm}
+          initialValues={siteConfig}
+          onFinish={(values) => {
+            setSiteConfig(values);
+            localStorage.setItem('siteConfig', JSON.stringify(values));
+            // 更新网站图标
+            const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+            if (link) {
+              link.href = values.siteIcon;
+            } else {
+              const newLink = document.createElement('link');
+              newLink.rel = 'icon';
+              newLink.href = values.siteIcon;
+              document.head.appendChild(newLink);
+            }
+            // 更新网站标题
+            document.title = values.siteName;
+            message.success('网站设置已保存');
+            setIsSiteConfigOpen(false);
+          }}
+        >
+          <Form.Item
+            label="网站名称"
+            name="siteName"
+            rules={[{required: true, message: '请输入网站名称！'}]}
+          >
+            <Input placeholder="请输入网站名称"/>
+          </Form.Item>
+
+          <Form.Item
+            label="网站图标"
+            name="siteIcon"
+            help="可以上传图片，输入在线图片地址，或者选择下方默认图标"
+          >
+            <div style={{display: 'flex', gap: '8px', alignItems: 'flex-start', flexWrap: 'wrap'}}>
+              <Upload
+                accept="image/*"
+                showUploadList={false}
+                beforeUpload={async (file) => {
+                  const url = await handleUpload(file);
+                  if (url) {
+                    siteConfigForm.setFieldValue('siteIcon', url);
+                  }
+                  return false;
+                }}
+              >
+                <Button icon={<UploadOutlined/>} loading={uploading}>
+                  上传图标
+                </Button>
+              </Upload>
+              <Input
+                placeholder="请输入图标地址（选填）"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  siteConfigForm.setFieldValue('siteIcon', value);
+                }}
+                value={siteConfigForm.getFieldValue('siteIcon')}
+                style={{flex: 1}}
+              />
+              {siteConfigForm.getFieldValue('siteIcon') && (
+                <div style={{
+                  marginLeft: '8px',
+                  padding: '4px',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '4px'
+                }}>
+                  <Avatar
+                    src={siteConfigForm.getFieldValue('siteIcon')}
+                    size={64}
+                  />
+                </div>
+              )}
+            </div>
+          </Form.Item>
+
+          <Form.Item label="默认图标">
+            <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+              {defaultSiteIcons.map((icon, index) => (
+                <div
+                  key={index}
+                  onClick={() => {
+                    siteConfigForm.setFieldValue('siteIcon', icon);
+                  }}
+                  style={{
+                    cursor: 'pointer',
+                    border: siteConfigForm.getFieldValue('siteIcon') === icon ? '2px solid #1890ff' : '2px solid transparent',
+                    borderRadius: '4px',
+                    padding: '4px',
+                  }}
+                >
+                  <Avatar src={icon} size={64}/>
+                </div>
+              ))}
+            </div>
+          </Form.Item>
+
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                保存设置
+              </Button>
+              <Button onClick={() => setIsSiteConfigOpen(false)}>
                 取消
               </Button>
             </Space>

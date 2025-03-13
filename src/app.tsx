@@ -77,6 +77,24 @@ export async function getInitialState(): Promise<InitialState> {
   };
   const {location} = history;
 
+  // 应用网站设置
+  const savedSiteConfig = localStorage.getItem('siteConfig');
+  if (savedSiteConfig) {
+    const { siteName, siteIcon } = JSON.parse(savedSiteConfig);
+    // 更新网站图标
+    const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+    if (link) {
+      link.href = siteIcon;
+    } else {
+      const newLink = document.createElement('link');
+      newLink.rel = 'icon';
+      newLink.href = siteIcon;
+      document.head.appendChild(newLink);
+    }
+    // 更新网站标题
+    document.title = siteName;
+  }
+
   // 检查当前路由是否需要登录验证
   if (checkNeedAuth(location.pathname)) {
     try {

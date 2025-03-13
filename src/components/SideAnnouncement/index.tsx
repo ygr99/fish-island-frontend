@@ -35,12 +35,10 @@ const SideAnnouncement: React.FC = () => {
       id: 2,
       title: 'V1.2.1 版本更新',
       content: [
-        { emoji: '✨', text: '优化查看历史消息自动下滑' },
-        { emoji: '✨', text: '优化聊天 emoji 表情包样式' },
-        { emoji: '✨', text: '新增用户卡片积分显示' },
-        { emoji: '🔧', text: '优化薪资计算机部分屏幕隐藏问题' },
-        { emoji: '🐛', text: '优化用户签到问题' },
-        { emoji: '💄', text: '优化用户查看历史记录问题' },
+        { emoji: '✨', text: '新增@机器人功能' },
+        { emoji: '✨', text: '优化用户聊天名称以及说话换行' },
+        { emoji: '✨', text: '新增用户自定义网站图标以及 icon' },
+        { emoji: '✨', text: '新增游戏（跳一跳，模拟赛车）' },
       ],
       date: '2025-03-13',
     }

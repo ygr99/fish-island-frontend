@@ -101,8 +101,8 @@ const ChatRoom: React.FC = () => {
         const botUser = {
           id: '-1',
           name: '摸鱼助手',
-          avatar: 'https://img1.baidu.com/it/u=3014707936,92115294&fm=253&fmt=auto&app=120&f=JPEG?w=500&h=500',
-          level: 7,
+          avatar: 'https://s1.aigei.com/src/img/gif/3d/3dbb70bf3c81407cb5aaba07c79b317b.gif?imageMogr2/auto-orient/thumbnail/!282x270r/gravity/Center/crop/282x270/quality/85/%7CimageView2/2/w/282&e=2051020800&token=P7S2Xpzfz11vAkASLTkfHN7Fw-oOZBecqeJaxypL:_J_OaEEsWRM6CkjjOHEHug85N7U=',
+          level: 1,
           isAdmin: false,
           status: '在线',
           points: 9999
