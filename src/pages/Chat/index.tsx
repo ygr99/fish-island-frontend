@@ -102,7 +102,7 @@ const ChatRoom: React.FC = () => {
           id: '-1',
           name: '摸鱼助手',
           avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=bot',
-          level: 99,
+          level: 7,
           isAdmin: false,
           status: '在线',
           points: 9999
@@ -115,7 +115,7 @@ const ChatRoom: React.FC = () => {
             id: String(currentUser.id),
             name: currentUser.userName || '未知用户',
             avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-            level: 1,  // 默认等级为1
+            level: currentUser.level || 1,  // 默认等级为1
             isAdmin: currentUser.userRole === 'admin',
             status: '在线',
             points: currentUser.points || 0
@@ -576,12 +576,24 @@ const ChatRoom: React.FC = () => {
   }, [currentUser?.id]);
 
   const getLevelEmoji = (level: number) => {
-    if (level >= 99) return '👑';
-    if (level >= 50) return '🌟';
-    if (level >= 30) return '💎';
-    if (level >= 20) return '🌙';
-    if (level >= 10) return '⭐';
-    return '🌱';
+    switch (level) {
+      case 7:
+        return '👑';  // 最高级
+      case 6:
+        return '🌟';
+      case 5:
+        return '💎';
+      case 4:
+        return '🌙';
+      case 3:
+        return '⭐';
+      case 2:
+        return '🌱';
+      case 1:
+        return '🐟';
+      default:
+        return '🐟';  // 默认显示
+    }
   };
 
   // 新增管理员标识函数
@@ -601,26 +613,42 @@ const ChatRoom: React.FC = () => {
       let tagText = '';
       let tagEmoji = '';
       let tagClass = '';
-      if (level >= 50) {
-        tagText = '摸鱼达人';
-        tagEmoji = '🏆';
-        tagClass = styles.levelTagMaster;
-      } else if (level >= 30) {
-        tagText = '摸鱼高手';
-        tagEmoji = '💎';
-        tagClass = styles.levelTagExpert;
-      } else if (level >= 20) {
-        tagText = '摸鱼专家';
-        tagEmoji = '🌟';
-        tagClass = styles.levelTagPro;
-      } else if (level >= 10) {
-        tagText = '摸鱼新手';
-        tagEmoji = '⭐';
-        tagClass = styles.levelTagBeginner;
-      } else {
-        tagText = '摸鱼小白';
-        tagEmoji = '🐟';
-        tagClass = styles.levelTagNewbie;
+
+      switch (level) {
+        case 7:
+          tagText = '摸鱼皇帝';
+          tagEmoji = '👑';
+          tagClass = styles.levelTagMaster;
+          break;
+        case 6:
+          tagText = '摸鱼达人';
+          tagEmoji = '🌟';
+          tagClass = styles.levelTagExpert;
+          break;
+        case 5:
+          tagText = '摸鱼高手';
+          tagEmoji = '💎';
+          tagClass = styles.levelTagPro;
+          break;
+        case 4:
+          tagText = '摸鱼专家';
+          tagEmoji = '🌙';
+          tagClass = styles.levelTagAdvanced;
+          break;
+        case 3:
+          tagText = '摸鱼新手';
+          tagEmoji = '⭐';
+          tagClass = styles.levelTagBeginner;
+          break;
+        case 2:
+          tagText = '摸鱼学徒';
+          tagEmoji = '🌱';
+          tagClass = styles.levelTagNewbie;
+          break;
+        default:
+          tagText = '摸鱼小白';
+          tagEmoji = '🐟';
+          tagClass = styles.levelTagNewbie;
       }
 
       return (
@@ -900,7 +928,7 @@ const ChatRoom: React.FC = () => {
             key={user.id}
             className={styles.userItem}
             onClick={() => handleMentionUser(user)}
-            style={{ cursor: 'pointer' }}
+            style={{cursor: 'pointer'}}
           >
             <div className={styles.avatarWrapper}>
               <Popover
