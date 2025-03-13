@@ -27,7 +27,7 @@ const GbaEmulator: React.FC = () => {
     <div className={styles.container}>
       <iframe
         ref={iframeRef}
-        src="https://endrift.github.io/gbajs/"
+        src="https://haiyong.site/moyu/slowroads/"
         className={styles.iframe}
         title="GBA.js Emulator"
       />
