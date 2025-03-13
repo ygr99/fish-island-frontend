@@ -871,11 +871,10 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             label="用户名"
             rules={[
               {required: true, message: '请输入用户名！'},
-              {max: 20, message: '用户名不能超过20个字符！'},
-              {min: 2, message: '用户名不能少于2个字符！'}
+              {max: 10, message: '用户名不能超过10个字符！'},
             ]}
           >
-            <Input maxLength={20} showCount placeholder="请输入2-20个字符的用户名"/>
+            <Input maxLength={10} showCount placeholder="请输入用户名"/>
           </Form.Item>
 
           <Form.Item
@@ -954,14 +953,14 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             name="userProfile"
             label="个人简介"
             rules={[
-              {max: 200, message: '个人简介不能超过200个字符！'}
+              {max: 100, message: '个人简介不能超过100个字符！'}
             ]}
           >
             <Input.TextArea 
               rows={4} 
-              maxLength={200} 
+              maxLength={100} 
               showCount 
-              placeholder="请输入不超过200个字符的个人简介"
+              placeholder="请输入不超过100个字符的个人简介"
             />
           </Form.Item>
 

@@ -338,6 +338,8 @@
           box-shadow: 0 2px 8px rgba(255, 167, 104, 0.15);
           margin-right: 0;
           align-self: flex-end;
+          max-width: 85%;
+          margin-left: 0;
         }
 
         .timestamp {
@@ -424,9 +426,13 @@
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
         color: #1a1c1e;
         word-break: break-word;
+        max-width: 100%;
         width: fit-content;
+        min-width: 50px;
         font-size: 13px;
         margin-left: 40px;
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
 
         .quotedMessage {
           margin-bottom: 8px;
