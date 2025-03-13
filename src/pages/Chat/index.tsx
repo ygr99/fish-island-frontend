@@ -97,6 +97,18 @@ const ChatRoom: React.FC = () => {
           points: user.points || 0
         }));
 
+        // 添加机器人用户
+        const botUser = {
+          id: '-1',
+          name: '摸鱼助手',
+          avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=bot',
+          level: 99,
+          isAdmin: false,
+          status: '在线',
+          points: 9999
+        };
+        onlineUsersList.unshift(botUser);
+
         // 如果当前用户已登录且不在列表中，将其添加到列表
         if (currentUser?.id && !onlineUsersList.some(user => user.id === String(currentUser.id))) {
           onlineUsersList.push({
@@ -884,7 +896,12 @@ const ChatRoom: React.FC = () => {
           在线成员 ({onlineUsers.length})
         </div>
         {onlineUsers.map(user => (
-          <div key={user.id} className={styles.userItem}>
+          <div
+            key={user.id}
+            className={styles.userItem}
+            onClick={() => handleMentionUser(user)}
+            style={{ cursor: 'pointer' }}
+          >
             <div className={styles.avatarWrapper}>
               <Popover
                 content={<UserInfoCard user={user}/>}
