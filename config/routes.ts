@@ -15,6 +15,8 @@ export default [
       { path: '/game', redirect: '/game/piece', requireAuth: true },
       { icon: 'DesktopOutlined', path: '/game/piece', component: './Game/Piece', name: '五子棋', requireAuth: true },
       { icon: 'DesktopOutlined', path: '/game/2048', component: './Game/2048', name: '2048', requireAuth: false },
+      { icon: 'DesktopOutlined', path: '/game/gba', component: './Game/Gba', name: 'Gba', requireAuth: false },
+      { icon: 'DesktopOutlined', path: '/game/infinityGames', component: './Game/InfinityGames', name: '游戏大全', requireAuth: false },
     ],
   },
   {
