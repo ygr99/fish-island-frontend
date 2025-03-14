@@ -10,7 +10,8 @@ import {
   SendOutlined,
   SmileOutlined,
   SoundOutlined,
-  DeleteOutlined
+  DeleteOutlined,
+  PaperClipOutlined
 } from '@ant-design/icons';
 import styles from './index.less';
 import {useModel} from "@@/exports";
@@ -19,6 +20,7 @@ import {getOnlineUserListUsingGet, listMessageVoByPageUsingPost} from "@/service
 import MessageContent from '@/components/MessageContent';
 import EmoticonPicker from '@/components/EmoticonPicker';
 import {getCosCredentialUsingGet} from "@/services/backend/fileController";
+import {generatePresignedDownloadUrlUsingGet} from "@/services/backend/fileController";
 
 interface Message {
   id: string;
@@ -81,6 +83,10 @@ const ChatRoom: React.FC = () => {
   const [quotedMessage, setQuotedMessage] = useState<Message | null>(null);
 
   const [notifications, setNotifications] = useState<Message[]>([]);
+
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [pendingFileUrl, setPendingFileUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 获取在线用户列表
   const fetchOnlineUsers = async () => {
@@ -272,7 +278,7 @@ const ChatRoom: React.FC = () => {
       const res = await getCosCredentialUsingGet({
         fileName: file.name || `paste_${Date.now()}.png`
       });
-      console.log('getKeyAndCredentials:', res);
+      // console.log('getKeyAndCredentials:', res);
       const data = res.data;
       const cos = new COS({
         SecretId: data?.response?.credentials?.tmpSecretId,
@@ -290,16 +296,16 @@ const ChatRoom: React.FC = () => {
           Key: data?.key as string,
           Body: file,
           onProgress: function (progressData) {
-            console.log('上传进度：', progressData);
+            // console.log('上传进度：', progressData);
           }
         }, function (err, data) {
           if (err) {
             reject(err);
             return;
           }
-          console.log('上传结束', data);
+          // console.log('上传结束', data);
           const url = "https://" + data.Location;
-          console.log("图片地址：", url);
+          // console.log("图片地址：", url);
           resolve(url);
         });
       });
@@ -334,6 +340,48 @@ const ChatRoom: React.FC = () => {
     setQuotedMessage(null);
   };
 
+  // 处理文件上传
+  const handleFileUpload = async (file: File) => {
+    try {
+      setUploadingFile(true);
+      const res = await generatePresignedDownloadUrlUsingGet({
+        fileName: file.name
+      });
+
+      console.log('getPresignedDownloadUrl:', res);
+      if (!res.data) {
+        throw new Error('获取上传地址失败');
+      }
+
+      const presignedUrl = res.data;
+
+      // 使用预签名URL上传文件
+      await fetch(presignedUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+        },
+      });
+
+      // 获取文件的访问URL
+      const fileUrl = presignedUrl.split('?')[0];
+      console.log('文件上传地址：', fileUrl);
+      setPendingFileUrl(fileUrl);
+
+      messageApi.success('文件上传成功');
+    } catch (error) {
+      messageApi.error(`文件上传失败：${error}`);
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  // 移除待发送的文件
+  const handleRemoveFile = () => {
+    setPendingFileUrl(null);
+  };
+
   // 修改 handleSend 函数
   const handleSend = (customContent?: string) => {
     let content = customContent || inputValue;
@@ -343,7 +391,12 @@ const ChatRoom: React.FC = () => {
       content = `[img]${pendingImageUrl}[/img]${content}`;
     }
 
-    if (!content.trim() && !pendingImageUrl) {
+    // 如果有待发送的文件，将其添加到消息内容中
+    if (pendingFileUrl) {
+      content = `[file]${pendingFileUrl}[/file]${content}`;
+    }
+
+    if (!content.trim() && !pendingImageUrl && !pendingFileUrl) {
       message.warning('请输入消息内容');
       return;
     }
@@ -403,9 +456,10 @@ const ChatRoom: React.FC = () => {
     setTotal(prev => prev + 1);
     setHasMore(true);
 
-    // 清空输入框、预览图片和引用消息
+    // 清空输入框、预览图片、文件和引用消息
     setInputValue('');
     setPendingImageUrl(null);
+    setPendingFileUrl(null);
     setQuotedMessage(null);
 
     // 滚动到底部
@@ -465,12 +519,12 @@ const ChatRoom: React.FC = () => {
       socket.send(JSON.stringify({
         type: 1, // 登录连接
       }));
-      console.log('WebSocket连接成功');
+      // console.log('WebSocket连接成功');
       setReconnectAttempts(0); // 重置重连次数
     };
 
     socket.onclose = () => {
-      console.log('WebSocket连接关闭');
+      // console.log('WebSocket连接关闭');
       setWs(null);
 
       // 只有在组件仍然挂载且非主动关闭的情况下才尝试重连
@@ -485,9 +539,9 @@ const ChatRoom: React.FC = () => {
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.log('收到服务器消息:', data);
+      // console.log('收到服务器消息:', data);
       if (data.type === 'chat') {
-        console.log('处理聊天消息:', data.data.message);
+        // console.log('处理聊天消息:', data.data.message);
         const otherUserMessage = data.data.message;
         if (otherUserMessage.sender.id !== String(currentUser?.id)) {
           setMessages(prev => {
@@ -509,20 +563,20 @@ const ChatRoom: React.FC = () => {
           }
         }
       } else if (data.type === 'userMessageRevoke') {
-        console.log('处理消息撤回:', data.data);
+        // console.log('处理消息撤回:', data.data);
         // 从消息列表中移除被撤回的消息
         setMessages(prev => prev.filter(msg => msg.id !== data.data));
         // 更新总消息数
         setTotal(prev => Math.max(0, prev - 1));
       } else if (data.type === 'userOnline') {
-        console.log('处理用户上线消息:', data.data);
+        // console.log('处理用户上线消息:', data.data);
         setOnlineUsers(prev => [
           ...prev,
           ...data.data.filter((newUser: { id: string; }) => !prev.some(user => user.id === newUser.id))
         ]);
 
       } else if (data.type === 'userOffline') {
-        console.log('处理用户下线消息:', data.data);
+        // console.log('处理用户下线消息:', data.data);
         // 过滤掉下线的用户
         setOnlineUsers(prev => prev.filter(user => user.id !== data.data));
       }
@@ -986,7 +1040,43 @@ const ChatRoom: React.FC = () => {
             </div>
           </div>
         )}
+        {pendingFileUrl && (
+          <div className={styles.filePreview}>
+            <div className={styles.previewWrapper}>
+              <div className={styles.fileInfo}>
+                <PaperClipOutlined className={styles.fileIcon}/>
+                <span className={styles.fileName}>
+                  {pendingFileUrl.split('/').pop()}
+                </span>
+              </div>
+              <Button
+                type="text"
+                icon={<DeleteOutlined/>}
+                className={styles.removeFile}
+                onClick={handleRemoveFile}
+              />
+            </div>
+          </div>
+        )}
         <div className={styles.inputRow}>
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{display: 'none'}}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                handleFileUpload(file);
+              }
+            }}
+            disabled={uploadingFile}
+          />
+          <Button
+            icon={<PaperClipOutlined/>}
+            className={styles.fileButton}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingFile}
+          />
           <Popover
             content={emojiPickerContent}
             trigger="click"

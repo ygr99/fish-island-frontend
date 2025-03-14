@@ -122,7 +122,17 @@ declare namespace API {
     id?: number;
   };
 
+  type generatePresignedDownloadUrlUsingGETParams = {
+    /** fileName */
+    fileName: string;
+  };
+
   type getCosCredentialUsingGETParams = {
+    /** fileName */
+    fileName?: string;
+  };
+
+  type getMinioPresignedUsingGETParams = {
     /** fileName */
     fileName?: string;
   };
@@ -402,6 +412,10 @@ declare namespace API {
     userName?: string;
     userProfile?: string;
     userRole?: string;
+  };
+
+  type uploadFileByMinioUsingPOSTParams = {
+    biz?: string;
   };
 
   type uploadFileUsingPOSTParams = {

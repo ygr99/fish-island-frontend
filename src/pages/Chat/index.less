@@ -1199,3 +1199,73 @@
   }
 }
 
+.filePreview {
+  margin: 8px 0;
+  padding: 8px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .previewWrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .fileInfo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .fileIcon {
+    font-size: 20px;
+    color: #1890ff;
+  }
+
+  .fileName {
+    color: #666;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .removeFile {
+    color: #ff4d4f;
+    padding: 4px;
+    margin-left: 8px;
+
+    &:hover {
+      color: #ff7875;
+    }
+  }
+}
+
+.fileButton {
+  padding: 4px 8px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d9d9d9;
+  background: #fff;
+  color: #666;
+  transition: all 0.3s;
+
+  &:hover {
+    color: #1890ff;
+    border-color: #1890ff;
+    background: #fff;
+  }
+
+  &:disabled {
+    color: rgba(0, 0, 0, 0.25);
+    background: #f5f5f5;
+    border-color: #d9d9d9;
+    cursor: not-allowed;
+  }
+}
+
