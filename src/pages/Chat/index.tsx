@@ -21,6 +21,7 @@ import MessageContent from '@/components/MessageContent';
 import EmoticonPicker from '@/components/EmoticonPicker';
 import {getCosCredentialUsingGet} from "@/services/backend/fileController";
 import {generatePresignedDownloadUrlUsingGet} from "@/services/backend/fileController";
+import {uploadFileByMinioUsingPost} from "@/services/backend/fileController";
 
 interface Message {
   id: string;
@@ -69,7 +70,7 @@ const ChatRoom: React.FC = () => {
   // 添加已加载消息ID的集合
   const [loadedMessageIds] = useState<Set<string>>(new Set());
 
-  const [announcement, setAnnouncement] = useState<string>('欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢：感谢玄德大佬赞助的对象存储服务🌟');
+  const [announcement, setAnnouncement] = useState<string>('欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢：感谢玄德大佬、yovvis大佬 赞助的对象存储服务🌟');
   const [showAnnouncement, setShowAnnouncement] = useState<boolean>(true);
 
   const [isComponentMounted, setIsComponentMounted] = useState(true);
@@ -344,28 +345,25 @@ const ChatRoom: React.FC = () => {
   const handleFileUpload = async (file: File) => {
     try {
       setUploadingFile(true);
-      const res = await generatePresignedDownloadUrlUsingGet({
-        fileName: file.name
-      });
 
-      console.log('getPresignedDownloadUrl:', res);
+      // 调用后端上传接口
+      const res = await uploadFileByMinioUsingPost(
+        { biz: 'user_file' },  // 业务标识参数
+        {},               // body 参数
+        file,            // 文件参数
+        {                // 其他选项
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
       if (!res.data) {
-        throw new Error('获取上传地址失败');
+        throw new Error('文件上传失败');
       }
 
-      const presignedUrl = res.data;
-
-      // 使用预签名URL上传文件
-      await fetch(presignedUrl, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
-      });
-
       // 获取文件的访问URL
-      const fileUrl = presignedUrl.split('?')[0];
+      const fileUrl = res.data;
       console.log('文件上传地址：', fileUrl);
       setPendingFileUrl(fileUrl);
 

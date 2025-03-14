@@ -496,7 +496,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const [bossKeyConfig, setBossKeyConfig] = useState(() => {
     const savedConfig = localStorage.getItem('bossKeyConfig');
     return savedConfig ? JSON.parse(savedConfig) : {
-      key: 'Escape',
+      key: 'F2',
       redirectUrl: 'https://www.deepseek.com/'
     };
   });
@@ -981,10 +981,10 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               {max: 100, message: '个人简介不能超过100个字符！'}
             ]}
           >
-            <Input.TextArea 
-              rows={4} 
-              maxLength={100} 
-              showCount 
+            <Input.TextArea
+              rows={4}
+              maxLength={100}
+              showCount
               placeholder="请输入不超过100个字符的个人简介"
             />
           </Form.Item>
@@ -1107,7 +1107,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             rules={[{required: true, message: '请设置触发按键！'}]}
           >
             <Select>
-              <Select.Option value="Escape">ESC键</Select.Option>
               <Select.Option value="F1">F1键</Select.Option>
               <Select.Option value="F2">F2键</Select.Option>
               <Select.Option value="F3">F3键</Select.Option>

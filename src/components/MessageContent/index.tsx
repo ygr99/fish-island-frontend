@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
-import {Card, Image} from 'antd';
-import {BilibiliOutlined, LinkOutlined} from '@ant-design/icons';
+import {Card, Image, Button} from 'antd';
+import {BilibiliOutlined, LinkOutlined, FileOutlined, DownloadOutlined} from '@ant-design/icons';
 import styles from './index.less';
 
 const DOUYIN_ICON = 'https://lf1-cdn-tos.bytegoofy.com/goofy/ies/douyin_web/public/favicon.ico';
@@ -30,6 +30,8 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   // 图片标签匹配正则表达式
   const imgRegex = /\[img\](.*?)\[\/img\]/g;
+  // 文件标签匹配正则表达式
+  const fileRegex = /\[file\](.*?)\[\/file\]/g;
 
   // 截断文本到指定长度
   const truncateText = (text: string, maxLength: number = 20) => {
@@ -111,46 +113,133 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
     }
   };
 
-  // 解析消息内容
-  const parseContent = () => {
-    // 先处理图片标签
-    const parts = content.split(imgRegex);
-    const result = [];
-    let index = 0;
+  // 处理文件下载
+  const handleFileDownload = (url: string) => {
+    // 从URL中提取文件名
+    const fileName = url.split('/').pop() || '未知文件';
+    
+    // 创建一个临时的a标签来触发下载
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i];
-      if (i % 2 === 0) {
-        // 非图片内容，继续处理URL
-        if (part) {
-          const urlParts = part.split(urlRegex);
-          urlParts.forEach((urlPart, urlIndex) => {
-            if (urlPart.match(urlRegex)) {
-              // 处理URL
-              result.push(renderUrl(urlPart, `${index}-${urlIndex}`));
-            } else if (urlPart) {
-              // 普通文本
-              result.push(<span key={`${index}-${urlIndex}`}>{urlPart}</span>);
-            }
-          });
-        }
-      } else {
-        // 图片内容
-        result.push(
-          <Image
-            key={`img-${index}`}
-            src={part}
-            alt="emoticon"
-            className={styles.messageImage}
-            style={{ maxWidth: '200px', borderRadius: '8px' }}
-            preview={true}
-          />
-        );
+  // 渲染文件
+  const renderFile = (url: string, key: string) => {
+    const fileName = url.split('/').pop() || '未知文件';
+    const fileExt = fileName.split('.').pop()?.toLowerCase() || '';
+    
+    // 获取文件图标
+    const getFileIcon = (ext: string) => {
+      // 可以根据文件类型返回不同的图标
+      const iconMap: { [key: string]: React.ReactNode } = {
+        pdf: <FileOutlined style={{ color: '#ff4d4f' }} />,
+        doc: <FileOutlined style={{ color: '#1890ff' }} />,
+        docx: <FileOutlined style={{ color: '#1890ff' }} />,
+        xls: <FileOutlined style={{ color: '#52c41a' }} />,
+        xlsx: <FileOutlined style={{ color: '#52c41a' }} />,
+        txt: <FileOutlined style={{ color: '#722ed1' }} />,
+        // 可以添加更多文件类型
+      };
+      return iconMap[ext] || <FileOutlined style={{ color: '#1890ff' }} />;
+    };
+
+    return (
+      <div key={key} className={styles.fileContainer}>
+        <Card className={styles.fileCard} size="small">
+          <div className={styles.fileInfo}>
+            <span className={styles.fileIcon}>
+              {getFileIcon(fileExt)}
+            </span>
+            <span className={styles.fileName} title={fileName}>
+              {fileName}
+            </span>
+          </div>
+          <Button 
+            type="link" 
+            className={styles.downloadButton}
+            onClick={() => handleFileDownload(url)}
+          >
+            <DownloadOutlined /> 下载文件
+          </Button>
+        </Card>
+      </div>
+    );
+  };
+
+  const parseContent = () => {
+    let parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    // 处理图片标签
+    while ((match = imgRegex.exec(content)) !== null) {
+      // 添加图片前的文本
+      if (match.index > lastIndex) {
+        const textBeforeImg = content.slice(lastIndex, match.index);
+        // 处理文本中的URL
+        const urlParts = textBeforeImg.split(urlRegex);
+        urlParts.forEach((urlPart, urlIndex) => {
+          if (urlPart.match(urlRegex)) {
+            parts.push(renderUrl(urlPart, `url-${match!.index}-${urlIndex}`));
+          } else if (urlPart) {
+            parts.push(<span key={`text-${match!.index}-${urlIndex}`}>{urlPart}</span>);
+          }
+        });
       }
-      index++;
+      // 添加图片组件
+      parts.push(
+        <Image
+          key={`img-${match.index}`}
+          src={match[1]}
+          alt="聊天图片"
+          style={{maxWidth: '200px', borderRadius: '4px'}}
+        />
+      );
+      lastIndex = match.index + match[0].length;
     }
 
-    return result;
+    // 处理文件标签
+    const remainingContent = content.slice(lastIndex);
+    let fileLastIndex = 0;
+    let fileMatch: RegExpExecArray | null;
+
+    while ((fileMatch = fileRegex.exec(remainingContent)) !== null) {
+      // 处理文件前的文本（包括URL解析）
+      if (fileMatch.index > fileLastIndex) {
+        const textBeforeFile = remainingContent.slice(fileLastIndex, fileMatch.index);
+        // 处理文本中的URL
+        const urlParts = textBeforeFile.split(urlRegex);
+        urlParts.forEach((urlPart, urlIndex) => {
+          if (urlPart.match(urlRegex)) {
+            parts.push(renderUrl(urlPart, `url-file-${fileMatch!.index}-${urlIndex}`));
+          } else if (urlPart) {
+            parts.push(<span key={`text-file-${fileMatch!.index}-${urlIndex}`}>{urlPart}</span>);
+          }
+        });
+      }
+      // 添加文件组件
+      parts.push(renderFile(fileMatch[1], `file-${fileMatch.index}`));
+      fileLastIndex = fileMatch.index + fileMatch[0].length;
+    }
+
+    // 处理剩余文本中的URL
+    if (fileLastIndex < remainingContent.length) {
+      const finalText = remainingContent.slice(fileLastIndex);
+      const urlParts = finalText.split(urlRegex);
+      urlParts.forEach((urlPart, urlIndex) => {
+        if (urlPart.match(urlRegex)) {
+          parts.push(renderUrl(urlPart, `url-final-${urlIndex}`));
+        } else if (urlPart) {
+          parts.push(<span key={`text-final-${urlIndex}`}>{urlPart}</span>);
+        }
+      });
+    }
+
+    return parts;
   };
 
   // 渲染URL内容

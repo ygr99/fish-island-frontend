@@ -39,6 +39,7 @@ const SideAnnouncement: React.FC = () => {
         { emoji: '✨', text: '优化用户聊天名称以及说话换行' },
         { emoji: '✨', text: '新增用户自定义网站图标以及 icon' },
         { emoji: '✨', text: '新增游戏（跳一跳，模拟赛车）' },
+        { emoji: '✨', text: '新增文件上传功能' },
       ],
       date: '2025-03-13',
     }
