@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Alert, Avatar, Button, Input, message, Popover, Spin, Tooltip, Popconfirm, Modal} from 'antd';
+import {Alert, Avatar, Button, Input, message, Popover, Spin, Popconfirm, Modal} from 'antd';
 import COS from 'cos-js-sdk-v5';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -20,7 +20,6 @@ import {getOnlineUserListUsingGet, listMessageVoByPageUsingPost} from "@/service
 import MessageContent from '@/components/MessageContent';
 import EmoticonPicker from '@/components/EmoticonPicker';
 import {getCosCredentialUsingGet} from "@/services/backend/fileController";
-import {generatePresignedDownloadUrlUsingGet} from "@/services/backend/fileController";
 import {uploadFileByMinioUsingPost} from "@/services/backend/fileController";
 
 interface Message {
@@ -30,6 +29,7 @@ interface Message {
   timestamp: Date;
   quotedMessage?: Message;
   mentionedUsers?: User[];
+  region?: string;
 }
 
 interface User {
@@ -40,6 +40,7 @@ interface User {
   isAdmin: boolean;
   status?: string;
   points?: number;
+  region?: string;
 }
 
 const ChatRoom: React.FC = () => {
@@ -88,6 +89,78 @@ const ChatRoom: React.FC = () => {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [pendingFileUrl, setPendingFileUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [userIpInfo, setUserIpInfo] = useState<{ region: string } | null>(null);
+
+  // 修改 getChineseLocation 函数
+  const getChineseLocation = (region: string) => {
+    const regionMap: { [key: string]: string } = {
+      'Guangdong': '广东省',
+      'Beijing': '北京市',
+      'Shanghai': '上海市',
+      'Tianjin': '天津市',
+      'Chongqing': '重庆市',
+      'Hebei': '河北省',
+      'Shanxi': '山西省',
+      'Inner Mongolia': '内蒙古自治区',
+      'Liaoning': '辽宁省',
+      'Jilin': '吉林省',
+      'Heilongjiang': '黑龙江省',
+      'Jiangsu': '江苏省',
+      'Zhejiang': '浙江省',
+      'Anhui': '安徽省',
+      'Fujian': '福建省',
+      'Jiangxi': '江西省',
+      'Shandong': '山东省',
+      'Henan': '河南省',
+      'Hubei': '湖北省',
+      'Hunan': '湖南省',
+      'Guangxi': '广西壮族自治区',
+      'Hainan': '海南省',
+      'Sichuan': '四川省',
+      'Guizhou': '贵州省',
+      'Yunnan': '云南省',
+      'Tibet': '西藏自治区',
+      'Shaanxi': '陕西省',
+      'Gansu': '甘肃省',
+      'Qinghai': '青海省',
+      'Ningxia': '宁夏回族自治区',
+      'Xinjiang': '新疆维吾尔自治区',
+      'Taiwan': '台湾省',
+      'Hong Kong': '香港特别行政区',
+      'Macao': '澳门特别行政区'
+    };
+
+    return {
+      region: regionMap[region] || region
+    };
+  };
+
+  // 修改 getIpInfo 函数
+  const getIpInfo = async () => {
+    try {
+      const response = await fetch('https://ip.renfei.net/?lang=zh-CN');
+      const data = await response.json();
+      const location = getChineseLocation(data.location.region);
+      
+      console.log('IP信息:', {
+        IP: data.clientIP,
+        '国家/地区': data.location.countryCode === 'CN' ? '中国' : data.location.countryCode,
+        '省份': location.region,
+        '运营商': data.location.line,
+        '经纬度': `${data.location.latitude}, ${data.location.longitude}`
+      });
+
+      // 只保存省份信息
+      setUserIpInfo(location);
+    } catch (error) {
+      console.error('获取IP信息失败:', error);
+    }
+  };
+
+  // 在组件加载时获取IP信息
+  useEffect(() => {
+    getIpInfo();
+  }, []);
 
   // 获取在线用户列表
   const fetchOnlineUsers = async () => {
@@ -122,7 +195,7 @@ const ChatRoom: React.FC = () => {
             id: String(currentUser.id),
             name: currentUser.userName || '未知用户',
             avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-            level: currentUser.level || 1,  // 默认等级为1
+            level: currentUser.level || 1,
             isAdmin: currentUser.userRole === 'admin',
             status: '在线',
             points: currentUser.points || 0
@@ -155,7 +228,7 @@ const ChatRoom: React.FC = () => {
         pageSize,
         roomId: -1,
         sortField: 'createTime',
-        sortOrder: 'desc'  // 保持降序，最新的消息在前面
+        sortOrder: 'desc'
       });
       if (response.data?.records) {
         const historyMessages = response.data.records
@@ -168,7 +241,7 @@ const ChatRoom: React.FC = () => {
               avatar: record.messageWrapper?.message?.sender?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
               level: record.messageWrapper?.message?.sender?.level || 1,
               points: record.messageWrapper?.message?.sender?.points || 0,
-              isAdmin: record.messageWrapper?.message?.sender?.isAdmin || false,
+              isAdmin: record.messageWrapper?.message?.sender?.isAdmin || false
             },
             timestamp: new Date(record.messageWrapper?.message?.timestamp || Date.now()),
             quotedMessage: record.messageWrapper?.message?.quotedMessage ? {
@@ -180,12 +253,12 @@ const ChatRoom: React.FC = () => {
                 avatar: record.messageWrapper.message.quotedMessage.sender?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
                 level: record.messageWrapper.message.quotedMessage.sender?.level || 1,
                 points: record.messageWrapper.message.quotedMessage.sender?.points || 0,
-                isAdmin: record.messageWrapper.message.quotedMessage.sender?.isAdmin || false,
+                isAdmin: record.messageWrapper.message.quotedMessage.sender?.isAdmin || false
               },
-              timestamp: new Date(record.messageWrapper.message.quotedMessage.timestamp || Date.now()),
-            } : undefined
+              timestamp: new Date(record.messageWrapper.message.quotedMessage.timestamp || Date.now())
+            } : undefined,
+            region: userIpInfo?.region || '未知地区'
           }))
-          // 过滤掉已经加载过的消息
           .filter(msg => !loadedMessageIds.has(msg.id));
 
         // 将新消息的ID添加到已加载集合中
@@ -375,6 +448,42 @@ const ChatRoom: React.FC = () => {
     }
   };
 
+  // 处理文件上传 Minio 前端
+  // const handleFileUpload = async (file: File) => {
+  //   try {
+  //     setUploadingFile(true);
+  //
+  //     const res = await getMinioPresignedUsingGet({
+  //       fileName: file.name
+  //     });
+  //     console.log('getPresignedDownloadUrl:', res);
+  //     if (!res.data) {
+  //       throw new Error('获取上传地址失败');
+  //     }
+  //
+  //     const presignedUrl = res.data.replace("http","https");
+  //
+  //     // 使用预签名URL上传文件
+  //     await fetch(presignedUrl, {
+  //       method: 'PUT',
+  //       body: file,
+  //       headers: {
+  //         'Content-Type': file.type,
+  //       },
+  //     });
+  //
+  //     // 获取文件的访问URL
+  //     const fileUrl = presignedUrl.split('?')[0].replace("http://api.oss.cqbo.com:19000/","https://api.oss.cqbo.com/");
+  //     console.log('文件上传地址：', fileUrl);
+  //     setPendingFileUrl(fileUrl);
+  //
+  //     messageApi.success('文件上传成功');
+  //   } catch (error) {
+  //     messageApi.error(`文件上传失败：${error}`);
+  //   } finally {
+  //     setUploadingFile(false);
+  //   }
+  // };
   // 移除待发送的文件
   const handleRemoveFile = () => {
     setPendingFileUrl(null);
@@ -430,10 +539,12 @@ const ChatRoom: React.FC = () => {
         level: currentUser.level || 1,
         points: currentUser.points || 0,
         isAdmin: currentUser.userRole === 'admin',
+        region: userIpInfo?.region || '未知地区'
       },
       timestamp: new Date(),
       quotedMessage: quotedMessage || undefined,
       mentionedUsers: mentionedUsers.length > 0 ? mentionedUsers : undefined,
+      region: userIpInfo?.region || '未知地区'
     };
 
     // 发送消息到服务器
@@ -845,6 +956,12 @@ const ChatRoom: React.FC = () => {
               <span className={styles.pointsEmoji}>✨</span>
               <span className={styles.pointsText}>积分: {user.points || 0}</span>
             </div>
+            {user.id === String(currentUser?.id) && userIpInfo && (
+              <div className={styles.userInfoCardLocation}>
+                <span className={styles.locationEmoji}>📍</span>
+                <span className={styles.locationText}>{userIpInfo.region}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
