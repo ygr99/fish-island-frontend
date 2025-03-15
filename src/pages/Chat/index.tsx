@@ -93,6 +93,8 @@ const ChatRoom: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [userIpInfo, setUserIpInfo] = useState<{ region: string; country: string } | null>(null);
 
+  const inputRef = useRef<any>(null);  // 添加输入框的ref
+
   // 修改 getIpInfo 函数
   const getIpInfo = async () => {
     try {
@@ -801,6 +803,10 @@ const ChatRoom: React.FC = () => {
   const handleEmojiClick = (emoji: any) => {
     setInputValue(prev => prev + emoji.native);
     setIsEmojiPickerVisible(false);
+    // 让输入框获得焦点
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
   };
 
   const emojiPickerContent = (
@@ -890,7 +896,7 @@ const ChatRoom: React.FC = () => {
     messageApi.info('消息已撤回');
   };
 
-  // 添加@用户的处理函数
+  // 修改handleMentionUser函数
   const handleMentionUser = (user: User) => {
     const mentionText = `@${user.name} `;
     setInputValue(prev => {
@@ -900,6 +906,10 @@ const ChatRoom: React.FC = () => {
       }
       return prev + mentionText;
     });
+    // 让输入框获得焦点
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
   };
 
   const UserInfoCard: React.FC<{ user: User }> = ({user}) => {
@@ -1203,6 +1213,7 @@ const ChatRoom: React.FC = () => {
             />
           </Popover>
           <Input
+            ref={inputRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onPressEnter={(e) => {
