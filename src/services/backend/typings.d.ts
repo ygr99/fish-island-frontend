@@ -392,11 +392,13 @@ declare namespace API {
 
   type Sender = {
     avatar?: string;
+    country?: string;
     id?: string;
     isAdmin?: boolean;
     level?: number;
     name?: string;
     points?: number;
+    region?: string;
   };
 
   type TokenLoginUserVo = {

@@ -30,6 +30,7 @@ interface Message {
   quotedMessage?: Message;
   mentionedUsers?: User[];
   region?: string;
+  country?: string;
 }
 
 interface User {
@@ -41,6 +42,7 @@ interface User {
   status?: string;
   points?: number;
   region?: string;
+  country?: string;
 }
 
 const ChatRoom: React.FC = () => {
@@ -89,69 +91,37 @@ const ChatRoom: React.FC = () => {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [pendingFileUrl, setPendingFileUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [userIpInfo, setUserIpInfo] = useState<{ region: string } | null>(null);
-
-  // 修改 getChineseLocation 函数
-  const getChineseLocation = (region: string) => {
-    const regionMap: { [key: string]: string } = {
-      'Guangdong': '广东省',
-      'Beijing': '北京市',
-      'Shanghai': '上海市',
-      'Tianjin': '天津市',
-      'Chongqing': '重庆市',
-      'Hebei': '河北省',
-      'Shanxi': '山西省',
-      'Inner Mongolia': '内蒙古自治区',
-      'Liaoning': '辽宁省',
-      'Jilin': '吉林省',
-      'Heilongjiang': '黑龙江省',
-      'Jiangsu': '江苏省',
-      'Zhejiang': '浙江省',
-      'Anhui': '安徽省',
-      'Fujian': '福建省',
-      'Jiangxi': '江西省',
-      'Shandong': '山东省',
-      'Henan': '河南省',
-      'Hubei': '湖北省',
-      'Hunan': '湖南省',
-      'Guangxi': '广西壮族自治区',
-      'Hainan': '海南省',
-      'Sichuan': '四川省',
-      'Guizhou': '贵州省',
-      'Yunnan': '云南省',
-      'Tibet': '西藏自治区',
-      'Shaanxi': '陕西省',
-      'Gansu': '甘肃省',
-      'Qinghai': '青海省',
-      'Ningxia': '宁夏回族自治区',
-      'Xinjiang': '新疆维吾尔自治区',
-      'Taiwan': '台湾省',
-      'Hong Kong': '香港特别行政区',
-      'Macao': '澳门特别行政区'
-    };
-
-    return {
-      region: regionMap[region] || region
-    };
-  };
+  const [userIpInfo, setUserIpInfo] = useState<{ region: string; country: string } | null>(null);
 
   // 修改 getIpInfo 函数
   const getIpInfo = async () => {
     try {
-      const response = await fetch('https://ip.renfei.net/?lang=zh-CN');
-      const data = await response.json();
-      const location = getChineseLocation(data.location.region);
-      
-      console.log('IP信息:', {
-        IP: data.clientIP,
-        '国家/地区': data.location.countryCode === 'CN' ? '中国' : data.location.countryCode,
-        '省份': location.region,
-        '运营商': data.location.line,
-        '经纬度': `${data.location.latitude}, ${data.location.longitude}`
-      });
+      // 先获取用户的 IP 地址
+      const ipResponse = await fetch('https://ip.renfei.net/?lang=zh-CN');
+      const ipData = await ipResponse.json();
+      const userIp = ipData.clientIP;
 
-      // 只保存省份信息
-      setUserIpInfo(location);
+      // 使用 allorigins.win 作为代理访问 ip-api.com
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`http://ip-api.com/json/${userIp}?lang=zh-CN`)}`;
+      const response = await fetch(proxyUrl);
+      const data = await response.json();
+
+      if (data.status === 'success') {
+        console.log('IP信息:', {
+          IP: data.query,
+          '国家': data.country,
+          '省份': data.regionName,
+          '城市': data.city,
+          '运营商': data.isp,
+          '经纬度': `${data.lat}, ${data.lon}`
+        });
+
+        // 保存省份和国家信息
+        setUserIpInfo({
+          region: data.regionName,
+          country: data.country
+        });
+      }
     } catch (error) {
       console.error('获取IP信息失败:', error);
     }
@@ -174,18 +144,20 @@ const ChatRoom: React.FC = () => {
           level: user.level || 1,
           isAdmin: user.isAdmin || false,
           status: '在线',
-          points: user.points || 0
+          points: user.points || 0,
         }));
 
         // 添加机器人用户
         const botUser = {
           id: '-1',
           name: '摸鱼助手',
-          avatar: 'https://s1.aigei.com/src/img/gif/3d/3dbb70bf3c81407cb5aaba07c79b317b.gif?imageMogr2/auto-orient/thumbnail/!282x270r/gravity/Center/crop/282x270/quality/85/%7CimageView2/2/w/282&e=2051020800&token=P7S2Xpzfz11vAkASLTkfHN7Fw-oOZBecqeJaxypL:_J_OaEEsWRM6CkjjOHEHug85N7U=',
+          avatar: 'https://codebug-1309318075.cos.ap-shanghai.myqcloud.com/fishMessage/34eaba5c-3809-45ef-a3bd-dd01cf97881b_478ce06b6d869a5a11148cf3ee119bac.gif',
           level: 1,
           isAdmin: false,
           status: '在线',
-          points: 9999
+          points: 9999,
+          region: '鱼塘',
+          country: '摸鱼岛'
         };
         onlineUsersList.unshift(botUser);
 
@@ -198,7 +170,7 @@ const ChatRoom: React.FC = () => {
             level: currentUser.level || 1,
             isAdmin: currentUser.userRole === 'admin',
             status: '在线',
-            points: currentUser.points || 0
+            points: currentUser.points || 0,
           });
         }
 
@@ -241,7 +213,10 @@ const ChatRoom: React.FC = () => {
               avatar: record.messageWrapper?.message?.sender?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
               level: record.messageWrapper?.message?.sender?.level || 1,
               points: record.messageWrapper?.message?.sender?.points || 0,
-              isAdmin: record.messageWrapper?.message?.sender?.isAdmin || false
+              isAdmin: record.messageWrapper?.message?.sender?.isAdmin || false,
+              region: record.messageWrapper?.message?.sender?.region || '未知地区',
+              country: record.messageWrapper?.message?.sender?.country ,
+
             },
             timestamp: new Date(record.messageWrapper?.message?.timestamp || Date.now()),
             quotedMessage: record.messageWrapper?.message?.quotedMessage ? {
@@ -253,7 +228,8 @@ const ChatRoom: React.FC = () => {
                 avatar: record.messageWrapper.message.quotedMessage.sender?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
                 level: record.messageWrapper.message.quotedMessage.sender?.level || 1,
                 points: record.messageWrapper.message.quotedMessage.sender?.points || 0,
-                isAdmin: record.messageWrapper.message.quotedMessage.sender?.isAdmin || false
+                isAdmin: record.messageWrapper.message.quotedMessage.sender?.isAdmin || false,
+                region: record.messageWrapper?.message.quotedMessage?.sender?.region || '未知地区'
               },
               timestamp: new Date(record.messageWrapper.message.quotedMessage.timestamp || Date.now())
             } : undefined,
@@ -369,9 +345,6 @@ const ChatRoom: React.FC = () => {
           Region: data?.region as string,
           Key: data?.key as string,
           Body: file,
-          onProgress: function (progressData) {
-            // console.log('上传进度：', progressData);
-          }
         }, function (err, data) {
           if (err) {
             reject(err);
@@ -539,12 +512,14 @@ const ChatRoom: React.FC = () => {
         level: currentUser.level || 1,
         points: currentUser.points || 0,
         isAdmin: currentUser.userRole === 'admin',
-        region: userIpInfo?.region || '未知地区'
+        region: userIpInfo?.region || '未知地区',
+        country: userIpInfo?.country || '未知国家'
       },
       timestamp: new Date(),
       quotedMessage: quotedMessage || undefined,
       mentionedUsers: mentionedUsers.length > 0 ? mentionedUsers : undefined,
-      region: userIpInfo?.region || '未知地区'
+      region: userIpInfo?.region || '未知地区',
+      country: userIpInfo?.country || '未知国家'
     };
 
     // 发送消息到服务器
@@ -956,11 +931,20 @@ const ChatRoom: React.FC = () => {
               <span className={styles.pointsEmoji}>✨</span>
               <span className={styles.pointsText}>积分: {user.points || 0}</span>
             </div>
-            {user.id === String(currentUser?.id) && userIpInfo && (
-              <div className={styles.userInfoCardLocation}>
-                <span className={styles.locationEmoji}>📍</span>
-                <span className={styles.locationText}>{userIpInfo.region}</span>
-              </div>
+            {user.id === String(currentUser?.id) ? (
+              userIpInfo && (
+                <div className={styles.userInfoCardLocation}>
+                  <span className={styles.locationEmoji}>📍</span>
+                  <span className={styles.locationText}>{userIpInfo.country} · {userIpInfo.region}</span>
+                </div>
+              )
+            ) : (
+              user.region && (
+                <div className={styles.userInfoCardLocation}>
+                  <span className={styles.locationEmoji}>📍</span>
+                  <span className={styles.locationText}>{user.country ? `${user.country} · ${user.region}` : user.region}</span>
+                </div>
+              )
             )}
           </div>
         </div>
