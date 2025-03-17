@@ -27,7 +27,8 @@ import {
   TimePicker,
   Tooltip,
   Select,
-  Upload
+  Upload,
+  Switch
 } from 'antd';
 import type {MenuInfo} from 'rc-menu/lib/interface';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
@@ -245,6 +246,11 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     };
   });
 
+  const [isMoneyVisible, setIsMoneyVisible] = useState(() => {
+    const savedVisibility = localStorage.getItem('moneyButtonVisibility');
+    return savedVisibility === null ? true : savedVisibility === 'true';
+  });
+
   const menuItems = [
     ...(menu
       ? [
@@ -279,13 +285,17 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       label: '网站设置',
     },
     {
+      key: 'toggleMoney',
+      icon: <SettingOutlined/>,
+      label: isMoneyVisible ? '隐藏工作时间' : '显示工作时间',
+    },
+    {
       key: 'logout',
       icon: <LogoutOutlined/>,
       label: '退出登录',
     },
   ];
 
-  // @ts-ignore
   // @ts-ignore
   const onMenuClick = useCallback(
     (event: MenuInfo) => {
@@ -300,9 +310,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       if (key === 'edit') {
         setIsEditProfileOpen(true);
         // 设置初始头像预览
-        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         if (currentUser?.userAvatar && !defaultAvatars.includes(currentUser.userAvatar)) {
-          // eslint-disable-next-line @typescript-eslint/no-use-before-define
           setPreviewAvatar(currentUser.userAvatar);
         }
         return;
@@ -315,9 +323,15 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         setIsSiteConfigOpen(true);
         return;
       }
+      if (key === 'toggleMoney') {
+        const newValue = !isMoneyVisible;
+        setIsMoneyVisible(newValue);
+        localStorage.setItem('moneyButtonVisibility', newValue.toString());
+        return;
+      }
       history.push(`/account/${key}`);
     },
-    [setInitialState, currentUser?.userAvatar],
+    [setInitialState, currentUser?.userAvatar, isMoneyVisible],
   );
 
 
@@ -804,6 +818,18 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                   <Input placeholder="选填，不填则不显示收入" type="number"/>
                 </Form.Item>
 
+                <Form.Item label="显示状态">
+                  <Switch
+                    checked={isMoneyVisible}
+                    onChange={(checked) => {
+                      setIsMoneyVisible(checked);
+                      localStorage.setItem('moneyButtonVisibility', checked.toString());
+                    }}
+                    checkedChildren="显示"
+                    unCheckedChildren="隐藏"
+                  />
+                </Form.Item>
+
                 <Form.Item>
                   <Button type="primary" htmlType="submit" onClick={() => {
                     setIsMoneyOpen(false)
@@ -814,31 +840,33 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               </Form>
             </div>
           </Modal>
-          <Button
-            type="primary"
-            shape="circle"
-            onClick={() => {
-              setIsMoneyOpen(true);
-            }}
-            className="money-button"
-          >
-            <div className="money-button-content">
-              <div>
-                {timeInfo.type === 'lunch' ? '🍱' : timeInfo.type === 'holiday' ? '🎉' : '🧑‍💻'}
+          {isMoneyVisible && (
+            <Button
+              type="primary"
+              shape="circle"
+              onClick={() => {
+                setIsMoneyOpen(true);
+              }}
+              className="money-button"
+            >
+              <div className="money-button-content">
+                <div>
+                  {timeInfo.type === 'lunch' ? '🍱' : timeInfo.type === 'holiday' ? '🎉' : '🧑‍💻'}
+                </div>
+                <div>
+                  {timeInfo.type === 'holiday' ?
+                    `${timeInfo.name}: ${timeInfo.timeRemaining}` :
+                    timeInfo.type === 'lunch' ?
+                      `午餐: ${timeInfo.timeRemaining}` :
+                      `下班: ${timeInfo.timeRemaining}`
+                  }
+                </div>
+                {timeInfo.earnedAmount !== undefined && (
+                  <div>💰：{timeInfo.earnedAmount.toFixed(2)}</div>
+                )}
               </div>
-              <div>
-                {timeInfo.type === 'holiday' ?
-                  `${timeInfo.name}: ${timeInfo.timeRemaining}` :
-                  timeInfo.type === 'lunch' ?
-                    `午餐: ${timeInfo.timeRemaining}` :
-                    `下班: ${timeInfo.timeRemaining}`
-                }
-              </div>
-              {timeInfo.earnedAmount !== undefined && (
-                <div>💰：{timeInfo.earnedAmount.toFixed(2)}</div>
-              )}
-            </div>
-          </Button>
+            </Button>
+          )}
         </div>
       </>
 
@@ -1048,6 +1076,18 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 <Input placeholder="选填，不填则不显示收入" type="number"/>
               </Form.Item>
 
+              <Form.Item label="显示状态">
+                <Switch
+                  checked={isMoneyVisible}
+                  onChange={(checked) => {
+                    setIsMoneyVisible(checked);
+                    localStorage.setItem('moneyButtonVisibility', checked.toString());
+                  }}
+                  checkedChildren="显示"
+                  unCheckedChildren="隐藏"
+                />
+              </Form.Item>
+
               <Form.Item>
                 <Button type="primary" htmlType="submit" onClick={() => {
                   setIsMoneyOpen(false)
@@ -1058,31 +1098,33 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             </Form>
           </div>
         </Modal>
-        <Button
-          type="primary"
-          shape="circle"
-          onClick={() => {
-            setIsMoneyOpen(true);
-          }}
-          className="money-button"
-        >
-          <div className="money-button-content">
-            <div>
-              {timeInfo.type === 'lunch' ? '🍱' : timeInfo.type === 'holiday' ? '🎉' : '🧑‍💻'}
+        {isMoneyVisible && (
+          <Button
+            type="primary"
+            shape="circle"
+            onClick={() => {
+              setIsMoneyOpen(true);
+            }}
+            className="money-button"
+          >
+            <div className="money-button-content">
+              <div>
+                {timeInfo.type === 'lunch' ? '🍱' : timeInfo.type === 'holiday' ? '🎉' : '🧑‍💻'}
+              </div>
+              <div>
+                {timeInfo.type === 'holiday' ?
+                  `${timeInfo.name}: ${timeInfo.timeRemaining}` :
+                  timeInfo.type === 'lunch' ?
+                    `午餐: ${timeInfo.timeRemaining}` :
+                    `下班: ${timeInfo.timeRemaining}`
+                }
+              </div>
+              {timeInfo.earnedAmount !== undefined && (
+                <div>💰：{timeInfo.earnedAmount.toFixed(2)}</div>
+              )}
             </div>
-            <div>
-              {timeInfo.type === 'holiday' ?
-                `${timeInfo.name}: ${timeInfo.timeRemaining}` :
-                timeInfo.type === 'lunch' ?
-                  `午餐: ${timeInfo.timeRemaining}` :
-                  `下班: ${timeInfo.timeRemaining}`
-              }
-            </div>
-            {timeInfo.earnedAmount !== undefined && (
-              <div>💰：{timeInfo.earnedAmount.toFixed(2)}</div>
-            )}
-          </div>
-        </Button>
+          </Button>
+        )}
       </div>
 
       {/* 添加老板键设置Modal */}
