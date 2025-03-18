@@ -1212,21 +1212,24 @@ const ChatRoom: React.FC = () => {
               className={styles.emoticonButton}
             />
           </Popover>
-          <Input
+          <Input.TextArea
             ref={inputRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onPressEnter={(e) => {
-              // 检查是否是输入法组合键
-              if (e.nativeEvent.isComposing) {
-                return;
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                if (!e.shiftKey) {
+                  e.preventDefault(); // 阻止默认的换行行为
+                  handleSend();
+                }
               }
-              handleSend();
             }}
             onPaste={handlePaste}
             placeholder={uploading ? "正在上传图片..." : "输入消息或粘贴图片..."}
             maxLength={200}
             disabled={uploading}
+            autoSize={{ minRows: 1, maxRows: 4 }}
+            className={styles.chatTextArea}
           />
           <span className={styles.inputCounter}>
             {inputValue.length}/200

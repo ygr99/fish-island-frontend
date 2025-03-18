@@ -51,7 +51,14 @@ const SideAnnouncement: React.FC = () => {
         { emoji: '✨', text: '新增获取用户 IP 地址功能' },
         { emoji: '✨', text: '优化下班倒计时按钮可以选择隐藏显示' },
       ],
-      date: '2025-03-13',
+      date: '2025-03-14',
+    },{
+      id: 4,
+      title: 'V1.2.4 版本更新',
+      content: [
+        { emoji: '✨', text: '新增假期倒计时' },
+      ],
+      date: '2025-03-18',
     }
   ]);
 

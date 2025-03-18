@@ -127,6 +127,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   ];
 
   const [type, setType] = useState<string>('login');
+  const [type, setType] = useState<string>('account');
+
   const containerClassName = useEmotionCss(() => {
     return {
       display: 'flex',
@@ -324,100 +326,50 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     return savedVisibility === null ? true : savedVisibility === 'true';
   });
 
-  const menuItems = [
-    ...(menu
-      ? [
-        {
-          key: 'center',
-          icon: <UserOutlined/>,
-          label: '个人中心',
-        },
-        {
-          key: 'settings',
-          icon: <SettingOutlined/>,
-          label: '个人设置',
-        },
-        {
-          type: 'divider' as const,
-        },
-      ]
-      : []),
-    {
-      key: 'edit',
-      icon: <EditOutlined/>,
-      label: '修改信息',
-    },
-    {
-      key: 'bossKey',
-      icon: <LockOutlined/>,
-      label: '老板键设置',
-    },
-    {
-      key: 'siteConfig',
-      icon: <SettingOutlined/>,
-      label: '网站设置',
-    },
-    {
-      key: 'toggleMoney',
-      icon: <SettingOutlined/>,
-      label: isMoneyVisible ? '隐藏工作时间' : '显示工作时间',
-    },
-    {
-      key: 'logout',
-      icon: <LogoutOutlined/>,
-      label: '退出登录',
-    },
-  ];
+  const [holidayInfo, setHolidayInfo] = useState<{
+    date: string;
+    days: number;
+    holiday: boolean;
+    name: string;
+  } | null>(null);
 
-  // @ts-ignore
-  const onMenuClick = useCallback(
-    (event: MenuInfo) => {
-      const {key} = event;
-      if (key === 'logout') {
-        flushSync(() => {
-          setInitialState((s) => ({...s, currentUser: undefined}));
-        });
-        loginOut();
-        return;
-      }
-      if (key === 'edit') {
-        setIsEditProfileOpen(true);
-        // 设置初始头像预览
-        if (currentUser?.userAvatar && !defaultAvatars.includes(currentUser.userAvatar)) {
-          setPreviewAvatar(currentUser.userAvatar);
-        }
-        return;
-      }
-      if (key === 'bossKey') {
-        setIsBossKeyOpen(true);
-        return;
-      }
-      if (key === 'siteConfig') {
-        setIsSiteConfigOpen(true);
-        return;
-      }
-      if (key === 'toggleMoney') {
-        const newValue = !isMoneyVisible;
-        setIsMoneyVisible(newValue);
-        localStorage.setItem('moneyButtonVisibility', newValue.toString());
-        return;
-      }
-      history.push(`/account/${key}`);
+  // 假期倒计时样式
+  const holidayTooltipStyle = useEmotionCss(() => ({
+    '.ant-tooltip-inner': {
+      background: 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)',
+      padding: '12px 16px',
+      borderRadius: '8px',
+      boxShadow: '0 4px 12px rgba(255, 154, 158, 0.2)',
+      minWidth: '200px'
     },
-    [setInitialState, currentUser?.userAvatar, isMoneyVisible],
-  );
+    '.ant-tooltip-arrow': {
+      display: 'none'
+    }
+  }));
 
+  // 获取假期信息
+  const fetchHolidayInfo = async () => {
+    try {
+      const response = await fetch('https://fish.codebug.icu/holiday/next');
+      const data = await response.json();
+      if (data.code === 200) {
+        setHolidayInfo(data.data);
+      }
+    } catch (error) {
+      console.error('获取假期信息失败:', error);
+    }
+  };
+
+  // 在组件加载时获取假期信息
+  useEffect(() => {
+    fetchHolidayInfo();
+  }, []);
 
   // 计算倒计时和已赚取金额
   useEffect(() => {
     if (moYuData?.endTime && moYuData?.startTime) {
       const interval = setInterval(() => {
         const now = moment();
-
-        // 查找最近的节假日
-        const upcomingHoliday = holidays
-          .filter(h => h.date.isAfter(now))
-          .sort((a, b) => a.date.diff(now) - b.date.diff(now))[0];
 
         // 检查是否接近午餐时间（前后120分钟内）
         const lunchTime = moment(moYuData.lunchTime);
@@ -457,15 +409,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               earnedAmount: moYuData.monthlySalary ? earnedAmount : undefined
             });
           }
-        } else if (upcomingHoliday) {
-          // 节假日倒计时
-          const duration = moment.duration(upcomingHoliday.date.diff(now));
-          setTimeInfo({
-            type: 'holiday',
-            name: upcomingHoliday.name,
-            timeRemaining: `${duration.days()}天${duration.hours()}时${duration.minutes()}分`,
-            earnedAmount: moYuData.monthlySalary ? earnedAmount : undefined
-          });
         } else {
           // 下班倒计时
           const duration = moment.duration(endTime.diff(now));
@@ -492,7 +435,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
 
       return () => clearInterval(interval);
     }
-  }, [moYuData, holidays]);
+  }, [moYuData]);
 
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
   const [isCheckinAnimating, setIsCheckinAnimating] = useState(false);
@@ -689,6 +632,89 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       textShadow: hasCheckedIn ? '0 1px 1px rgba(0, 0, 0, 0.1)' : 'none',
     },
   }));
+
+  const menuItems = [
+    ...(menu
+      ? [
+        {
+          key: 'center',
+          icon: <UserOutlined/>,
+          label: '个人中心',
+        },
+        {
+          key: 'settings',
+          icon: <SettingOutlined/>,
+          label: '个人设置',
+        },
+        {
+          type: 'divider' as const,
+        },
+      ]
+      : []),
+    {
+      key: 'edit',
+      icon: <EditOutlined/>,
+      label: '修改信息',
+    },
+    {
+      key: 'bossKey',
+      icon: <LockOutlined/>,
+      label: '老板键设置',
+    },
+    {
+      key: 'siteConfig',
+      icon: <SettingOutlined/>,
+      label: '网站设置',
+    },
+    {
+      key: 'toggleMoney',
+      icon: <SettingOutlined/>,
+      label: isMoneyVisible ? '隐藏工作时间' : '显示工作时间',
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined/>,
+      label: '退出登录',
+    },
+  ];
+
+  // @ts-ignore
+  const onMenuClick = useCallback(
+    (event: MenuInfo) => {
+      const {key} = event;
+      if (key === 'logout') {
+        flushSync(() => {
+          setInitialState((s) => ({...s, currentUser: undefined}));
+        });
+        loginOut();
+        return;
+      }
+      if (key === 'edit') {
+        setIsEditProfileOpen(true);
+        // 设置初始头像预览
+        if (currentUser?.userAvatar && !defaultAvatars.includes(currentUser.userAvatar)) {
+          setPreviewAvatar(currentUser.userAvatar);
+        }
+        return;
+      }
+      if (key === 'bossKey') {
+        setIsBossKeyOpen(true);
+        return;
+      }
+      if (key === 'siteConfig') {
+        setIsSiteConfigOpen(true);
+        return;
+      }
+      if (key === 'toggleMoney') {
+        const newValue = !isMoneyVisible;
+        setIsMoneyVisible(newValue);
+        localStorage.setItem('moneyButtonVisibility', newValue.toString());
+        return;
+      }
+      history.push(`/account/${key}`);
+    },
+    [setInitialState, currentUser?.userAvatar, isMoneyVisible],
+  );
 
   if (!currentUser) {
     return (
@@ -971,31 +997,68 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             </div>
           </Modal>
           {isMoneyVisible && (
-            <Button
-              type="primary"
-              shape="circle"
-              onClick={() => {
-                setIsMoneyOpen(true);
-              }}
-              className="money-button"
+            <Tooltip
+              title={
+                holidayInfo ? (
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <div style={{
+                      fontSize: '16px',
+                      fontWeight: 'bold',
+                      color: '#fff',
+                      textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                    }}>
+                      {holidayInfo.name}
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#fff',
+                      opacity: 0.9
+                    }}>
+                      {moment(holidayInfo.date).format('YYYY年MM月DD日')}
+                    </div>
+                    <div style={{
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      color: '#fff',
+                      textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                    }}>
+                      还有 {moment(holidayInfo.date).diff(moment(), 'days')} 天 🎉
+                    </div>
+                  </div>
+                ) : '加载中...'
+              }
+              placement="top"
+              overlayClassName={holidayTooltipStyle}
             >
-              <div className="money-button-content">
-                <div>
-                  {timeInfo.type === 'lunch' ? '🍱' : timeInfo.type === 'holiday' ? '🎉' : '🧑‍💻'}
-                </div>
-                <div>
-                  {timeInfo.type === 'holiday' ?
-                    `${timeInfo.name}: ${timeInfo.timeRemaining}` :
-                    timeInfo.type === 'lunch' ?
+              <Button
+                type="primary"
+                shape="circle"
+                onClick={() => {
+                  setIsMoneyOpen(true);
+                }}
+                className="money-button"
+              >
+                <div className="money-button-content">
+                  <div>
+                    {timeInfo.type === 'lunch' ? '🍱' : '🧑‍💻'}
+                  </div>
+                  <div>
+                    {timeInfo.type === 'lunch' ?
                       `午餐: ${timeInfo.timeRemaining}` :
                       `下班: ${timeInfo.timeRemaining}`
                   }
+                  </div>
+                  {timeInfo.earnedAmount !== undefined && (
+                    <div>💰：{timeInfo.earnedAmount.toFixed(2)}</div>
+                  )}
                 </div>
-                {timeInfo.earnedAmount !== undefined && (
-                  <div>💰：{timeInfo.earnedAmount.toFixed(2)}</div>
-                )}
-              </div>
-            </Button>
+              </Button>
+            </Tooltip>
           )}
         </div>
       </>
@@ -1229,31 +1292,68 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           </div>
         </Modal>
         {isMoneyVisible && (
-          <Button
-            type="primary"
-            shape="circle"
-            onClick={() => {
-              setIsMoneyOpen(true);
-            }}
-            className="money-button"
+          <Tooltip
+            title={
+              holidayInfo ? (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  <div style={{
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: '#fff',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                  }}>
+                    {holidayInfo.name}
+                  </div>
+                  <div style={{
+                    fontSize: '14px',
+                    color: '#fff',
+                    opacity: 0.9
+                  }}>
+                    {moment(holidayInfo.date).format('YYYY年MM月DD日')}
+                  </div>
+                  <div style={{
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    color: '#fff',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                  }}>
+                    还有 {moment(holidayInfo.date).diff(moment(), 'days')} 天 🎉
+                  </div>
+                </div>
+              ) : '加载中...'
+            }
+            placement="top"
+            overlayClassName={holidayTooltipStyle}
           >
-            <div className="money-button-content">
-              <div>
-                {timeInfo.type === 'lunch' ? '🍱' : timeInfo.type === 'holiday' ? '🎉' : '🧑‍💻'}
-              </div>
-              <div>
-                {timeInfo.type === 'holiday' ?
-                  `${timeInfo.name}: ${timeInfo.timeRemaining}` :
-                  timeInfo.type === 'lunch' ?
+            <Button
+              type="primary"
+              shape="circle"
+              onClick={() => {
+                setIsMoneyOpen(true);
+              }}
+              className="money-button"
+            >
+              <div className="money-button-content">
+                <div>
+                  {timeInfo.type === 'lunch' ? '🍱' : '🧑‍💻'}
+                </div>
+                <div>
+                  {timeInfo.type === 'lunch' ?
                     `午餐: ${timeInfo.timeRemaining}` :
                     `下班: ${timeInfo.timeRemaining}`
-                }
+                  }
+                </div>
+                {timeInfo.earnedAmount !== undefined && (
+                  <div>💰：{timeInfo.earnedAmount.toFixed(2)}</div>
+                )}
               </div>
-              {timeInfo.earnedAmount !== undefined && (
-                <div>💰：{timeInfo.earnedAmount.toFixed(2)}</div>
-              )}
-            </div>
-          </Button>
+            </Button>
+          </Tooltip>
         )}
       </div>
 
