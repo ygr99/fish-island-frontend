@@ -2,7 +2,9 @@ import {
   updateMyUserUsingPost,
   userLoginUsingPost,
   userLogoutUsingPost,
-  userRegisterUsingPost
+  userEmailSendUsingPost,
+  userEmailLoginUsingPost,
+  userEmailRegisterUsingPost
 } from '@/services/backend/userController';
 import {getCosCredentialUsingGet} from '@/services/backend/fileController';
 import {
@@ -11,7 +13,9 @@ import {
   SettingOutlined,
   UserOutlined,
   EditOutlined,
-  UploadOutlined
+  UploadOutlined,
+  MailOutlined,
+  QqCircleFilled,
 } from '@ant-design/icons';
 import {history, useModel} from '@umijs/max';
 import {
@@ -64,6 +68,30 @@ type Holiday = {
   date: Moment;
 };
 
+interface UserLoginRequest {
+  userAccount?: string;
+  userPassword?: string;
+  userEmail?: string;
+}
+
+interface EmailLoginRequest {
+  email: string;          // 邮箱登录用 email
+  userPassword: string;
+}
+
+interface AccountLoginRequest {
+  userAccount: string;    // 账号登录用 userAccount
+  userPassword: string;
+}
+
+interface EmailRegisterRequest {
+  userAccount: string;
+  userPassword: string;
+  checkPassword: string;
+  email: string;
+  code: string;
+  captchaVerification: string;
+}
 export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const [moYuData, setMoYuData] = useState<MoYuTimeType>({
     startTime: moment('08:30', 'HH:mm'),
@@ -98,7 +126,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     {name: '国庆节', date: moment('2024-10-01')},
   ];
 
-  const [type, setType] = useState<string>('account');
+  const [type, setType] = useState<string>('login');
   const containerClassName = useEmotionCss(() => {
     return {
       display: 'flex',
@@ -130,22 +158,34 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const onFinishFailedMoYu: FormProps<MoYuTimeType>['onFinishFailed'] = (errorInfo) => {
     console.log('Failed:', errorInfo);
   };
-  const handleSubmit = async (values: API.UserLoginRequest) => {
+  const handleSubmit = async (values: UserLoginRequest) => {
     try {
-      // 登录
-      const res = await userLoginUsingPost({
-        ...values,
-      });
+      // 判断是否为邮箱登录
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.userAccount || '');
+      let res;
+      if (isEmail) {
+        // 邮箱登录
+        const emailLoginData: EmailLoginRequest = {
+          email: values.userAccount || '',        // 使用 email 参数
+          userPassword: values.userPassword || '',
+        };
+        res = await userEmailLoginUsingPost(emailLoginData);
+      } else {
+        // 账号密码登录
+        const accountLoginData: AccountLoginRequest = {
+          userAccount: values.userAccount || '',   // 使用 userAccount 参数
+          userPassword: values.userPassword || '',
+        };
+        res = await userLoginUsingPost(accountLoginData);
+      }
+
       if (res.code === 0) {
         const defaultLoginSuccessMessage = '登录成功！';
         const result = res.data as any
         localStorage.setItem('tokenName', result.saTokenInfo?.tokenName as string);
         localStorage.setItem('tokenValue', result.saTokenInfo?.tokenValue as string);
         message.success(defaultLoginSuccessMessage);
-        // 保存已登录用户信息
-        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         setInitialState({
-          // eslint-disable-next-line @typescript-eslint/no-use-before-define
           ...initialState,
           currentUser: res.data,
         });
@@ -174,22 +214,55 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     current.verify();
     console.log(current.verify());
   };
-  const handleRegisterSubmit = async (values: API.UserRegisterRequest) => {
-    const {userPassword, checkPassword} = values;
+  const [countdown, setCountdown] = useState(0);
+  const [email, setEmail] = useState('');
+
+  const handleSendCode = async () => {
+    if (!email) {
+      message.error('请输入邮箱地址');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      message.error('请输入正确的邮箱地址');
+      return;
+    }
+    try {
+      const res = await userEmailSendUsingPost({
+        email: email,  // 使用 email 参数
+      });
+      if (res.code === 0) {
+        message.success('验证码已发送到邮箱');
+        setCountdown(60);
+        const timer = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    } catch (error: any) {
+      message.error(`发送验证码失败：${error.message}`);
+    }
+  };
+
+  const [form] = Form.useForm();
+
+  const handleRegisterSubmit = async (values: EmailRegisterRequest) => {
     // 校验
-    if (userPassword !== checkPassword) {
+    if (values.userPassword !== values.checkPassword) {
       message.error('两次输入的密码不一致');
       return;
     }
 
     try {
-      // 注册
-      const data = await userRegisterUsingPost(values);
+      const data = await userEmailRegisterUsingPost(values);
       if (data.code === 0) {
         const defaultLoginSuccessMessage = '注册成功！';
         message.success(defaultLoginSuccessMessage);
-
-        setType('account');
+        setType('login');
       }
     } catch (error: any) {
       const defaultLoginFailureMessage = '注册失败，请重试！';
@@ -636,6 +709,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               }}
             >
               <LoginForm
+                form={form}
                 contentStyle={{
                   minWidth: 280,
                   maxWidth: '75vw',
@@ -648,11 +722,30 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                   autoLogin: true,
                 }}
                 onFinish={async (values) => {
-                  if (type === 'account') {
-                    await handleSubmit(values as API.UserLoginRequest);
+                  if (type === 'login') {
+                    await handleSubmit(values as UserLoginRequest);
                   } else if (type === 'register') {
-                    click();
-                    setValueData(values);
+                    // 检查是否已完成图形验证
+                    if (!valueData?.captchaVerification) {
+                      message.error('请先完成图形验证');
+                      click(); // 触发图形验证
+                      return;
+                    }
+                    // 合并表单值和图形验证码信息
+                    const registerData: EmailRegisterRequest = {
+                      userAccount: values.userAccount || '',
+                      userPassword: values.userPassword,
+                      checkPassword: values.checkPassword,
+                      email: values.email,
+                      code: values.code,
+                      captchaVerification: valueData.captchaVerification,
+                    };
+                    await handleRegisterSubmit(registerData);
+                  }
+                }}
+                submitter={{
+                  searchConfig: {
+                    submitText: type === 'register' ? '注册' : '登录',
                   }
                 }}
               >
@@ -662,7 +755,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                   centered
                   items={[
                     {
-                      key: 'account',
+                      key: 'login',
                       label: '登录',
                     },
                     {
@@ -671,7 +764,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                     }
                   ]}
                 />
-                {type === 'account' && (
+                {type === 'login' && (
                   <>
                     <ProFormText
                       name="userAccount"
@@ -679,11 +772,11 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                         size: 'large',
                         prefix: <UserOutlined/>,
                       }}
-                      placeholder={'请输入账号'}
+                      placeholder={'请输入账号/邮箱'}
                       rules={[
                         {
                           required: true,
-                          message: '账号是必填项！',
+                          message: '账号/邮箱是必填项！',
                         },
                       ]}
                     />
@@ -711,13 +804,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                         size: 'large',
                         prefix: <UserOutlined className={styles.prefixIcon}/>,
                       }}
-                      placeholder="请输入账号"
-                      rules={[
-                        {
-                          required: true,
-                          message: '账号是必填项！',
-                        },
-                      ]}
+                      placeholder="请输入账号（选填）"
                     />
                     <ProFormText.Password
                       name="userPassword"
@@ -757,18 +844,61 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                         },
                       ]}
                     />
+                    <ProFormText
+                      name="email"
+                      fieldProps={{
+                        size: 'large',
+                        prefix: <QqCircleFilled className={styles.prefixIcon}/>,
+                        onChange: (e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value),
+                      }}
+                      placeholder="请输入邮箱"
+                      rules={[
+                        {
+                          required: true,
+                          message: '邮箱是必填项！',
+                        },
+                        {
+                          type: 'email',
+                          message: '请输入正确的邮箱地址！',
+                        },
+                      ]}
+                    />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <ProFormText
+                        name="code"
+                        fieldProps={{
+                          size: 'large',
+                          prefix: <MailOutlined className={styles.prefixIcon}/>,
+                        }}
+                        placeholder="请输入邮箱验证码"
+                        rules={[
+                          {
+                            required: true,
+                            message: '验证码是必填项！',
+                          },
+                        ]}
+                      />
+                      <Button
+                        type="primary"
+                        onClick={handleSendCode}
+                        disabled={countdown > 0}
+                        style={{ height: '40px', minWidth: '120px' }}
+                      >
+                        {countdown > 0 ? `${countdown}秒后重试` : '获取验证码'}
+                      </Button>
+                    </div>
                     <Captcha
                       onSuccess={async (data) => {
-                        const value = valueData as any;
-                        if (value) {
-                          value.captchaVerification = data.captchaVerification;
-                          await handleRegisterSubmit(value);
-                        }
+                        // 只保存验证码信息，不直接提交
+                        setValueData({
+                          ...valueData,
+                          captchaVerification: data.captchaVerification,
+                        });
                       }}
                       path={BACKEND_HOST_CODE}
                       type="auto"
                       ref={ref}
-                    ></Captcha>
+                    />
                   </>
                 )}
               </LoginForm>
