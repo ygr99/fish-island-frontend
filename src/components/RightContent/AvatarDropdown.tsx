@@ -92,12 +92,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     earnedAmount?: number;
   }>({type: 'work', timeRemaining: '00:00:00'});
 
-  const holidays: Holiday[] = [
-    {name: '端午节', date: moment('2024-06-10')},
-    {name: '中秋节', date: moment('2024-09-17')},
-    {name: '国庆节', date: moment('2024-10-01')},
-  ];
-
   const [type, setType] = useState<string>('account');
   const containerClassName = useEmotionCss(() => {
     return {
@@ -865,31 +859,31 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             </div>
           </Modal>
           {isMoneyVisible && (
-            <Tooltip 
+            <Tooltip
               title={
                 holidayInfo ? (
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
                     gap: '4px'
                   }}>
-                    <div style={{ 
-                      fontSize: '16px', 
+                    <div style={{
+                      fontSize: '16px',
                       fontWeight: 'bold',
                       color: '#fff',
                       textShadow: '0 1px 2px rgba(0,0,0,0.1)'
                     }}>
                       {holidayInfo.name}
                     </div>
-                    <div style={{ 
+                    <div style={{
                       fontSize: '14px',
                       color: '#fff',
                       opacity: 0.9
                     }}>
                       {moment(holidayInfo.date).format('YYYY年MM月DD日')}
                     </div>
-                    <div style={{ 
+                    <div style={{
                       fontSize: '18px',
                       fontWeight: 'bold',
                       color: '#fff',
@@ -1160,31 +1154,31 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           </div>
         </Modal>
         {isMoneyVisible && (
-          <Tooltip 
+          <Tooltip
             title={
               holidayInfo ? (
-                <div style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
                   gap: '4px'
                 }}>
-                  <div style={{ 
-                    fontSize: '16px', 
+                  <div style={{
+                    fontSize: '16px',
                     fontWeight: 'bold',
                     color: '#fff',
                     textShadow: '0 1px 2px rgba(0,0,0,0.1)'
                   }}>
                     {holidayInfo.name}
                   </div>
-                  <div style={{ 
+                  <div style={{
                     fontSize: '14px',
                     color: '#fff',
                     opacity: 0.9
                   }}>
                     {moment(holidayInfo.date).format('YYYY年MM月DD日')}
                   </div>
-                  <div style={{ 
+                  <div style={{
                     fontSize: '18px',
                     fontWeight: 'bold',
                     color: '#fff',
