@@ -57,6 +57,7 @@ const SideAnnouncement: React.FC = () => {
       title: 'V1.2.4 版本更新',
       content: [
         { emoji: '✨', text: '新增假期倒计时' },
+        { emoji: '✨', text: '聊天室支持 shift + enter 换行' },
       ],
       date: '2025-03-18',
     }

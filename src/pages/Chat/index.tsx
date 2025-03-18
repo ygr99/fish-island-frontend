@@ -1218,6 +1218,10 @@ const ChatRoom: React.FC = () => {
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
+                // 检查是否是输入法组合键
+                if (e.nativeEvent.isComposing) {
+                  return;
+                }
                 if (!e.shiftKey) {
                   e.preventDefault(); // 阻止默认的换行行为
                   handleSend();
