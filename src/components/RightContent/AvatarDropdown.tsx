@@ -63,11 +63,6 @@ type MoYuTimeType = {
   monthlySalary?: number;
 };
 
-type Holiday = {
-  name: string;
-  date: Moment;
-};
-
 interface UserLoginRequest {
   userAccount?: string;
   userPassword?: string;
@@ -120,14 +115,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     earnedAmount?: number;
   }>({type: 'work', timeRemaining: '00:00:00'});
 
-  const holidays: Holiday[] = [
-    {name: '端午节', date: moment('2024-06-10')},
-    {name: '中秋节', date: moment('2024-09-17')},
-    {name: '国庆节', date: moment('2024-10-01')},
-  ];
 
   const [type, setType] = useState<string>('login');
-  const [type, setType] = useState<string>('account');
 
   const containerClassName = useEmotionCss(() => {
     return {
