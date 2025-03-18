@@ -55,6 +55,8 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel }) 
   const [countdown, setCountdown] = useState(0);
   const [email, setEmail] = useState('');
   const { initialState, setInitialState } = useModel('@@initialState');
+  const [showCaptcha, setShowCaptcha] = useState(false);
+  const [registerValues, setRegisterValues] = useState<any>(null);
 
   const containerClassName = useEmotionCss(() => {
     return {
@@ -151,11 +153,27 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel }) 
         const defaultLoginSuccessMessage = '注册成功！';
         message.success(defaultLoginSuccessMessage);
         setType('login');
+        setShowCaptcha(false);
       }
     } catch (error: any) {
       const defaultLoginFailureMessage = '注册失败，请重试！';
       message.error(defaultLoginFailureMessage);
     }
+  };
+
+  const validateAndShowCaptcha = async (values: any) => {
+    if (values.userPassword !== values.checkPassword) {
+      message.error('两次输入的密码不一致');
+      return;
+    }
+    setRegisterValues(values);
+    setShowCaptcha(true);
+    setTimeout(() => {
+      const current = ref.current as any;
+      if (current) {
+        current.verify();
+      }
+    }, 100);
   };
 
   return (
@@ -182,20 +200,7 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel }) 
               if (type === 'login') {
                 await handleSubmit(values as UserLoginRequest);
               } else if (type === 'register') {
-                if (!valueData?.captchaVerification) {
-                  message.error('请先完成图形验证');
-                  click();
-                  return;
-                }
-                const registerData: EmailRegisterRequest = {
-                  userAccount: values.userAccount || '',
-                  userPassword: values.userPassword,
-                  checkPassword: values.checkPassword,
-                  email: values.email,
-                  code: values.code,
-                  captchaVerification: valueData.captchaVerification,
-                };
-                await handleRegisterSubmit(registerData);
+                await validateAndShowCaptcha(values);
               }
             }}
             submitter={{
@@ -354,6 +359,26 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel }) 
                   ref={ref}
                 />
               </>
+            )}
+            {showCaptcha && (
+              <Captcha
+                onSuccess={async (data) => {
+                  if (registerValues) {
+                    const registerData: EmailRegisterRequest = {
+                      userAccount: registerValues.userAccount || '',
+                      userPassword: registerValues.userPassword,
+                      checkPassword: registerValues.checkPassword,
+                      email: registerValues.email,
+                      code: registerValues.code,
+                      captchaVerification: data.captchaVerification,
+                    };
+                    await handleRegisterSubmit(registerData);
+                  }
+                }}
+                path={BACKEND_HOST_CODE}
+                type="auto"
+                ref={ref}
+              />
             )}
           </LoginForm>
         </div>
