@@ -262,24 +262,10 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const holidayTooltipStyle = useEmotionCss(() => ({
     '.ant-tooltip-inner': {
       background: 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)',
-      padding: '8px 12px',
+      padding: '12px 16px',
       borderRadius: '8px',
       boxShadow: '0 4px 12px rgba(255, 154, 158, 0.2)',
-      animation: 'holidayPulse 2s infinite',
-      '@keyframes holidayPulse': {
-        '0%': {
-          transform: 'scale(1)',
-          boxShadow: '0 4px 12px rgba(255, 154, 158, 0.2)',
-        },
-        '50%': {
-          transform: 'scale(1.02)',
-          boxShadow: '0 6px 16px rgba(255, 154, 158, 0.3)',
-        },
-        '100%': {
-          transform: 'scale(1)',
-          boxShadow: '0 4px 12px rgba(255, 154, 158, 0.2)',
-        }
-      }
+      minWidth: '200px'
     },
     '.ant-tooltip-arrow': {
       display: 'none'
