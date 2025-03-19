@@ -58,8 +58,10 @@ const SideAnnouncement: React.FC = () => {
       content: [
         { emoji: '✨', text: '新增假期倒计时' },
         { emoji: '✨', text: '聊天室支持 shift + enter 换行' },
+        { emoji: '✨', text: '优化注册，使用邮箱验证码注册' },
+        { emoji: '✨', text: '新增音乐播放器' },
       ],
-      date: '2025-03-18',
+      date: '2025-03-19',
     }
   ]);
 

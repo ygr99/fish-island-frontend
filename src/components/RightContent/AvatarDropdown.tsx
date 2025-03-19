@@ -40,6 +40,7 @@ import './app.css';
 import {RcFile} from "antd/lib/upload";
 import COS from 'cos-js-sdk-v5';
 import LoginRegister from '../LoginRegister';
+import MusicPlayer from '@/components/MusicPlayer';
 
 export type GlobalHeaderRightProps = {
   menu?: boolean;
@@ -719,6 +720,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           <span className="anticon">{currentUser?.userName ?? '无名'}</span>
         </Space>
       </HeaderDropdown>
+
+      <MusicPlayer playerId="1742366149119" />
 
       {/* 添加修改信息的 Modal */}
       <Modal
