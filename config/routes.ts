@@ -16,7 +16,7 @@ export default [
       { icon: 'DesktopOutlined', path: '/game/piece', component: './Game/Piece', name: '五子棋', requireAuth: true },
       { icon: 'DesktopOutlined', path: '/game/2048', component: './Game/2048', name: '2048', requireAuth: false },
       { icon: 'DesktopOutlined', path: '/game/car', component: './Game/Car', name: '模拟赛车', requireAuth: false },
-      { icon: 'DesktopOutlined', path: '/game/jump', component: './Game/Jump', name: '跳一跳', requireAuth: false },
+      { icon: 'DesktopOutlined', path: '/game/jump', component: './Game/Jump', name: '跳一跳   ', requireAuth: false },
       { icon: 'DesktopOutlined', path: '/game/infinityGames', component: './Game/InfinityGames', name: '游戏大全', requireAuth: false },
     ],
   },

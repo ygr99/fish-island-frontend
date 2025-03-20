@@ -19,7 +19,7 @@ import {BACKEND_HOST_WS} from "@/constants";
 import {getOnlineUserListUsingGet, listMessageVoByPageUsingPost} from "@/services/backend/chatController";
 import MessageContent from '@/components/MessageContent';
 import EmoticonPicker from '@/components/EmoticonPicker';
-import {getCosCredentialUsingGet} from "@/services/backend/fileController";
+import {getCosCredentialUsingGet, uploadTo111666UsingPost} from "@/services/backend/fileController";
 import {uploadFileByMinioUsingPost} from "@/services/backend/fileController";
 
 interface Message {
@@ -324,43 +324,69 @@ const ChatRoom: React.FC = () => {
   }, [loading, hasMore, current]);
 
   // 处理图片上传
+  // const handleImageUpload = async (file: File) => {
+  //   try {
+  //     setUploading(true);
+  //     const res = await getCosCredentialUsingGet({
+  //       fileName: file.name || `paste_${Date.now()}.png`
+  //     });
+  //     // console.log('getKeyAndCredentials:', res);
+  //     const data = res.data;
+  //     const cos = new COS({
+  //       SecretId: data?.response?.credentials?.tmpSecretId,
+  //       SecretKey: data?.response?.credentials?.tmpSecretKey,
+  //       SecurityToken: data?.response?.credentials?.sessionToken,
+  //       StartTime: data?.response?.startTime,
+  //       ExpiredTime: data?.response?.expiredTime,
+  //     });
+  //
+  //     // 使用 Promise 包装 COS 上传
+  //     const url = await new Promise<string>((resolve, reject) => {
+  //       cos.uploadFile({
+  //         Bucket: data?.bucket as string,
+  //         Region: data?.region as string,
+  //         Key: data?.key as string,
+  //         Body: file,
+  //       }, function (err, data) {
+  //         if (err) {
+  //           reject(err);
+  //           return;
+  //         }
+  //         // console.log('上传结束', data);
+  //         const url = "https://" + data.Location;
+  //         // console.log("图片地址：", url);
+  //         resolve(url);
+  //       });
+  //     });
+  //
+  //     // 设置预览图片
+  //     setPendingImageUrl(url);
+  //
+  //   } catch (error) {
+  //     messageApi.error(`上传失败：${error}`);
+  //   } finally {
+  //     setUploading(false);
+  //   }
+  // };
   const handleImageUpload = async (file: File) => {
     try {
       setUploading(true);
-      const res = await getCosCredentialUsingGet({
-        fileName: file.name || `paste_${Date.now()}.png`
-      });
-      // console.log('getKeyAndCredentials:', res);
-      const data = res.data;
-      const cos = new COS({
-        SecretId: data?.response?.credentials?.tmpSecretId,
-        SecretKey: data?.response?.credentials?.tmpSecretKey,
-        SecurityToken: data?.response?.credentials?.sessionToken,
-        StartTime: data?.response?.startTime,
-        ExpiredTime: data?.response?.expiredTime,
-      });
+      const res = await uploadTo111666UsingPost(
+        {},  // body 参数
+        file,  // 文件参数
+        {  // 其他选项
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
 
-      // 使用 Promise 包装 COS 上传
-      const url = await new Promise<string>((resolve, reject) => {
-        cos.uploadFile({
-          Bucket: data?.bucket as string,
-          Region: data?.region as string,
-          Key: data?.key as string,
-          Body: file,
-        }, function (err, data) {
-          if (err) {
-            reject(err);
-            return;
-          }
-          // console.log('上传结束', data);
-          const url = "https://" + data.Location;
-          // console.log("图片地址：", url);
-          resolve(url);
-        });
-      });
+      if (!res.data) {
+        throw new Error('图片上传失败');
+      }
 
       // 设置预览图片
-      setPendingImageUrl(url);
+      setPendingImageUrl(res.data);
 
     } catch (error) {
       messageApi.error(`上传失败：${error}`);
@@ -368,7 +394,6 @@ const ChatRoom: React.FC = () => {
       setUploading(false);
     }
   };
-
   // 处理粘贴事件
   const handlePaste = async (e: React.ClipboardEvent) => {
     const items = e.clipboardData.items;
@@ -1049,7 +1074,7 @@ const ChatRoom: React.FC = () => {
               <span className={styles.timestamp}>
                 {new Date(msg.timestamp).toLocaleTimeString()}
               </span>
-              {currentUser?.id && String(msg.sender.id) === String(currentUser.id) ? (
+              {(currentUser?.id && String(msg.sender.id) === String(currentUser.id)) || currentUser?.userRole === 'admin' ? (
                 <Popconfirm
                   title="确定要撤回这条消息吗？"
                   onConfirm={() => handleRevokeMessage(msg.id)}
@@ -1058,14 +1083,13 @@ const ChatRoom: React.FC = () => {
                 >
                   <span className={styles.revokeText}>撤回</span>
                 </Popconfirm>
-              ) : (
-                <span
-                  className={styles.quoteText}
-                  onClick={() => handleQuoteMessage(msg)}
-                >
-                  引用
-                </span>
-              )}
+              ) : null}
+              <span
+                className={styles.quoteText}
+                onClick={() => handleQuoteMessage(msg)}
+              >
+                引用
+              </span>
             </div>
           </div>
         ))}
@@ -1180,12 +1204,12 @@ const ChatRoom: React.FC = () => {
             }}
             disabled={uploadingFile}
           />
-          <Button
-            icon={<PaperClipOutlined/>}
-            className={styles.fileButton}
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploadingFile}
-          />
+          {/*<Button*/}
+          {/*  icon={<PaperClipOutlined/>}*/}
+          {/*  className={styles.fileButton}*/}
+          {/*  onClick={() => fileInputRef.current?.click()}*/}
+          {/*  disabled={uploadingFile}*/}
+          {/*/>*/}
           <Popover
             content={emojiPickerContent}
             trigger="click"

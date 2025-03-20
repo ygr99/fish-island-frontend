@@ -4,7 +4,7 @@ import {
   signInUsingPost,
   getLoginUserUsingGet
 } from '@/services/backend/userController';
-import {getCosCredentialUsingGet} from '@/services/backend/fileController';
+import {getCosCredentialUsingGet, uploadFileByMinioUsingPost} from '@/services/backend/fileController';
 import {
   LockOutlined,
   LogoutOutlined,
@@ -41,6 +41,7 @@ import {RcFile} from "antd/lib/upload";
 import COS from 'cos-js-sdk-v5';
 import LoginRegister from '../LoginRegister';
 import MusicPlayer from '@/components/MusicPlayer';
+import {uploadTo111666UsingPost} from '@/services/backend/fileController';
 
 export type GlobalHeaderRightProps = {
   menu?: boolean;
@@ -394,40 +395,22 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const handleUpload = async (file: RcFile) => {
     try {
       setUploading(true);
-      const res = await getCosCredentialUsingGet(
-        {fileName: file.name}
+      const res = await uploadFileByMinioUsingPost(
+        { biz: 'user_avatar' },  // 参数
+        {},  // body 参数
+        file,  // 文件参数
+        {  // 其他选项
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
       );
-      console.log('getKeyAndCredentials:', res);
-      const data = res.data;
-      const cos = new COS({
-        SecretId: data?.response?.credentials?.tmpSecretId,
-        SecretKey: data?.response?.credentials?.tmpSecretKey,
-        SecurityToken: data?.response?.credentials?.sessionToken,
-        StartTime: data?.response?.startTime,
-        ExpiredTime: data?.response?.expiredTime,
-      });
 
-      // 使用 Promise 包装 COS 上传
-      return new Promise((resolve, reject) => {
-        cos.uploadFile({
-          Bucket: data?.bucket as string,
-          Region: data?.region as string,
-          Key: data?.key as string,
-          Body: file,
-          onProgress: function (progressData) {
-            console.log('上传进度：', progressData);
-          }
-        }, function (err, data) {
-          if (err) {
-            reject(err);
-            return;
-          }
-          console.log('上传结束', data);
-          const url = "https://" + data.Location;
-          console.log("用户头像地址：", url);
-          resolve(url);
-        });
-      });
+      if (!res.data) {
+        throw new Error('图片上传失败');
+      }
+
+      return res.data;
     } catch (error) {
       message.error(`上传失败：${error}`);
       return '';

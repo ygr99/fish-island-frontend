@@ -10,8 +10,27 @@ import AnnouncementModal from '@/components/AnnouncementModal';
 import BossKeySettings from '@/components/BossKeySettings';
 import SideAnnouncement from '@/components/SideAnnouncement';
 import routes from '../config/routes';
+import GlobalTitle from '@/components/GlobalTitle';
 
 const loginPath = '/user/login';
+
+// 获取网站名称
+const getSiteName = () => {
+  const savedSiteConfig = localStorage.getItem('siteConfig');
+  if (savedSiteConfig) {
+    const { siteName } = JSON.parse(savedSiteConfig);
+    return siteName;
+  }
+  return '摸鱼岛🎣';
+};
+
+// 监听路由变化
+const listenRouteChange = () => {
+  history.listen(({ location }) => {
+    // 设置网站标题
+    document.title = getSiteName();
+  });
+};
 
 /**
  * 监听老板键（Ctrl + Shift + B）切换工作模式
@@ -93,6 +112,8 @@ export async function getInitialState(): Promise<InitialState> {
     }
     // 更新网站标题
     document.title = siteName;
+    // 更新默认设置中的标题
+    defaultSettings.title = siteName;
   }
 
   // 检查当前路由是否需要登录验证
@@ -116,6 +137,11 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
   const { isBossMode, showSettings, setShowSettings, config, setConfig } = useBossKey();
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const [showAnnouncement, setShowAnnouncement] = useState(true);
+
+  // 监听路由变化
+  useEffect(() => {
+    listenRouteChange();
+  }, []);
 
   if (isBossMode) {
     // @ts-ignore
@@ -219,6 +245,7 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
     childrenRender: (children) => {
       return (
         <>
+          <GlobalTitle />
           {children}
           <SideAnnouncement />
           <AnnouncementModal

@@ -1,5 +1,9 @@
 import { ProLayoutProps } from '@ant-design/pro-components';
 
+// 从 localStorage 获取用户设置的标题
+const savedSiteConfig = typeof window !== 'undefined' ? localStorage.getItem('siteConfig') : null;
+const userSiteName = savedSiteConfig ? JSON.parse(savedSiteConfig).siteName : null;
+
 /**
  * 默认设置
  */
@@ -16,7 +20,7 @@ const Settings: ProLayoutProps & {
   fixedHeader: false,
   fixSiderbar: true,
   colorWeak: false,
-  title: '摸鱼岛🎣',
+  title: userSiteName || '摸鱼岛🎣',
   logo: 'https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png',
   pwa: true,
   // iconfontUrl: 'https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png',
