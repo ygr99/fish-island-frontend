@@ -1,12 +1,27 @@
-import React, {useState, useCallback, useEffect} from 'react';
+import React, {useState, useCallback, useEffect, useRef} from 'react';
 import {Board as BoardComponent} from '@/components/Game/Board';
 import {Board, Player, Position, Move, COLUMNS, ROWS, WinningLine} from '@/game';
 import {createEmptyBoard, checkWin, getAIMove} from '@/utils/gameLogic';
-import {Trophy, RotateCcw, ArrowLeft, ChevronDown, Brain, Timer, X} from 'lucide-react';
+import {Trophy, RotateCcw, ArrowLeft, ChevronDown, Brain, Timer, X, MessageSquare} from 'lucide-react';
 import "./index.css"
-import {Button, Input, message} from "antd";
+import {Button, Input, message, Modal} from "antd";
 import {BACKEND_HOST_WS} from "@/constants";
 import {useModel} from "@@/exports";
+import styles from './index.less';
+
+// 添加消息类型定义
+interface ChatMessage {
+  id: string;
+  content: string;
+  sender: {
+    id: string;
+    name: string;
+    avatar: string;
+    level: number;
+    isAdmin: boolean;
+  };
+  timestamp: Date;
+}
 
 function App() {
   // 新增类型定义
@@ -33,6 +48,15 @@ function App() {
   const [winningLine, setWinningLine] = useState<WinningLine | null>(null);
   const [showRestartModal, setShowRestartModal] = useState(false);
   const {initialState, setInitialState} = useModel('@@initialState');
+  const {currentUser} = initialState || {};
+
+  // 添加聊天相关的状态
+  const [showChat, setShowChat] = useState(true);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInputValue, setChatInputValue] = useState('');
+  const [activeTab, setActiveTab] = useState<'chat' | 'history'>('chat');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
   // start 原有单机
   const addMove = (position: Position, player: Player) => {
 
@@ -63,104 +87,153 @@ function App() {
   };
 
   //end 原有单机
-  const {currentUser} = initialState || {};
-  // 建立WebSocket连接（根据后端URL修改）
+
+  // 添加聊天相关的函数
+  const scrollToBottom = () => {
+    // 移除自动滚动功能
+  };
+
+  const handleChatSend = () => {
+    if (!chatInputValue.trim()) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (!currentUser?.id) {
+      messageApi.error('请先登录！');
+      return;
+    }
+
+    const newMessage: ChatMessage = {
+      id: `${Date.now()}`,
+      content: chatInputValue,
+      sender: {
+        id: String(currentUser.id),
+        name: currentUser.userName || '游客',
+        avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+        level: currentUser.level || 1,
+        isAdmin: currentUser.userRole === 'admin',
+      },
+      timestamp: new Date(),
+    };
+
+    // 发送消息到服务器
+    const messageData = {
+      type: 2,
+      userId: -1,
+      data: {
+        type: 'chat',
+        content: {
+          message: newMessage
+        }
+      }
+    };
+    ws.send(JSON.stringify(messageData));
+
+    // 更新消息列表
+    setChatMessages(prev => [...prev, newMessage]);
+    setChatInputValue('');
+  };
+
+  // WebSocket连接函数
+  const connectWebSocket = () => {
+    const token = localStorage.getItem('tokenValue');
+    if (!token || !currentUser?.id) {
+      messageApi.error('请先登录！');
+      return;
+    }
+
+    const socket = new WebSocket(BACKEND_HOST_WS + token);
+
+    socket.onopen = () => {
+      setOnlineStatus('waiting');
+      socket.send(JSON.stringify({
+        type: 1, // 登录连接
+      }));
+    };
+
+    socket.onclose = () => {
+      console.log("WebSocket 已关闭");
+      setWs(null);
+      setOnlineStatus('connecting');
+    };
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      switch (data.type) {
+        case 'createChessRoom':
+          console.log('创建房间成功', data.data);
+          setRoomId(data.data);
+          messageApi.open({
+            type: 'success',
+            content: '房间创建成功啦',
+          });
+          setGameStarted(true);
+          break;
+        case 'joinSuccess':
+          setOpponentColor(data.data.opponentColor);
+          setPlayerColor(data.data.yourColor);
+          setOnlineStatus('playing');
+          setGameStarted(true);
+          setOpponentUserId(data.data.playerId);
+          messageApi.open({
+            type: 'success',
+            content: '战斗开始！！！',
+          });
+          if (data.data.yourColor === 'white') {
+            // 如果加入房间且执白，等待对方先手
+            setCurrentPlayer('black');
+          }
+          break;
+        case 'moveChess':
+          setPlayerColor(data.data.player === 'black' ? 'white' : 'black');
+          // 处理对手的移动
+          handleRemoteMove(data.data.position, data.data.player);
+          break;
+        case 'chat':
+          const otherUserMessage = data.data.message;
+          if (otherUserMessage.sender.id !== String(currentUser?.id)) {
+            setChatMessages(prev => [...prev, {...otherUserMessage}]);
+            setTimeout(scrollToBottom, 100);
+          }
+          break;
+        case 'error':
+          console.error('WebSocket Error:', data.error);
+          break;
+      }
+    };
+
+    socket.onerror = (error) => {
+      console.error('WebSocket错误:', error);
+      messageApi.error('连接发生错误');
+    };
+
+    // 定期发送心跳消息
+    const pingInterval = setInterval(() => {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 4, // 心跳消息类型
+        }));
+      }
+    }, 25000);
+
+    setWs(socket);
+
+    return () => {
+      clearInterval(pingInterval);
+      socket.close();
+    };
+  };
+
+  // 在游戏模式改变时建立WebSocket连接
   useEffect(() => {
     if (gameMode === 'online') {
-      const token = localStorage.getItem('tokenValue');
-      if (!currentUser || !token) {
-        messageApi.open({
-          type: 'info',
-          content: '请先登陆一下啦～',
-        });
-        setGameMode('single')
-        return;
-      }
-    }
-    if (gameMode === 'online' && !ws) {
-      const token = localStorage.getItem('tokenValue');
-      console.log("开始连接系统")
-      const socket = new WebSocket(BACKEND_HOST_WS + token);
-
-      socket.onopen = () => {
-        setOnlineStatus('waiting');
-        // 请求加入或创建房间逻辑
-        // 这里示例自动创建房间，实际需要UI让用户输入房间号
-        socket.send(JSON.stringify({
-          type: 1,
-        }));
-      };
-      socket.onclose = () => {
-        // messageApi.open({
-        //   type: 'error',
-        //   content: '连接断开啦🔗',
-        // });
-        console.log("WebSocket 已关闭")
-        // setGameMode('single')
-        setWs(null);
-        setOnlineStatus('connecting');
-      };
-
-      socket.onmessage = (event) => {
-        const message = JSON.parse(event.data);
-        switch (message.type) {
-          case 'createChessRoom':
-            console.log('创建房间成功', message.data);
-            setRoomId(message.data);
-            messageApi.open({
-              type: 'success',
-              content: '房间创建成功啦',
-            });
-            setGameStarted(true);
-            break;
-          case 'joinSuccess':
-            setOpponentColor(message.data.opponentColor);
-            setPlayerColor(message.data.yourColor);
-            setOnlineStatus('playing');
-            setGameStarted(true);
-            setOpponentUserId(message.data.playerId);
-            messageApi.open({
-              type: 'success',
-              content: '战斗开始！！！',
-            });
-            if (message.data.yourColor === 'white') {
-              // 如果加入房间且执白，等待对方先手
-              setCurrentPlayer('black');
-            }
-            break;
-          case 'moveChess':
-            setPlayerColor(message.data.player === 'black' ? 'white' : 'black');
-            // 处理对手的移动
-            handleRemoteMove(message.data.position, message.data.player);
-            break;
-          case 'error':
-            console.error('WebSocket Error:', message.error);
-            break;
-        }
-      };
-      // 定期发送心跳消息（ping）
-      const pingInterval = setInterval(() => {
-        if (socket.readyState === WebSocket.OPEN) {
-          console.log('Sending ping...');
-          socket.send(JSON.stringify({
-            type: 4,
-          }));
-        }
-      }, 25000);  // 每 25 秒发送一次心跳
-
-      setWs(socket);
-
-      // 清理：组件卸载时关闭 WebSocket 连接并清除定时器
+      const cleanup = connectWebSocket();
       return () => {
-        clearInterval(pingInterval);
-        socket.close();
+        if (cleanup) cleanup();
       };
     }
   }, [gameMode]);
 
   //原有单机
   const handleMove = useCallback((position: Position) => {
-
     if (gameMode === 'single') {
       // 原有单机逻辑...
       if (winner || board[position.row][position.col]) return;
@@ -191,7 +264,7 @@ function App() {
       if (currentPlayer !== playerColor || winner) return;
       // 发送移动信息到服务器
       ws?.send(JSON.stringify({
-        type: '2',
+        type: 2,
         userId: opponentUserId,
         data: {
           type: 'moveChess',
@@ -204,8 +277,7 @@ function App() {
       }));
 
       // 本地更新棋盘
-      const newBoard = [...board]
-      // const newBoard = board.map(row => [...row]);
+      const newBoard = [...board];
       newBoard[position.row][position.col] = playerColor;
       setBoard(newBoard);
       addMove(position, playerColor);
@@ -219,7 +291,6 @@ function App() {
 
       setCurrentPlayer(opponentColor); // 切换回合显示
     }
-
   }, [board, winner, onlineStatus, gameMode, currentPlayer, playerColor, opponentColor, ws, roomId, messageApi]);
 
   useEffect(() => {
@@ -549,46 +620,125 @@ function App() {
             </div>
           </div>
 
-          <div className="lg:w-96 w-full">
-            <div className="bg-white rounded-2xl shadow-xl p-4 h-full">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xl font-bold text-gray-800">对局记录</h2>
-                <ChevronDown className="w-5 h-5 text-gray-400"/>
-              </div>
-              <div className="h-[calc(100vh-8rem)] lg:h-[calc(100vh-10rem)] overflow-y-auto">
-                {moves.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                    <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-3">
-                      <Timer className="w-8 h-8"/>
-                    </div>
-                    <p>暂无落子</p>
-                  </div>
-                ) : (
-                  <div className="space-y-1.5">
-                    {moves.map((move, index) => (
-                      <div
-                        key={index}
-                        className={`p-2.5 rounded-lg ${
-                          index === moves.length - 1
-                            ? 'bg-blue-50 border border-blue-100'
-                            : 'hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className={`w-4 h-4 rounded-full ${
-                            move.player === 'black'
-                              ? 'bg-gray-900'
-                              : 'bg-white border-2 border-gray-900'
-                          }`}/>
-                          <span className="font-medium">{formatMove(move)}</span>
+          {/* 右侧面板：对战记录和聊天窗口 */}
+          {gameMode === 'online' && (
+            <div className="lg:w-96 w-full">
+              <div className="bg-white rounded-2xl shadow-xl p-4 h-[calc(100vh-12rem)] flex flex-col">
+                {/* Tab 切换按钮 */}
+                <div className="flex border-b mb-4">
+                  <button
+                    onClick={() => setActiveTab('chat')}
+                    className={`flex-1 py-2 px-4 text-center font-medium transition-colors ${
+                      activeTab === 'chat'
+                        ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    聊天室
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('history')}
+                    className={`flex-1 py-2 px-4 text-center font-medium transition-colors ${
+                      activeTab === 'history'
+                        ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    对战记录
+                  </button>
+                </div>
+
+                {/* 聊天窗口 */}
+                {activeTab === 'chat' && (
+                  <div className="flex-1 flex flex-col">
+                    <div className="flex-1 overflow-y-auto mb-4">
+                      {chatMessages.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className={`mb-3 ${
+                            currentUser?.id && String(msg.sender.id) === String(currentUser.id)
+                              ? 'text-right'
+                              : ''
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm text-gray-500">{msg.sender.name}</span>
+                            <span className="text-xs text-gray-400">
+                              {new Date(msg.timestamp).toLocaleTimeString()}
+                            </span>
+                          </div>
+                          <div className={`rounded-lg p-2 inline-block max-w-[80%] ${
+                            currentUser?.id && String(msg.sender.id) === String(currentUser.id)
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {msg.content}
+                          </div>
                         </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-2 mt-auto">
+                      <Input.TextArea
+                        value={chatInputValue}
+                        onChange={(e) => setChatInputValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleChatSend();
+                          }
+                        }}
+                        placeholder="输入消息..."
+                        autoSize={{ minRows: 1, maxRows: 4 }}
+                        className="flex-1"
+                      />
+                      <Button type="primary" onClick={handleChatSend} className="px-6">
+                        发送
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 对战记录 */}
+                {activeTab === 'history' && (
+                  <div className="flex-1 overflow-y-auto">
+                    {moves.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                        <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-3">
+                          <Timer className="w-8 h-8"/>
+                        </div>
+                        <p>暂无落子</p>
                       </div>
-                    ))}
+                    ) : (
+                      <div className="space-y-1.5">
+                        {moves.map((move, index) => (
+                          <div
+                            key={index}
+                            className={`p-2.5 rounded-lg cursor-pointer transition-colors ${
+                              index === moves.length - 1
+                                ? 'bg-blue-50 border border-blue-100'
+                                : 'hover:bg-gray-50'
+                            }`}
+                            onClick={() => {
+                              // 这里可以添加点击落子记录时的处理逻辑
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className={`w-4 h-4 rounded-full ${
+                                move.player === 'black'
+                                  ? 'bg-gray-900'
+                                  : 'bg-white border-2 border-gray-900'
+                              }`}/>
+                              <span className="font-medium">{formatMove(move)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
