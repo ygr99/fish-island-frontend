@@ -10,7 +10,12 @@ class WebSocketService {
   private messageHandlers: Map<string, ((data: any) => void)[]> = new Map();
   private isManuallyClosed = false;
 
-  private constructor() {}
+  private constructor() {
+    // 添加默认的错误消息处理器
+    this.addMessageHandler('error', (data) => {
+      message.error(data.data || '发生错误');
+    });
+  }
 
   public static getInstance(): WebSocketService {
     if (!WebSocketService.instance) {
