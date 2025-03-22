@@ -29,26 +29,26 @@ function App() {
   type GameMode = 'single' | 'online';
   type OnlineStatus = 'connecting' | 'waiting' | 'playing';
   // 在App组件中新增状态
-  const [gameMode, setGameMode] = useState<GameMode>('single');
-  const [onlineStatus, setOnlineStatus] = useState<OnlineStatus>('connecting');
-  const [roomId, setRoomId] = useState<string>('');
-  const [opponentColor, setOpponentColor] = useState<Player>('white');
-  const [opponentUserId, setOpponentUserId] = useState<string>();
-  const [messageApi, contextHolder] = message.useMessage();
-  //原有单机模式
-  const [board, setBoard] = useState<Board>(createEmptyBoard());
-  const [currentPlayer, setCurrentPlayer] = useState<Player>('black');
-  const [winner, setWinner] = useState<Player | null>(null);
-  const [isThinking, setIsThinking] = useState(false);
-  const [moves, setMoves] = useState<Move[]>([]);
-  const [playerColor, setPlayerColor] = useState<Player>('black');
-  const [gameStarted, setGameStarted] = useState(false);
-  const [lastMove, setLastMove] = useState<Position | null>(null);
-  const [opponentLastMove, setOpponentLastMove] = useState<Position | null>(null);
-  const [winningLine, setWinningLine] = useState<WinningLine | null>(null);
-  const [showRestartModal, setShowRestartModal] = useState(false);
   const {initialState, setInitialState} = useModel('@@initialState');
   const {currentUser} = initialState || {};
+  const [gameMode, setGameMode] = useState<GameMode>(initialState?.gameState?.mode || 'single');
+  const [onlineStatus, setOnlineStatus] = useState<OnlineStatus>(initialState?.gameState?.onlineStatus || 'connecting');
+  const [roomId, setRoomId] = useState<string>(initialState?.gameState?.roomId || '');
+  const [opponentColor, setOpponentColor] = useState<Player>(initialState?.gameState?.opponentColor || 'white');
+  const [opponentUserId, setOpponentUserId] = useState<string>(initialState?.gameState?.opponentUserId || '');
+  const [playerColor, setPlayerColor] = useState<Player>(initialState?.gameState?.playerColor || 'black');
+  const [gameStarted, setGameStarted] = useState<boolean>(initialState?.gameState?.gameStarted || false);
+  const [messageApi, contextHolder] = message.useMessage();
+  //原有单机模式
+  const [board, setBoard] = useState<Board>(initialState?.gameState?.board || createEmptyBoard());
+  const [currentPlayer, setCurrentPlayer] = useState<Player>('black');
+  const [winner, setWinner] = useState<Player | null>(initialState?.gameState?.winner || null);
+  const [isThinking, setIsThinking] = useState(false);
+  const [moves, setMoves] = useState<Move[]>(initialState?.gameState?.moves || []);
+  const [lastMove, setLastMove] = useState<Position | null>(initialState?.gameState?.lastMove || null);
+  const [opponentLastMove, setOpponentLastMove] = useState<Position | null>(initialState?.gameState?.opponentLastMove || null);
+  const [winningLine, setWinningLine] = useState<WinningLine | null>(initialState?.gameState?.winningLine || null);
+  const [showRestartModal, setShowRestartModal] = useState(false);
 
   // 添加聊天相关的状态
   const [showChat, setShowChat] = useState(true);
@@ -57,15 +57,46 @@ function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'history'>('chat');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // 添加保存游戏状态的函数
+  const saveGameState = useCallback(() => {
+    if (gameMode === 'online') {
+      setInitialState((s) => ({
+        ...s,
+        gameState: {
+          mode: gameMode,
+          onlineStatus,
+          roomId,
+          opponentColor,
+          opponentUserId,
+          playerColor,
+          gameStarted,
+          board,
+          moves,
+          lastMove,
+          opponentLastMove,
+          winningLine,
+          winner,
+        },
+      }));
+    }
+  }, [gameMode, onlineStatus, roomId, opponentColor, opponentUserId, playerColor, gameStarted, board, moves, lastMove, opponentLastMove, winningLine, winner, setInitialState]);
+
+  // 在组件卸载时保存状态
+  useEffect(() => {
+    return () => {
+      saveGameState();
+    };
+  }, [saveGameState]);
+
   // start 原有单机
   const addMove = (position: Position, player: Player) => {
-
     setMoves(prev => [...prev, {
       ...position,
       player,
       number: prev.length + 1
     }]);
   };
+
   // 处理远程对手的移动
   const handleRemoteMove = (position: Position, player: any) => {
     const newBoard = [...board];
@@ -84,6 +115,7 @@ function App() {
       setPlayerColor(player === 'black' ? 'white' : 'black')
       setCurrentPlayer(player === 'black' ? 'white' : 'black'); // 切换回本地玩家回合
     }
+    saveGameState();
   };
 
   //end 原有单机
@@ -114,6 +146,7 @@ function App() {
     if (data.data.yourColor === 'white') {
       setCurrentPlayer('black');
     }
+    saveGameState();
   };
 
   const handleCreateChessRoom = (data: any) => {
@@ -125,11 +158,13 @@ function App() {
       content: '房间创建成功啦',
     });
     setGameStarted(true);
+    saveGameState();
   };
 
   const handleMoveChess = (data: any) => {
     setPlayerColor(data.data.player === 'black' ? 'white' : 'black');
     handleRemoteMove(data.data.position, data.data.player);
+    saveGameState();
   };
 
   // 在游戏模式改变时建立WebSocket连接
@@ -177,6 +212,7 @@ function App() {
       if (winResult) {
         setWinner(currentPlayer);
         setWinningLine(winResult);
+        saveGameState();
         return;
       }
 
@@ -219,8 +255,9 @@ function App() {
       }
 
       setCurrentPlayer(opponentColor); // 切换回合显示
+      saveGameState();
     }
-  }, [board, winner, onlineStatus, gameMode, currentPlayer, playerColor, opponentColor, roomId, messageApi]);
+  }, [board, winner, onlineStatus, gameMode, currentPlayer, playerColor, opponentColor, roomId, messageApi, saveGameState]);
 
   useEffect(() => {
     if (gameStarted && currentPlayer !== playerColor && !winner) {
@@ -640,14 +677,14 @@ function App() {
                                 ? 'justify-end'
                                 : 'justify-start'
                             }`}>
-                              <span className="text-sm text-gray-500">{msg.sender.name}</span>
-                              <span className="text-xs text-gray-400">
+                              <span className="text-sm text-gray-800 font-medium">{msg.sender.name}</span>
+                              <span className="text-xs text-gray-500">
                                 {new Date(msg.timestamp).toLocaleTimeString()}
                               </span>
                             </div>
                             <div className={`rounded-2xl px-4 py-2 ${
                               currentUser?.id && String(msg.sender.id) === String(currentUser.id)
-                                ? 'bg-blue-500 text-white rounded-br-none'
+                                ? 'bg-blue-100 text-gray-800 rounded-br-none'
                                 : 'bg-gray-100 text-gray-800 rounded-bl-none'
                             }`}>
                               {msg.content}

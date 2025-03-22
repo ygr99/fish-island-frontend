@@ -11,6 +11,7 @@ import BossKeySettings from '@/components/BossKeySettings';
 import SideAnnouncement from '@/components/SideAnnouncement';
 import routes from '../config/routes';
 import GlobalTitle from '@/components/GlobalTitle';
+import {Board, Player, Position, Move, WinningLine} from '@/game';
 
 const loginPath = '/user/login';
 
@@ -87,12 +88,32 @@ const checkNeedAuth = (pathname: string) => {
   return findRoute(routes, pathname);
 };
 
+interface InitialState {
+  currentUser?: API.LoginUserVO;
+  gameState?: {
+    mode: 'single' | 'online';
+    onlineStatus: 'connecting' | 'waiting' | 'playing';
+    roomId: string;
+    opponentColor: 'black' | 'white';
+    opponentUserId: string;
+    playerColor: 'black' | 'white';
+    gameStarted: boolean;
+    board: Board;
+    moves: Move[];
+    lastMove: Position | null;
+    opponentLastMove: Position | null;
+    winningLine: WinningLine | null;
+    winner: Player | null;
+  };
+}
+
 /**
  * @see  https://umijs.org/zh-CN/plugins/plugin-initial-state
  * */
 export async function getInitialState(): Promise<InitialState> {
   const initialState: InitialState = {
     currentUser: undefined,
+    gameState: undefined,
   };
   const {location} = history;
 
