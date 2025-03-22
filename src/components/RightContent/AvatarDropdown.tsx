@@ -720,7 +720,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       >
         <Space>
           <div style={{position: 'relative'}}>
-            <span className={vipBadgeStyle}>VIP</span>
             {currentUser?.userAvatar ? (
               <Avatar size="default" src={currentUser?.userAvatar}/>
             ) : (

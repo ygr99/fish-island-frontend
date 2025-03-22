@@ -36,6 +36,12 @@ function App() {
   const [roomId, setRoomId] = useState<string>(initialState?.gameState?.roomId || '');
   const [opponentColor, setOpponentColor] = useState<Player>(initialState?.gameState?.opponentColor || 'white');
   const [opponentUserId, setOpponentUserId] = useState<string>(initialState?.gameState?.opponentUserId || '');
+  const [opponentInfo, setOpponentInfo] = useState<{
+    id: string;
+    name: string;
+    avatar: string;
+    level: number;
+  } | null>(initialState?.gameState?.opponentInfo || null);
   const [playerColor, setPlayerColor] = useState<Player>(initialState?.gameState?.playerColor || 'black');
   const [gameStarted, setGameStarted] = useState<boolean>(initialState?.gameState?.gameStarted || false);
   const [messageApi, contextHolder] = message.useMessage();
@@ -68,6 +74,7 @@ function App() {
           roomId,
           opponentColor,
           opponentUserId,
+          opponentInfo,
           playerColor,
           gameStarted,
           board,
@@ -79,7 +86,7 @@ function App() {
         },
       }));
     }
-  }, [gameMode, onlineStatus, roomId, opponentColor, opponentUserId, playerColor, gameStarted, board, moves, lastMove, opponentLastMove, winningLine, winner, setInitialState]);
+  }, [gameMode, onlineStatus, roomId, opponentColor, opponentUserId, opponentInfo, playerColor, gameStarted, board, moves, lastMove, opponentLastMove, winningLine, winner, setInitialState]);
 
   // 在组件卸载时保存状态
   useEffect(() => {
@@ -143,6 +150,7 @@ function App() {
     setOnlineStatus('playing');
     setGameStarted(true);
     setOpponentUserId(data.data.playerId);
+    setOpponentInfo(data.data.playerInfo);
     messageApi.open({
       type: 'success',
       content: '战斗开始！！！',
@@ -168,6 +176,9 @@ function App() {
   const handleMoveChess = (data: any) => {
     setPlayerColor(data.data.player === 'black' ? 'white' : 'black');
     handleRemoteMove(data.data.position, data.data.player);
+    if (data.data.playerInfo) {
+      setOpponentInfo(data.data.playerInfo);
+    }
     saveGameState();
   };
 
@@ -240,7 +251,13 @@ function App() {
           content: {
             roomId: roomId,
             position,
-            player: playerColor
+            player: playerColor,
+            playerInfo: {
+              id: currentUser?.id,
+              name: currentUser?.userName,
+              avatar: currentUser?.userAvatar,
+              level: currentUser?.level
+            }
           }
         },
       });
@@ -261,7 +278,7 @@ function App() {
       setCurrentPlayer(opponentColor); // 切换回合显示
       saveGameState();
     }
-  }, [board, winner, onlineStatus, gameMode, currentPlayer, playerColor, opponentColor, roomId, messageApi, saveGameState]);
+  }, [board, winner, onlineStatus, gameMode, currentPlayer, playerColor, opponentColor, roomId, messageApi, saveGameState, currentUser, opponentUserId]);
 
   useEffect(() => {
     if (gameStarted && currentPlayer !== playerColor && !winner) {
@@ -519,15 +536,57 @@ function App() {
             <div className="bg-white rounded-2xl shadow-xl p-4">
               {gameMode === 'online' && (
                 <div className="mb-3 bg-purple-50 border border-purple-100 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full ${
-                      onlineStatus === 'playing' ? 'bg-green-500' : 'bg-yellow-500'
-                    }`}/>
-                    <span className="text-sm text-purple-800">
-                      {onlineStatus === 'connecting' && '连接中...'}
-                      {onlineStatus === 'waiting' && `等待对手加入 (房间号🏠: ${roomId})`}
-                      {onlineStatus === 'playing' && `对战中 - 你执${playerColor === 'black' ? '黑' : '白'}棋`}
-                    </span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${
+                        onlineStatus === 'playing' ? 'bg-green-500' : 'bg-yellow-500'
+                      }`}/>
+                      <span className="text-sm text-purple-800">
+                        {onlineStatus === 'connecting' && '连接中...'}
+                        {onlineStatus === 'waiting' && `等待对手加入 (房间号🏠: ${roomId})`}
+                        {onlineStatus === 'playing' && `对战中 - 你执${playerColor === 'black' ? '黑' : '白'}棋`}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      {/* 对手信息 */}
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full overflow-hidden">
+                          <img 
+                            src={opponentInfo?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${opponentUserId || 'opponent'}`} 
+                            alt="对手头像"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-gray-800">
+                            {opponentInfo?.name || (opponentUserId ? `对手 ${opponentUserId.slice(-4)}` : '等待对手...')}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {opponentColor === 'black' ? '执黑先手' : '执白后手'}
+                          </div>
+                        </div>
+                      </div>
+                      {/* 分隔线 */}
+                      <div className="w-px h-8 bg-gray-200"></div>
+                      {/* 玩家信息 */}
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-gray-800">
+                            {currentUser?.userName || '游客'}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {playerColor === 'black' ? '执黑先手' : '执白后手'}
+                          </div>
+                        </div>
+                        <div className="w-8 h-8 rounded-full overflow-hidden">
+                          <img 
+                            src={currentUser?.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.id || 'visitor'}`} 
+                            alt="玩家头像"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

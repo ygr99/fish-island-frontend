@@ -38,6 +38,15 @@ const SideAnnouncement: React.FC = () => {
         { emoji: '✨', text: '新增播放器隐藏按钮' },
       ],
       date: '2025-03-20',
+    },
+    {
+      id: 6,
+      title: 'V1.2.6 版本更新',
+      content: [
+        { emoji: '✨', text: '优化五子棋在线对战' },
+        { emoji: '✨', text: '机器人模式改变，海龟汤改为问答助手' },
+      ],
+      date: '2025-03-22',
     }
   ]);
 

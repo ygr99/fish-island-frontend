@@ -31,6 +31,14 @@ export default [
     ],
   },
   {
+    path: '/github',
+    icon: 'github',
+    name: '支持网站',
+    routes: [
+      {path: 'https://github.com/lhccong/fish-island-backend', name: '狠狠点个 star 🌟'},
+    ],
+  },
+  {
     path: '/admin',
     icon: 'crown',
     name: '管理页',

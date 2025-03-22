@@ -19,7 +19,7 @@ const loginPath = '/user/login';
 const getSiteName = () => {
   const savedSiteConfig = localStorage.getItem('siteConfig');
   if (savedSiteConfig) {
-    const { siteName } = JSON.parse(savedSiteConfig);
+    const {siteName} = JSON.parse(savedSiteConfig);
     return siteName;
   }
   return '摸鱼岛🎣';
@@ -27,7 +27,7 @@ const getSiteName = () => {
 
 // 监听路由变化
 const listenRouteChange = () => {
-  history.listen(({ location }) => {
+  history.listen(({location}) => {
     // 设置网站标题
     document.title = getSiteName();
   });
@@ -66,7 +66,7 @@ const useBossKey = () => {
     };
   }, []);
 
-  return { isBossMode, showSettings, setShowSettings, config, setConfig };
+  return {isBossMode, showSettings, setShowSettings, config, setConfig};
 };
 
 // 检查当前路由是否需要登录验证
@@ -91,6 +91,7 @@ const checkNeedAuth = (pathname: string) => {
 interface InitialState {
   currentUser?: API.LoginUserVO;
   gameState?: {
+    opponentInfo: any;
     mode: 'single' | 'online';
     onlineStatus: 'connecting' | 'waiting' | 'playing';
     roomId: string;
@@ -120,7 +121,7 @@ export async function getInitialState(): Promise<InitialState> {
   // 应用网站设置
   const savedSiteConfig = localStorage.getItem('siteConfig');
   if (savedSiteConfig) {
-    const { siteName, siteIcon } = JSON.parse(savedSiteConfig);
+    const {siteName, siteIcon} = JSON.parse(savedSiteConfig);
     // 更新网站图标
     const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
     if (link) {
@@ -155,7 +156,7 @@ export async function getInitialState(): Promise<InitialState> {
 // ProLayout 支持的api https://procomponents.ant.design/components/layout
 // @ts-ignore
 export const layout: RunTimeLayoutConfig = ({initialState}) => {
-  const { isBossMode, showSettings, setShowSettings, config, setConfig } = useBossKey();
+  const {isBossMode, showSettings, setShowSettings, config, setConfig} = useBossKey();
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const [showAnnouncement, setShowAnnouncement] = useState(true);
 
@@ -266,9 +267,9 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
     childrenRender: (children) => {
       return (
         <>
-          <GlobalTitle />
+          <GlobalTitle/>
           {children}
-          <SideAnnouncement />
+          <SideAnnouncement/>
           <AnnouncementModal
             visible={showAnnouncement}
             onClose={() => setShowAnnouncement(false)}
