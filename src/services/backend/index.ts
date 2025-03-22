@@ -11,7 +11,9 @@ import * as postThumbController from './postThumbController';
 import * as restAuthController from './restAuthController';
 import * as todoController from './todoController';
 import * as userController from './userController';
+import * as webParserController from './webParserController';
 export default {
+  webParserController,
   chatController,
   fileController,
   hotPostController,

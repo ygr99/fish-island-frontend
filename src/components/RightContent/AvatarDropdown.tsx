@@ -31,7 +31,7 @@ import {
   Switch
 } from 'antd';
 import type {MenuInfo} from 'rc-menu/lib/interface';
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState, Suspense, lazy} from 'react';
 import {flushSync} from 'react-dom';
 import HeaderDropdown from '../HeaderDropdown';
 import {useEmotionCss} from "@ant-design/use-emotion-css";
@@ -40,9 +40,7 @@ import './app.css';
 import {RcFile} from "antd/lib/upload";
 import COS from 'cos-js-sdk-v5';
 import LoginRegister from '../LoginRegister';
-import MusicPlayer from '@/components/MusicPlayer';
-import {uploadTo111666UsingPost} from '@/services/backend/fileController';
-
+lazy(() => import('@/components/MusicPlayer'));
 export type GlobalHeaderRightProps = {
   menu?: boolean;
 };
@@ -215,10 +213,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     if (moYuData?.endTime && moYuData?.startTime) {
       const interval = setInterval(() => {
         const now = moment();
-
-        // 检查是否接近午餐时间（前后120分钟内）
         const lunchTime = moment(moYuData.lunchTime);
-        const isNearLunch = Math.abs(now.diff(lunchTime, 'minutes')) <= 120;
+        const endTime = moment(moYuData.endTime);
 
         // 计算工作日每小时收入
         const workdaysInMonth = 22; // 假设每月22个工作日
@@ -227,11 +223,14 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
 
         // 计算已工作时长和收入
         const startTime = moment(moYuData.startTime);
-        const endTime = moment(moYuData.endTime);
         const workedDuration = moment.duration(
           now.isAfter(endTime) ? endTime.diff(startTime) : now.diff(startTime)
         );
         const earnedAmount = hourlyRate * workedDuration.asHours();
+
+        // 检查是否在午餐时间前后120分钟内，且未超过午餐时间1小时
+        const isNearLunch = Math.abs(now.diff(lunchTime, 'minutes')) <= 120
+          && now.diff(lunchTime, 'minutes') <= 60;
 
         if (isNearLunch) {
           // 午餐倒计时
@@ -460,6 +459,23 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     },
   }));
 
+  const [isMusicVisible, setIsMusicVisible] = useState(() => {
+    const savedVisibility = localStorage.getItem('musicPlayerVisibility');
+    return savedVisibility === null ? true : savedVisibility === 'true';
+  });
+
+  const [musicPlayer, setMusicPlayer] = useState<React.ComponentType<any> | null>(null);
+
+  useEffect(() => {
+    if (isMusicVisible) {
+      import('@/components/MusicPlayer').then(module => {
+        setMusicPlayer(() => module.default);
+      });
+    } else {
+      setMusicPlayer(null);
+    }
+  }, [isMusicVisible]);
+
   const menuItems = [
     ...(menu
       ? [
@@ -497,6 +513,11 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       key: 'toggleMoney',
       icon: <SettingOutlined/>,
       label: isMoneyVisible ? '隐藏工作时间' : '显示工作时间',
+    },
+    {
+      key: 'toggleMusic',
+      icon: <SettingOutlined/>,
+      label: isMusicVisible ? '隐藏音乐播放器' : '显示音乐播放器',
     },
     {
       key: 'logout',
@@ -538,9 +559,15 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         localStorage.setItem('moneyButtonVisibility', newValue.toString());
         return;
       }
+      if (key === 'toggleMusic') {
+        const newValue = !isMusicVisible;
+        setIsMusicVisible(newValue);
+        localStorage.setItem('musicPlayerVisibility', newValue.toString());
+        return;
+      }
       history.push(`/account/${key}`);
     },
-    [setInitialState, currentUser?.userAvatar, isMoneyVisible],
+    [setInitialState, currentUser?.userAvatar, isMoneyVisible, isMusicVisible],
   );
 
   if (!currentUser) {
@@ -704,7 +731,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         </Space>
       </HeaderDropdown>
 
-      <MusicPlayer playerId="1742366149119" />
+      {musicPlayer && React.createElement(musicPlayer, { playerId: "1742366149119", key: isMusicVisible.toString() })}
 
       {/* 添加修改信息的 Modal */}
       <Modal

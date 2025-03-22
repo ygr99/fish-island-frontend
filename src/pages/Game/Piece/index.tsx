@@ -621,58 +621,70 @@ function App() {
           </div>
 
           {/* 右侧面板：对战记录和聊天窗口 */}
-          {gameMode === 'online' && (
+          {(gameMode === 'online' || gameMode === 'single') && (
             <div className="lg:w-96 w-full">
-              <div className="bg-white rounded-2xl shadow-xl p-4 h-[calc(100vh-12rem)] flex flex-col">
-                {/* Tab 切换按钮 */}
-                <div className="flex border-b mb-4">
-                  <button
-                    onClick={() => setActiveTab('chat')}
-                    className={`flex-1 py-2 px-4 text-center font-medium transition-colors ${
-                      activeTab === 'chat'
-                        ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    聊天室
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('history')}
-                    className={`flex-1 py-2 px-4 text-center font-medium transition-colors ${
-                      activeTab === 'history'
-                        ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    对战记录
-                  </button>
-                </div>
+              <div className="bg-white rounded-2xl shadow-xl p-4 flex flex-col" style={{ height: 'calc(100vh - 8rem)' }}>
+                {/* Tab 切换按钮 - 仅在联机模式下显示 */}
+                {gameMode === 'online' && (
+                  <div className="flex border-b mb-4">
+                    <button
+                      onClick={() => setActiveTab('chat')}
+                      className={`flex-1 py-2 px-4 text-center font-medium transition-colors ${
+                        activeTab === 'chat'
+                          ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      聊天室
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('history')}
+                      className={`flex-1 py-2 px-4 text-center font-medium transition-colors ${
+                        activeTab === 'history'
+                          ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      对战记录
+                    </button>
+                  </div>
+                )}
 
-                {/* 聊天窗口 */}
-                {activeTab === 'chat' && (
+                {/* 聊天窗口 - 仅在联机模式下显示 */}
+                {gameMode === 'online' && activeTab === 'chat' && (
                   <div className="flex-1 flex flex-col">
                     <div className="flex-1 overflow-y-auto mb-4">
                       {chatMessages.map((msg) => (
                         <div
                           key={msg.id}
-                          className={`mb-3 ${
+                          className={`mb-3 flex ${
                             currentUser?.id && String(msg.sender.id) === String(currentUser.id)
-                              ? 'text-right'
-                              : ''
+                              ? 'justify-end'
+                              : 'justify-start'
                           }`}
                         >
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-sm text-gray-500">{msg.sender.name}</span>
-                            <span className="text-xs text-gray-400">
-                              {new Date(msg.timestamp).toLocaleTimeString()}
-                            </span>
-                          </div>
-                          <div className={`rounded-lg p-2 inline-block max-w-[80%] ${
+                          <div className={`max-w-[80%] ${
                             currentUser?.id && String(msg.sender.id) === String(currentUser.id)
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-800'
+                              ? 'order-2'
+                              : 'order-1'
                           }`}>
-                            {msg.content}
+                            <div className={`flex items-center gap-2 mb-1 ${
+                              currentUser?.id && String(msg.sender.id) === String(currentUser.id)
+                                ? 'justify-end'
+                                : 'justify-start'
+                            }`}>
+                              <span className="text-sm text-gray-500">{msg.sender.name}</span>
+                              <span className="text-xs text-gray-400">
+                                {new Date(msg.timestamp).toLocaleTimeString()}
+                              </span>
+                            </div>
+                            <div className={`rounded-2xl px-4 py-2 ${
+                              currentUser?.id && String(msg.sender.id) === String(currentUser.id)
+                                ? 'bg-blue-500 text-white rounded-br-none'
+                                : 'bg-gray-100 text-gray-800 rounded-bl-none'
+                            }`}>
+                              {msg.content}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -698,8 +710,8 @@ function App() {
                   </div>
                 )}
 
-                {/* 对战记录 */}
-                {activeTab === 'history' && (
+                {/* 对战记录 - 在所有模式下显示 */}
+                {(gameMode === 'single' || (gameMode === 'online' && activeTab === 'history')) && (
                   <div className="flex-1 overflow-y-auto">
                     {moves.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-gray-400">

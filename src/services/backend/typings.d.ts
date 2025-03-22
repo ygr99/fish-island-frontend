@@ -101,6 +101,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseWebParseVO_ = {
+    code?: number;
+    data?: WebParseVO;
+    message?: string;
+  };
+
   type CosCredentialVo = {
     /** 桶名称 */
     bucket?: string;
@@ -274,6 +280,11 @@ declare namespace API {
     searchCount?: boolean;
     size?: number;
     total?: number;
+  };
+
+  type parseWebPageUsingGETParams = {
+    /** url */
+    url: string;
   };
 
   type Post = {
@@ -524,5 +535,11 @@ declare namespace API {
     userName?: string;
     userProfile?: string;
     userRole?: string;
+  };
+
+  type WebParseVO = {
+    description?: string;
+    favicon?: string;
+    title?: string;
   };
 }
