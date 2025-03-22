@@ -122,14 +122,18 @@ function App() {
 
   // 添加聊天相关的函数
   const scrollToBottom = () => {
-    // 移除自动滚动功能
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // 在消息列表更新时自动滚动到底部
+  useEffect(() => {
+    scrollToBottom();
+  }, [chatMessages]);
 
   const handleChatMessage = (data: any) => {
     const otherUserMessage = data.data.message;
     if (otherUserMessage.sender.id !== String(currentUser?.id)) {
       setChatMessages(prev => [...prev, {...otherUserMessage}]);
-      setTimeout(scrollToBottom, 100);
     }
   };
 
@@ -529,6 +533,26 @@ function App() {
               )}
               {contextHolder}
               <div className="flex items-center justify-between mb-3">
+                <button
+                  onClick={() => {
+                    setGameStarted(false);
+                    setGameMode('single');
+                    setBoard(createEmptyBoard());
+                    setCurrentPlayer('black');
+                    setWinner(null);
+                    setMoves([]);
+                    setLastMove(null);
+                    setOpponentLastMove(null);
+                    setWinningLine(null);
+                    setChatMessages([]);
+                    setChatInputValue('');
+                    setRoomId('');
+                  }}
+                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                  <span className="font-medium">返回</span>
+                </button>
                 {gameMode === 'single' && (
                   <div>
                     <h1 className="text-2xl font-bold text-gray-800">五子棋 Gomoku</h1>
@@ -626,74 +650,81 @@ function App() {
 
           {/* 右侧面板：对战记录和聊天窗口 */}
           {(gameMode === 'online' || gameMode === 'single') && (
-            <div className="lg:w-96 w-full">
-              <div className="bg-white rounded-2xl shadow-xl p-4 flex flex-col" style={{ height: 'calc(100vh - 8rem)' }}>
+            <div className="lg:w-96 w-full flex items-center">
+              <div className="bg-white rounded-2xl shadow-xl p-6 flex flex-col w-full" style={{ height: 'min(calc(100vh - 6rem), 800px)' }}>
                 {/* Tab 切换按钮 - 仅在联机模式下显示 */}
                 {gameMode === 'online' && (
-                  <div className="flex border-b mb-4">
+                  <div className="flex border-b mb-6">
                     <button
                       onClick={() => setActiveTab('chat')}
-                      className={`flex-1 py-2 px-4 text-center font-medium transition-colors ${
+                      className={`flex-1 py-3 px-4 text-center font-medium transition-all duration-200 ${
                         activeTab === 'chat'
                           ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                           : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                       }`}
                     >
-                      聊天室
+                      <div className="flex items-center justify-center gap-2">
+                        <MessageSquare className="w-4 h-4" />
+                        <span>聊天室</span>
+                      </div>
                     </button>
                     <button
                       onClick={() => setActiveTab('history')}
-                      className={`flex-1 py-2 px-4 text-center font-medium transition-colors ${
+                      className={`flex-1 py-3 px-4 text-center font-medium transition-all duration-200 ${
                         activeTab === 'history'
                           ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                           : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                       }`}
                     >
-                      对战记录
+                      <div className="flex items-center justify-center gap-2">
+                        <Timer className="w-4 h-4" />
+                        <span>对战记录</span>
+                      </div>
                     </button>
                   </div>
                 )}
 
                 {/* 聊天窗口 - 仅在联机模式下显示 */}
                 {gameMode === 'online' && activeTab === 'chat' && (
-                  <div className="flex-1 flex flex-col">
-                    <div className="flex-1 overflow-y-auto mb-4">
+                  <div className="flex-1 flex flex-col min-h-0">
+                    <div className="h-[500px] overflow-y-auto mb-4 space-y-4 px-2" style={{ height: '500px' }}>
                       {chatMessages.map((msg) => (
                         <div
                           key={msg.id}
-                          className={`mb-3 flex ${
+                          className={`flex ${
                             currentUser?.id && String(msg.sender.id) === String(currentUser.id)
                               ? 'justify-end'
                               : 'justify-start'
                           }`}
                         >
-                          <div className={`max-w-[80%] ${
+                          <div className={`max-w-[85%] ${
                             currentUser?.id && String(msg.sender.id) === String(currentUser.id)
                               ? 'order-2'
                               : 'order-1'
                           }`}>
-                            <div className={`flex items-center gap-2 mb-1 ${
+                            <div className={`flex items-center gap-2 mb-1.5 ${
                               currentUser?.id && String(msg.sender.id) === String(currentUser.id)
                                 ? 'justify-end'
                                 : 'justify-start'
                             }`}>
                               <span className="text-sm text-gray-800 font-medium">{msg.sender.name}</span>
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-gray-400">
                                 {new Date(msg.timestamp).toLocaleTimeString()}
                               </span>
                             </div>
-                            <div className={`rounded-2xl px-4 py-2 ${
+                            <div className={`rounded-2xl px-4 py-2.5 ${
                               currentUser?.id && String(msg.sender.id) === String(currentUser.id)
-                                ? 'bg-blue-100 text-gray-800 rounded-br-none'
-                                : 'bg-gray-100 text-gray-800 rounded-bl-none'
+                                ? 'bg-blue-50 text-gray-800 rounded-br-none border border-blue-100'
+                                : 'bg-gray-50 text-gray-800 rounded-bl-none border border-gray-100'
                             }`}>
                               {msg.content}
                             </div>
                           </div>
                         </div>
                       ))}
+                      <div ref={messagesEndRef} />
                     </div>
-                    <div className="flex gap-2 mt-auto">
+                    <div className="flex gap-3 mt-auto pt-4 pb-4 border-t">
                       <Input.TextArea
                         value={chatInputValue}
                         onChange={(e) => setChatInputValue(e.target.value)}
@@ -725,26 +756,26 @@ function App() {
                         <p>暂无落子</p>
                       </div>
                     ) : (
-                      <div className="space-y-1.5">
+                      <div className="space-y-2">
                         {moves.map((move, index) => (
                           <div
                             key={index}
-                            className={`p-2.5 rounded-lg cursor-pointer transition-colors ${
+                            className={`p-3 rounded-lg cursor-pointer transition-all duration-200 ${
                               index === moves.length - 1
-                                ? 'bg-blue-50 border border-blue-100'
-                                : 'hover:bg-gray-50'
+                                ? 'bg-blue-50 border border-blue-100 shadow-sm'
+                                : 'hover:bg-gray-50 border border-transparent hover:border-gray-100'
                             }`}
                             onClick={() => {
                               // 这里可以添加点击落子记录时的处理逻辑
                             }}
                           >
-                            <div className="flex items-center gap-2">
-                              <div className={`w-4 h-4 rounded-full ${
+                            <div className="flex items-center gap-3">
+                              <div className={`w-5 h-5 rounded-full ${
                                 move.player === 'black'
                                   ? 'bg-gray-900'
                                   : 'bg-white border-2 border-gray-900'
                               }`}/>
-                              <span className="font-medium">{formatMove(move)}</span>
+                              <span className="font-medium text-gray-800">{formatMove(move)}</span>
                             </div>
                           </div>
                         ))}
