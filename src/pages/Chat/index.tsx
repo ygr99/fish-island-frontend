@@ -21,6 +21,7 @@ import MessageContent from '@/components/MessageContent';
 import EmoticonPicker from '@/components/EmoticonPicker';
 import {getCosCredentialUsingGet, uploadTo111666UsingPost} from "@/services/backend/fileController";
 import {uploadFileByMinioUsingPost} from "@/services/backend/fileController";
+import { wsService } from '@/services/websocket';
 
 interface Message {
   id: string;
@@ -53,13 +54,9 @@ const ChatRoom: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const [isUserListCollapsed, setIsUserListCollapsed] = useState(false);
-  const [ws, setWs] = useState<WebSocket | null>(null);
   const {initialState} = useModel('@@initialState');
   const {currentUser} = initialState || {};
   const [messageApi, contextHolder] = message.useMessage();
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
-  const maxReconnectAttempts = 5;
-  const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const isManuallyClosedRef = useRef(false);
@@ -324,50 +321,6 @@ const ChatRoom: React.FC = () => {
   }, [loading, hasMore, current]);
 
   // 处理图片上传
-  // const handleImageUpload = async (file: File) => {
-  //   try {
-  //     setUploading(true);
-  //     const res = await getCosCredentialUsingGet({
-  //       fileName: file.name || `paste_${Date.now()}.png`
-  //     });
-  //     // console.log('getKeyAndCredentials:', res);
-  //     const data = res.data;
-  //     const cos = new COS({
-  //       SecretId: data?.response?.credentials?.tmpSecretId,
-  //       SecretKey: data?.response?.credentials?.tmpSecretKey,
-  //       SecurityToken: data?.response?.credentials?.sessionToken,
-  //       StartTime: data?.response?.startTime,
-  //       ExpiredTime: data?.response?.expiredTime,
-  //     });
-  //
-  //     // 使用 Promise 包装 COS 上传
-  //     const url = await new Promise<string>((resolve, reject) => {
-  //       cos.uploadFile({
-  //         Bucket: data?.bucket as string,
-  //         Region: data?.region as string,
-  //         Key: data?.key as string,
-  //         Body: file,
-  //       }, function (err, data) {
-  //         if (err) {
-  //           reject(err);
-  //           return;
-  //         }
-  //         // console.log('上传结束', data);
-  //         const url = "https://" + data.Location;
-  //         // console.log("图片地址：", url);
-  //         resolve(url);
-  //       });
-  //     });
-  //
-  //     // 设置预览图片
-  //     setPendingImageUrl(url);
-  //
-  //   } catch (error) {
-  //     messageApi.error(`上传失败：${error}`);
-  //   } finally {
-  //     setUploading(false);
-  //   }
-  // };
   const handleImageUpload = async (file: File) => {
     try {
       setUploading(true);
@@ -448,46 +401,111 @@ const ChatRoom: React.FC = () => {
     }
   };
 
-  // 处理文件上传 Minio 前端
-  // const handleFileUpload = async (file: File) => {
-  //   try {
-  //     setUploadingFile(true);
-  //
-  //     const res = await getMinioPresignedUsingGet({
-  //       fileName: file.name
-  //     });
-  //     console.log('getPresignedDownloadUrl:', res);
-  //     if (!res.data) {
-  //       throw new Error('获取上传地址失败');
-  //     }
-  //
-  //     const presignedUrl = res.data.replace("http","https");
-  //
-  //     // 使用预签名URL上传文件
-  //     await fetch(presignedUrl, {
-  //       method: 'PUT',
-  //       body: file,
-  //       headers: {
-  //         'Content-Type': file.type,
-  //       },
-  //     });
-  //
-  //     // 获取文件的访问URL
-  //     const fileUrl = presignedUrl.split('?')[0].replace("http://api.oss.cqbo.com:19000/","https://api.oss.cqbo.com/");
-  //     console.log('文件上传地址：', fileUrl);
-  //     setPendingFileUrl(fileUrl);
-  //
-  //     messageApi.success('文件上传成功');
-  //   } catch (error) {
-  //     messageApi.error(`文件上传失败：${error}`);
-  //   } finally {
-  //     setUploadingFile(false);
-  //   }
-  // };
   // 移除待发送的文件
   const handleRemoveFile = () => {
     setPendingFileUrl(null);
   };
+
+  // 添加滚动到指定消息的函数
+  const scrollToMessage = (messageId: string) => {
+    const messageElement = document.getElementById(`message-${messageId}`);
+    if (messageElement) {
+      messageElement.scrollIntoView({behavior: 'smooth', block: 'center'});
+      // 添加高亮效果
+      messageElement.classList.add(styles.highlighted);
+      setTimeout(() => {
+        messageElement.classList.remove(styles.highlighted);
+      }, 2000);
+    }
+  };
+
+  // 添加处理@消息的函数
+  const handleMentionNotification = (message: Message) => {
+    if (message.mentionedUsers?.some(user => user.id === String(currentUser?.id))) {
+      messageApi.info({
+        content: (
+          <div onClick={() => scrollToMessage(message.id)}>
+            {message.sender.name} 在消息中提到了你
+          </div>
+        ),
+        duration: 5,
+        key: message.id,
+      });
+      setNotifications(prev => [...prev, message]);
+    }
+  };
+
+  // 添加 WebSocket 消息处理函数
+  const handleChatMessage = (data: any) => {
+    const otherUserMessage = data.data.message;
+    if (otherUserMessage.sender.id !== String(currentUser?.id)) {
+      setMessages(prev => {
+        const newMessages = [...prev, {...otherUserMessage}];
+        handleMentionNotification(otherUserMessage);
+        return newMessages;
+      });
+
+      // 实时检查是否在底部
+      const container = messageContainerRef.current;
+      if (container) {
+        const threshold = 30; // 30px的阈值，在底部附近就会自动滚动
+        const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+        if (distanceFromBottom <= threshold) {
+          setTimeout(scrollToBottom, 100);
+        }
+      }
+    }
+  };
+
+  const handleUserMessageRevoke = (data: any) => {
+    setMessages(prev => prev.filter(msg => msg.id !== data.data));
+    setTotal(prev => Math.max(0, prev - 1));
+  };
+
+  const handleUserOnline = (data: any) => {
+    setOnlineUsers(prev => [
+      ...prev,
+      ...data.data.filter((newUser: { id: string; }) => !prev.some(user => user.id === newUser.id))
+    ]);
+  };
+
+  const handleUserOffline = (data: any) => {
+    setOnlineUsers(prev => prev.filter(user => user.id !== data.data));
+  };
+
+  // 修改 WebSocket 连接逻辑
+  useEffect(() => {
+    setIsComponentMounted(true);
+    isManuallyClosedRef.current = false;
+
+    // 只有当用户已登录时才建立WebSocket连接
+    if (currentUser?.id) {
+      const token = localStorage.getItem('tokenValue');
+      if (!token) {
+        messageApi.error('请先登录！');
+        return;
+      }
+
+      // 添加消息处理器
+      wsService.addMessageHandler('chat', handleChatMessage);
+      wsService.addMessageHandler('userMessageRevoke', handleUserMessageRevoke);
+      wsService.addMessageHandler('userOnline', handleUserOnline);
+      wsService.addMessageHandler('userOffline', handleUserOffline);
+
+      // 连接WebSocket
+      wsService.connect(token);
+
+      return () => {
+        setIsComponentMounted(false);
+        isManuallyClosedRef.current = true;
+        // 移除消息处理器
+        wsService.removeMessageHandler('chat', handleChatMessage);
+        wsService.removeMessageHandler('userMessageRevoke', handleUserMessageRevoke);
+        wsService.removeMessageHandler('userOnline', handleUserOnline);
+        wsService.removeMessageHandler('userOffline', handleUserOffline);
+      };
+    }
+  }, [currentUser?.id]);
 
   // 修改 handleSend 函数
   const handleSend = (customContent?: string) => {
@@ -505,10 +523,6 @@ const ChatRoom: React.FC = () => {
 
     if (!content.trim() && !pendingImageUrl && !pendingFileUrl) {
       message.warning('请输入消息内容');
-      return;
-    }
-
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
       return;
     }
 
@@ -549,8 +563,8 @@ const ChatRoom: React.FC = () => {
       country: userIpInfo?.country || '未知国家'
     };
 
-    // 发送消息到服务器
-    const messageData = {
+    // 使用全局 WebSocket 服务发送消息
+    wsService.send({
       type: 2,
       userId: -1,
       data: {
@@ -559,8 +573,7 @@ const ChatRoom: React.FC = () => {
           message: newMessage
         }
       }
-    };
-    ws.send(JSON.stringify(messageData));
+    });
 
     // 更新消息列表
     setMessages(prev => [...prev, newMessage]);
@@ -582,163 +595,90 @@ const ChatRoom: React.FC = () => {
     setPendingImageUrl(null);
   };
 
-  // 添加滚动到指定消息的函数
-  const scrollToMessage = (messageId: string) => {
-    const messageElement = document.getElementById(`message-${messageId}`);
-    if (messageElement) {
-      messageElement.scrollIntoView({behavior: 'smooth', block: 'center'});
-      // 添加高亮效果
-      messageElement.classList.add(styles.highlighted);
-      setTimeout(() => {
-        messageElement.classList.remove(styles.highlighted);
-      }, 2000);
-    }
+  // 添加撤回消息的处理函数
+  const handleRevokeMessage = (messageId: string) => {
+    wsService.send({
+      type: 2,
+      userId: -1,
+      data: {
+        type: 'userMessageRevoke',
+        content: messageId
+      }
+    });
+
+    messageApi.info('消息已撤回');
   };
 
-  // 添加处理@消息的函数
-  const handleMentionNotification = (message: Message) => {
-    if (message.mentionedUsers?.some(user => user.id === String(currentUser?.id))) {
-      messageApi.info({
-        content: (
-          <div onClick={() => scrollToMessage(message.id)}>
-            {message.sender.name} 在消息中提到了你
+  // 修改handleMentionUser函数
+  const handleMentionUser = (user: User) => {
+    const mentionText = `@${user.name} `;
+    setInputValue(prev => {
+      // 如果当前输入框已经有这个@，就不重复添加
+      if (prev.includes(mentionText)) {
+        return prev;
+      }
+      return prev + mentionText;
+    });
+    // 让输入框获得焦点
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+  };
+
+  const UserInfoCard: React.FC<{ user: User }> = ({user}) => {
+    return (
+      <div className={styles.userInfoCard}>
+        <div className={styles.userInfoCardHeader}>
+          <div
+            className={styles.avatarWrapper}
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              handleMentionUser(user);
+            }}
+          >
+            <Avatar src={user.avatar} size={48}/>
+            <div className={styles.floatingFish}>🐟</div>
           </div>
-        ),
-        duration: 5,
-        key: message.id,
-      });
-      setNotifications(prev => [...prev, message]);
-    }
+          <div className={styles.userInfoCardTitle}>
+            <div className={styles.userInfoCardNameRow}>
+              <span className={styles.userInfoCardName}>{user.name}</span>
+              <span className={styles.userInfoCardLevel}>
+                <span className={styles.levelEmoji}>{getLevelEmoji(user.level)}</span>
+                <span className={styles.levelText}>{user.level}</span>
+              </span>
+            </div>
+            <div className={styles.userInfoCardAdminTag}>
+              {getAdminTag(user.isAdmin, user.level)}
+            </div>
+            <div className={styles.userInfoCardPoints}>
+              <span className={styles.pointsEmoji}>✨</span>
+              <span className={styles.pointsText}>积分: {user.points || 0}</span>
+            </div>
+            {user.id === String(currentUser?.id) ? (
+              userIpInfo && (
+                <div className={styles.userInfoCardLocation}>
+                  <span className={styles.locationEmoji}>📍</span>
+                  <span className={styles.locationText}>{userIpInfo.country} · {userIpInfo.region}</span>
+                </div>
+              )
+            ) : (
+              user.region && (
+                <div className={styles.userInfoCardLocation}>
+                  <span className={styles.locationEmoji}>📍</span>
+                  <span className={styles.locationText}>{user.country ? `${user.country} · ${user.region}` : user.region}</span>
+                </div>
+              )
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
-  // WebSocket连接函数
-  const connectWebSocket = () => {
-    const token = localStorage.getItem('tokenValue');
-    if (!token || !currentUser?.id) {
-      messageApi.error('请先登录！');
-      return;
-    }
-
-    // 如果是手动关闭的，不要重新连接
-    if (isManuallyClosedRef.current) {
-      return;
-    }
-
-    const socket = new WebSocket(BACKEND_HOST_WS + token);
-
-    socket.onopen = () => {
-      socket.send(JSON.stringify({
-        type: 1, // 登录连接
-      }));
-      // console.log('WebSocket连接成功');
-      setReconnectAttempts(0); // 重置重连次数
-    };
-
-    socket.onclose = () => {
-      // console.log('WebSocket连接关闭');
-      setWs(null);
-
-      // 只有在组件仍然挂载且非主动关闭的情况下才尝试重连
-      if (isComponentMounted && !isManuallyClosedRef.current && reconnectAttempts < maxReconnectAttempts) {
-        const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
-        reconnectTimeoutRef.current = setTimeout(() => {
-          setReconnectAttempts(prev => prev + 1);
-          connectWebSocket();
-        }, timeout);
-      }
-    };
-
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      // console.log('收到服务器消息:', data);
-      if (data.type === 'chat') {
-        // console.log('处理聊天消息:', data.data.message);
-        const otherUserMessage = data.data.message;
-        if (otherUserMessage.sender.id !== String(currentUser?.id)) {
-          setMessages(prev => {
-            const newMessages = [...prev, {...otherUserMessage}];
-            // 检查是否有@当前用户
-            handleMentionNotification(otherUserMessage);
-            return newMessages;
-          });
-
-          // 实时检查是否在底部
-          const container = messageContainerRef.current;
-          if (container) {
-            const threshold = 30; // 30px的阈值，在底部附近就会自动滚动
-            const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-            // 当距离底部很近时才自动滚动
-            if (distanceFromBottom <= threshold) {
-              setTimeout(scrollToBottom, 100);
-            }
-          }
-        }
-      } else if (data.type === 'userMessageRevoke') {
-        // console.log('处理消息撤回:', data.data);
-        // 从消息列表中移除被撤回的消息
-        setMessages(prev => prev.filter(msg => msg.id !== data.data));
-        // 更新总消息数
-        setTotal(prev => Math.max(0, prev - 1));
-      } else if (data.type === 'userOnline') {
-        // console.log('处理用户上线消息:', data.data);
-        setOnlineUsers(prev => [
-          ...prev,
-          ...data.data.filter((newUser: { id: string; }) => !prev.some(user => user.id === newUser.id))
-        ]);
-
-      } else if (data.type === 'userOffline') {
-        // console.log('处理用户下线消息:', data.data);
-        // 过滤掉下线的用户
-        setOnlineUsers(prev => prev.filter(user => user.id !== data.data));
-      }
-    };
-
-    socket.onerror = (error) => {
-      console.error('WebSocket错误:', error);
-      messageApi.error('连接发生错误');
-    };
-
-    // 定期发送心跳消息
-    const pingInterval = setInterval(() => {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({
-          type: 4, // 心跳消息类型
-        }));
-      }
-    }, 25000);
-
-    setWs(socket);
-
-    return () => {
-      clearInterval(pingInterval);
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      socket.close();
-    };
+  // 在 return 语句之前添加引用消息的处理函数
+  const handleQuoteMessage = (message: Message) => {
+    setQuotedMessage(message);
   };
-
-  useEffect(() => {
-    setIsComponentMounted(true);
-    isManuallyClosedRef.current = false;
-
-    // 只有当用户已登录时才建立WebSocket连接
-    if (currentUser?.id) {
-      const cleanup = connectWebSocket();
-
-      return () => {
-        setIsComponentMounted(false);
-        isManuallyClosedRef.current = true;  // 标记为手动关闭
-        if (cleanup) cleanup();
-        if (reconnectTimeoutRef.current) {
-          clearTimeout(reconnectTimeoutRef.current);
-        }
-        if (ws) {
-          ws.close();
-        }
-      };
-    }
-  }, [currentUser?.id]);
 
   const getLevelEmoji = (level: number) => {
     switch (level) {
@@ -853,7 +793,7 @@ const ChatRoom: React.FC = () => {
     setInputValue(imageMessage);
 
     // 直接使用新的消息内容发送，而不是依赖 inputValue 的状态更新
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
+    if (!wsService.isConnected()) {
       return;
     }
 
@@ -882,7 +822,7 @@ const ChatRoom: React.FC = () => {
     setHasMore(true);
 
     // 发送消息到服务器
-    const messageData = {
+    wsService.send({
       type: 2,
       userId: -1,
       data: {
@@ -891,107 +831,13 @@ const ChatRoom: React.FC = () => {
           message: newMessage
         }
       }
-    };
-    ws.send(JSON.stringify(messageData));
+    });
 
     setInputValue('');
     setIsEmoticonPickerVisible(false);
     // 发送消息后滚动到底部
     setTimeout(scrollToBottom, 100);
   };
-
-  // 添加撤回消息的处理函数
-  const handleRevokeMessage = (messageId: string) => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      messageApi.error('连接已断开，无法撤回消息');
-      return;
-    }
-
-    const messageData = {
-      type: 2,
-      userId: -1,
-      data: {
-        type: 'userMessageRevoke',
-        content: messageId
-      }
-    };
-
-    ws.send(JSON.stringify(messageData));
-
-    messageApi.info('消息已撤回');
-  };
-
-  // 修改handleMentionUser函数
-  const handleMentionUser = (user: User) => {
-    const mentionText = `@${user.name} `;
-    setInputValue(prev => {
-      // 如果当前输入框已经有这个@，就不重复添加
-      if (prev.includes(mentionText)) {
-        return prev;
-      }
-      return prev + mentionText;
-    });
-    // 让输入框获得焦点
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 0);
-  };
-
-  const UserInfoCard: React.FC<{ user: User }> = ({user}) => {
-    return (
-      <div className={styles.userInfoCard}>
-        <div className={styles.userInfoCardHeader}>
-          <div
-            className={styles.avatarWrapper}
-            onClick={(e: React.MouseEvent) => {
-              e.stopPropagation();
-              handleMentionUser(user);
-            }}
-          >
-            <Avatar src={user.avatar} size={48}/>
-            <div className={styles.floatingFish}>🐟</div>
-          </div>
-          <div className={styles.userInfoCardTitle}>
-            <div className={styles.userInfoCardNameRow}>
-              <span className={styles.userInfoCardName}>{user.name}</span>
-              <span className={styles.userInfoCardLevel}>
-                <span className={styles.levelEmoji}>{getLevelEmoji(user.level)}</span>
-                <span className={styles.levelText}>{user.level}</span>
-              </span>
-            </div>
-            <div className={styles.userInfoCardAdminTag}>
-              {getAdminTag(user.isAdmin, user.level)}
-            </div>
-            <div className={styles.userInfoCardPoints}>
-              <span className={styles.pointsEmoji}>✨</span>
-              <span className={styles.pointsText}>积分: {user.points || 0}</span>
-            </div>
-            {user.id === String(currentUser?.id) ? (
-              userIpInfo && (
-                <div className={styles.userInfoCardLocation}>
-                  <span className={styles.locationEmoji}>📍</span>
-                  <span className={styles.locationText}>{userIpInfo.country} · {userIpInfo.region}</span>
-                </div>
-              )
-            ) : (
-              user.region && (
-                <div className={styles.userInfoCardLocation}>
-                  <span className={styles.locationEmoji}>📍</span>
-                  <span className={styles.locationText}>{user.country ? `${user.country} · ${user.region}` : user.region}</span>
-                </div>
-              )
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // 在 return 语句之前添加引用消息的处理函数
-  const handleQuoteMessage = (message: Message) => {
-    setQuotedMessage(message);
-  };
-
 
   return (
     <div className={`${styles.chatRoom} ${isUserListCollapsed ? styles.collapsed : ''}`}>
@@ -1204,12 +1050,6 @@ const ChatRoom: React.FC = () => {
             }}
             disabled={uploadingFile}
           />
-          {/*<Button*/}
-          {/*  icon={<PaperClipOutlined/>}*/}
-          {/*  className={styles.fileButton}*/}
-          {/*  onClick={() => fileInputRef.current?.click()}*/}
-          {/*  disabled={uploadingFile}*/}
-          {/*/>*/}
           <Popover
             content={emojiPickerContent}
             trigger="click"

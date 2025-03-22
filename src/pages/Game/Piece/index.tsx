@@ -8,6 +8,7 @@ import {Button, Input, message, Modal} from "antd";
 import {BACKEND_HOST_WS} from "@/constants";
 import {useModel} from "@@/exports";
 import styles from './index.less';
+import { wsService } from '@/services/websocket';
 
 // 添加消息类型定义
 interface ChatMessage {
@@ -30,7 +31,6 @@ function App() {
   // 在App组件中新增状态
   const [gameMode, setGameMode] = useState<GameMode>('single');
   const [onlineStatus, setOnlineStatus] = useState<OnlineStatus>('connecting');
-  const [ws, setWs] = useState<WebSocket | null>(null);
   const [roomId, setRoomId] = useState<string>('');
   const [opponentColor, setOpponentColor] = useState<Player>('white');
   const [opponentUserId, setOpponentUserId] = useState<string>();
@@ -93,144 +93,72 @@ function App() {
     // 移除自动滚动功能
   };
 
-  const handleChatSend = () => {
-    if (!chatInputValue.trim()) return;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    if (!currentUser?.id) {
-      messageApi.error('请先登录！');
-      return;
+  const handleChatMessage = (data: any) => {
+    const otherUserMessage = data.data.message;
+    if (otherUserMessage.sender.id !== String(currentUser?.id)) {
+      setChatMessages(prev => [...prev, {...otherUserMessage}]);
+      setTimeout(scrollToBottom, 100);
     }
-
-    const newMessage: ChatMessage = {
-      id: `${Date.now()}`,
-      content: chatInputValue,
-      sender: {
-        id: String(currentUser.id),
-        name: currentUser.userName || '游客',
-        avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-        level: currentUser.level || 1,
-        isAdmin: currentUser.userRole === 'admin',
-      },
-      timestamp: new Date(),
-    };
-
-    // 发送消息到服务器
-    const messageData = {
-      type: 2,
-      userId: -1,
-      data: {
-        type: 'chat',
-        content: {
-          message: newMessage
-        }
-      }
-    };
-    ws.send(JSON.stringify(messageData));
-
-    // 更新消息列表
-    setChatMessages(prev => [...prev, newMessage]);
-    setChatInputValue('');
   };
 
-  // WebSocket连接函数
-  const connectWebSocket = () => {
-    const token = localStorage.getItem('tokenValue');
-    if (!token || !currentUser?.id) {
-      messageApi.error('请先登录！');
-      return;
+  const handleJoinSuccess = (data: any) => {
+    setOpponentColor(data.data.opponentColor);
+    setPlayerColor(data.data.yourColor);
+    setOnlineStatus('playing');
+    setGameStarted(true);
+    setOpponentUserId(data.data.playerId);
+    messageApi.open({
+      type: 'success',
+      content: '战斗开始！！！',
+    });
+    if (data.data.yourColor === 'white') {
+      setCurrentPlayer('black');
     }
+  };
 
-    const socket = new WebSocket(BACKEND_HOST_WS + token);
+  const handleCreateChessRoom = (data: any) => {
+    console.log('创建房间成功', data.data);
+    setRoomId(data.data);
+    setOnlineStatus('waiting');
+    messageApi.open({
+      type: 'success',
+      content: '房间创建成功啦',
+    });
+    setGameStarted(true);
+  };
 
-    socket.onopen = () => {
-      setOnlineStatus('waiting');
-      socket.send(JSON.stringify({
-        type: 1, // 登录连接
-      }));
-    };
-
-    socket.onclose = () => {
-      console.log("WebSocket 已关闭");
-      setWs(null);
-      setOnlineStatus('connecting');
-    };
-
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      switch (data.type) {
-        case 'createChessRoom':
-          console.log('创建房间成功', data.data);
-          setRoomId(data.data);
-          messageApi.open({
-            type: 'success',
-            content: '房间创建成功啦',
-          });
-          setGameStarted(true);
-          break;
-        case 'joinSuccess':
-          setOpponentColor(data.data.opponentColor);
-          setPlayerColor(data.data.yourColor);
-          setOnlineStatus('playing');
-          setGameStarted(true);
-          setOpponentUserId(data.data.playerId);
-          messageApi.open({
-            type: 'success',
-            content: '战斗开始！！！',
-          });
-          if (data.data.yourColor === 'white') {
-            // 如果加入房间且执白，等待对方先手
-            setCurrentPlayer('black');
-          }
-          break;
-        case 'moveChess':
-          setPlayerColor(data.data.player === 'black' ? 'white' : 'black');
-          // 处理对手的移动
-          handleRemoteMove(data.data.position, data.data.player);
-          break;
-        case 'chat':
-          const otherUserMessage = data.data.message;
-          if (otherUserMessage.sender.id !== String(currentUser?.id)) {
-            setChatMessages(prev => [...prev, {...otherUserMessage}]);
-            setTimeout(scrollToBottom, 100);
-          }
-          break;
-        case 'error':
-          console.error('WebSocket Error:', data.error);
-          break;
-      }
-    };
-
-    socket.onerror = (error) => {
-      console.error('WebSocket错误:', error);
-      messageApi.error('连接发生错误');
-    };
-
-    // 定期发送心跳消息
-    const pingInterval = setInterval(() => {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({
-          type: 4, // 心跳消息类型
-        }));
-      }
-    }, 25000);
-
-    setWs(socket);
-
-    return () => {
-      clearInterval(pingInterval);
-      socket.close();
-    };
+  const handleMoveChess = (data: any) => {
+    setPlayerColor(data.data.player === 'black' ? 'white' : 'black');
+    handleRemoteMove(data.data.position, data.data.player);
   };
 
   // 在游戏模式改变时建立WebSocket连接
   useEffect(() => {
     if (gameMode === 'online') {
-      const cleanup = connectWebSocket();
+      const token = localStorage.getItem('tokenValue');
+      if (!token || !currentUser?.id) {
+        messageApi.error('请先登录！');
+        return;
+      }
+
+      // 添加消息处理器
+      wsService.addMessageHandler('chat', handleChatMessage);
+      wsService.addMessageHandler('joinSuccess', handleJoinSuccess);
+      wsService.addMessageHandler('createChessRoom', handleCreateChessRoom);
+      wsService.addMessageHandler('moveChess', handleMoveChess);
+
+      // 连接WebSocket
+      wsService.connect(token);
+
       return () => {
-        if (cleanup) cleanup();
+        // 移除消息处理器
+        wsService.removeMessageHandler('chat', handleChatMessage);
+        wsService.removeMessageHandler('joinSuccess', handleJoinSuccess);
+        wsService.removeMessageHandler('createChessRoom', handleCreateChessRoom);
+        wsService.removeMessageHandler('moveChess', handleMoveChess);
       };
     }
-  }, [gameMode]);
+  }, [gameMode, currentUser?.id]);
 
   //原有单机
   const handleMove = useCallback((position: Position) => {
@@ -262,8 +190,9 @@ function App() {
         return;
       }
       if (currentPlayer !== playerColor || winner) return;
-      // 发送移动信息到服务器
-      ws?.send(JSON.stringify({
+
+      // 使用全局 WebSocket 服务发送消息
+      wsService.send({
         type: 2,
         userId: opponentUserId,
         data: {
@@ -274,7 +203,7 @@ function App() {
             player: playerColor
           }
         },
-      }));
+      });
 
       // 本地更新棋盘
       const newBoard = [...board];
@@ -291,7 +220,7 @@ function App() {
 
       setCurrentPlayer(opponentColor); // 切换回合显示
     }
-  }, [board, winner, onlineStatus, gameMode, currentPlayer, playerColor, opponentColor, ws, roomId, messageApi]);
+  }, [board, winner, onlineStatus, gameMode, currentPlayer, playerColor, opponentColor, roomId, messageApi]);
 
   useEffect(() => {
     if (gameStarted && currentPlayer !== playerColor && !winner) {
@@ -303,7 +232,7 @@ function App() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [gameMode, ws, roomId, currentPlayer, board, winner, opponentColor, playerColor, gameStarted, handleMove]);
+  }, [gameMode, roomId, currentPlayer, board, winner, opponentColor, playerColor, gameStarted, handleMove]);
 
   const switchColor = () => {
     const newColor: Player = playerColor === 'black' ? 'white' : 'black';
@@ -384,6 +313,44 @@ function App() {
     return `${move.number}. ${move.player === 'black' ? '●' : '○'} ${col}${row}`;
   };
 
+  // 添加 handleChatSend 函数
+  const handleChatSend = () => {
+    if (!chatInputValue.trim()) return;
+    if (!currentUser?.id) {
+      messageApi.error('请先登录！');
+      return;
+    }
+
+    const newMessage: ChatMessage = {
+      id: `${Date.now()}`,
+      content: chatInputValue,
+      sender: {
+        id: String(currentUser.id),
+        name: currentUser.userName || '游客',
+        avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+        level: currentUser.level || 1,
+        isAdmin: currentUser.userRole === 'admin',
+      },
+      timestamp: new Date(),
+    };
+
+    // 使用全局 WebSocket 服务发送消息
+    wsService.send({
+      type: 2,
+      userId: -1,
+      data: {
+        type: 'chat',
+        content: {
+          message: newMessage
+        }
+      }
+    });
+
+    // 更新消息列表
+    setChatMessages(prev => [...prev, newMessage]);
+    setChatInputValue('');
+  };
+
   if (!gameStarted) {
     return (
       <div className="min-h-screen bg-gradient-to-br  to-indigo-50 flex items-center justify-center p-4">
@@ -444,24 +411,24 @@ function App() {
                 onClick={() => {
                   if (roomId) {
                     // 发送加入房间请求
-                    ws?.send(JSON.stringify({
+                    wsService.send({
                       type: 2,
                       userId: -1,
                       data: {
                         type: 'joinRoom',
                         content: roomId
                       }
-                    }));
+                    });
                   } else {
                     // 发送创建房间请求
-                    ws?.send(JSON.stringify({
+                    wsService.send({
                       type: 2,
                       userId: -1,
                       data: {
                         type: 'createChessRoom',
                         content: ''
                       }
-                    }));
+                    });
                   }
                 }}
               >
