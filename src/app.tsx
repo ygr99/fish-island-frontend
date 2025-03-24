@@ -22,14 +22,51 @@ const getSiteName = () => {
     const {siteName} = JSON.parse(savedSiteConfig);
     return siteName;
   }
-  return '摸鱼岛🎣';
+  return '摸鱼岛🎣 - 有趣的在线交流平台';
 };
 
 // 监听路由变化
 const listenRouteChange = () => {
   history.listen(({location}) => {
     // 设置网站标题
-    document.title = getSiteName();
+    const pathname = location.pathname;
+    let title = getSiteName();
+
+    // 根据路由设置不同的标题
+    if (pathname === '/index') {
+      title = '首页 - ' + title;
+    } else if (pathname === '/todo') {
+      title = '每日待办 - ' + title;
+    } else if (pathname === '/chat') {
+      title = '摸鱼室 - ' + title;
+    } else if (pathname.startsWith('/game')) {
+      title = '小游戏 - ' + title;
+    } else if (pathname.startsWith('/utils')) {
+      title = '工具箱 - ' + title;
+    } else if (pathname.startsWith('/admin')) {
+      title = '管理页 - ' + title;
+    }
+
+    document.title = title;
+
+    // 更新 meta 描述
+    let description = '摸鱼岛 - 一个有趣的在线游戏平台，提供多种休闲游戏和社交功能';
+    if (pathname.startsWith('/game')) {
+      description = '摸鱼岛游戏中心 - 提供五子棋、2048、模拟赛车等多种休闲游戏';
+    } else if (pathname === '/chat') {
+      description = '摸鱼室 - 与好友聊天、分享生活趣事的社交空间';
+    }
+
+    // 更新 meta 描述
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute('content', description);
+    } else {
+      const meta = document.createElement('meta');
+      meta.name = 'description';
+      meta.content = description;
+      document.head.appendChild(meta);
+    }
   });
 };
 

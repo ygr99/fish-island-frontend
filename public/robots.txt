@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Allow: /index
+Allow: /game/
+Allow: /utils/
+Disallow: /user/
+Disallow: /admin/
+Disallow: /chat/
+Disallow: /todo/
+
+Sitemap: https://fish-island.cn/sitemap.xml 
