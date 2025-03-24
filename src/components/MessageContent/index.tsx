@@ -1,6 +1,11 @@
 import React, {useState} from 'react';
 import {Card, Image, Button} from 'antd';
 import {BilibiliOutlined, LinkOutlined, FileOutlined, DownloadOutlined} from '@ant-design/icons';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import rehypePrism from 'rehype-prism-plus';
+import 'prismjs/themes/prism-tomorrow.css';
 import styles from './index.less';
 import {parseWebPageUsingGet} from '@/services/backend/webParserController';
 
@@ -118,78 +123,6 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
         </Card>
       </div>
     );
-  };
-
-  const parseContent = () => {
-    let parts: React.ReactNode[] = [];
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
-
-    // 处理图片标签
-    while ((match = imgRegex.exec(content)) !== null) {
-      // 添加图片前的文本
-      if (match.index > lastIndex) {
-        const textBeforeImg = content.slice(lastIndex, match.index);
-        // 处理文本中的URL
-        const urlParts = textBeforeImg.split(urlRegex);
-        urlParts.forEach((urlPart, urlIndex) => {
-          if (urlPart.match(urlRegex)) {
-            parts.push(renderUrl(urlPart, `url-${match!.index}-${urlIndex}`));
-          } else if (urlPart) {
-            parts.push(<span key={`text-${match!.index}-${urlIndex}`}>{urlPart}</span>);
-          }
-        });
-      }
-      // 添加图片组件
-      parts.push(
-        <Image
-          key={`img-${match.index}`}
-          src={match[1]}
-          alt="聊天图片"
-          style={{maxWidth: '200px', borderRadius: '4px'}}
-        />
-      );
-      lastIndex = match.index + match[0].length;
-    }
-
-    // 处理文件标签
-    const remainingContent = content.slice(lastIndex);
-    let fileLastIndex = 0;
-    let fileMatch: RegExpExecArray | null;
-
-    while ((fileMatch = fileRegex.exec(remainingContent)) !== null) {
-      // 处理文件前的文本（包括URL解析）
-      if (fileMatch.index > fileLastIndex) {
-        const textBeforeFile = remainingContent.slice(fileLastIndex, fileMatch.index);
-        // 处理文本中的URL
-        const urlParts = textBeforeFile.split(urlRegex);
-        urlParts.forEach((urlPart, urlIndex) => {
-          if (urlPart.match(urlRegex)) {
-            parts.push(renderUrl(urlPart, `url-file-${fileMatch!.index}-${urlIndex}`));
-          } else if (urlPart) {
-            parts.push(<span key={`text-file-${fileMatch!.index}-${urlIndex}`}>{urlPart}</span>);
-          }
-        });
-      }
-      // 添加文件组件
-      parts.push(renderFile(fileMatch[1], `file-${fileMatch.index}`));
-      fileLastIndex = fileMatch.index + fileMatch[0].length;
-    }
-
-    // 处理剩余文本中的URL
-    if (fileLastIndex < remainingContent.length) {
-      const finalText = remainingContent.slice(fileLastIndex);
-      const urlParts = finalText.split(urlRegex);
-      urlParts.forEach((urlPart, urlIndex) => {
-        if (urlPart.match(urlRegex)) {
-          parts.push(renderUrl(urlPart, `url-final-${urlIndex}`));
-        } else if (urlPart) {
-          parts.push(<span key={`text-final-${urlIndex}`}>{urlPart}</span>);
-        }
-      });
-    }
-
-    return parts;
   };
 
   // 渲染URL内容
@@ -356,6 +289,152 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
         </div>
       </Card>
     );
+  };
+
+  const parseContent = () => {
+    let parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    // 处理图片标签
+    while ((match = imgRegex.exec(content)) !== null) {
+      // 添加图片前的文本
+      if (match.index > lastIndex) {
+        const textBeforeImg = content.slice(lastIndex, match.index);
+        // 处理文本中的URL
+        const urlParts = textBeforeImg.split(urlRegex);
+        urlParts.forEach((urlPart, urlIndex) => {
+          if (urlPart.match(urlRegex)) {
+            parts.push(renderUrl(urlPart, `url-${match!.index}-${urlIndex}`));
+          } else if (urlPart) {
+            parts.push(
+              <ReactMarkdown
+                key={`markdown-${match!.index}-${urlIndex}`}
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw, rehypePrism]}
+                components={{
+                  // 自定义链接渲染，避免与我们的URL渲染冲突
+                  a: ({node, ...props}) => {
+                    const href = props.href || '';
+                    if (href.match(urlRegex)) {
+                      return renderUrl(href, `markdown-url-${match!.index}-${urlIndex}`);
+                    }
+                    return <a {...props} target="_blank" rel="noopener noreferrer" />;
+                  },
+                  // 自定义图片渲染，避免与我们的图片标签冲突
+                  img: ({node, ...props}) => {
+                    const src = props.src || '';
+                    if (src.match(/^https?:\/\//)) {
+                      return <Image src={src} alt={props.alt || ''} style={{maxWidth: '200px', borderRadius: '4px'}} />;
+                    }
+                    return <img {...props} />;
+                  },
+                }}
+              >
+                {urlPart}
+              </ReactMarkdown>
+            );
+          }
+        });
+      }
+      // 添加图片组件
+      parts.push(
+        <Image
+          key={`img-${match.index}`}
+          src={match[1]}
+          alt="聊天图片"
+          style={{maxWidth: '200px', borderRadius: '4px'}}
+        />
+      );
+      lastIndex = match.index + match[0].length;
+    }
+
+    // 处理文件标签
+    const remainingContent = content.slice(lastIndex);
+    let fileLastIndex = 0;
+    let fileMatch: RegExpExecArray | null;
+
+    while ((fileMatch = fileRegex.exec(remainingContent)) !== null) {
+      // 处理文件前的文本（包括URL解析）
+      if (fileMatch.index > fileLastIndex) {
+        const textBeforeFile = remainingContent.slice(fileLastIndex, fileMatch.index);
+        // 处理文本中的URL
+        const urlParts = textBeforeFile.split(urlRegex);
+        urlParts.forEach((urlPart, urlIndex) => {
+          if (urlPart.match(urlRegex)) {
+            parts.push(renderUrl(urlPart, `url-file-${fileMatch!.index}-${urlIndex}`));
+          } else if (urlPart) {
+            parts.push(
+              <ReactMarkdown
+                key={`markdown-file-${fileMatch!.index}-${urlIndex}`}
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw, rehypePrism]}
+                components={{
+                  a: ({node, ...props}) => {
+                    const href = props.href || '';
+                    if (href.match(urlRegex)) {
+                      return renderUrl(href, `markdown-url-file-${fileMatch!.index}-${urlIndex}`);
+                    }
+                    return <a {...props} target="_blank" rel="noopener noreferrer" />;
+                  },
+                  img: ({node, ...props}) => {
+                    const src = props.src || '';
+                    if (src.match(/^https?:\/\//)) {
+                      return <Image src={src} alt={props.alt || ''} style={{maxWidth: '200px', borderRadius: '4px'}} />;
+                    }
+                    return <img {...props} />;
+                  },
+                }}
+              >
+                {urlPart}
+              </ReactMarkdown>
+            );
+          }
+        });
+      }
+      // 添加文件组件
+      parts.push(renderFile(fileMatch[1], `file-${fileMatch.index}`));
+      fileLastIndex = fileMatch.index + fileMatch[0].length;
+    }
+
+    // 处理剩余文本中的URL
+    if (fileLastIndex < remainingContent.length) {
+      const finalText = remainingContent.slice(fileLastIndex);
+      const urlParts = finalText.split(urlRegex);
+      urlParts.forEach((urlPart, urlIndex) => {
+        if (urlPart.match(urlRegex)) {
+          parts.push(renderUrl(urlPart, `url-final-${urlIndex}`));
+        } else if (urlPart) {
+          parts.push(
+            <ReactMarkdown
+              key={`markdown-final-${urlIndex}`}
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeRaw, rehypePrism]}
+              components={{
+                a: ({node, ...props}) => {
+                  const href = props.href || '';
+                  if (href.match(urlRegex)) {
+                    return renderUrl(href, `markdown-url-final-${urlIndex}`);
+                  }
+                  return <a {...props} target="_blank" rel="noopener noreferrer" />;
+                },
+                img: ({node, ...props}) => {
+                  const src = props.src || '';
+                  if (src.match(/^https?:\/\//)) {
+                    return <Image src={src} alt={props.alt || ''} style={{maxWidth: '200px', borderRadius: '4px'}} />;
+                  }
+                  return <img {...props} />;
+                },
+              }}
+            >
+              {urlPart}
+            </ReactMarkdown>
+          );
+        }
+      });
+    }
+
+    return parts;
   };
 
   return <div className={styles.messageContent}>{parseContent()}</div>;
