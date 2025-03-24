@@ -63,6 +63,32 @@ function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'history'>('chat');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // 添加从路由获取房间号的逻辑
+  useEffect(() => {
+    const location = window.location;
+    const searchParams = new URLSearchParams(location.search);
+    const roomIdFromUrl = searchParams.get('roomId');
+    const modeFromUrl = searchParams.get('mode');
+
+    if (roomIdFromUrl) {
+      setRoomId(roomIdFromUrl);
+      setGameMode('online');
+      // 发送加入房间请求
+      wsService.send({
+        type: 2,
+        userId: -1,
+        data: {
+          type: 'joinRoom',
+          content: roomIdFromUrl
+        }
+      });
+    }
+
+    if (modeFromUrl) {
+      setGameMode(modeFromUrl as GameMode);
+    }
+  }, []);
+
   // 添加保存游戏状态的函数
   const saveGameState = useCallback(() => {
     if (gameMode === 'online') {
@@ -409,6 +435,39 @@ function App() {
     setChatInputValue('');
   };
 
+  // 添加发送邀请的函数
+  const handleSendInvitation = () => {
+    if (!currentUser?.id) {
+      messageApi.error('请先登录！');
+      return;
+    }
+
+    // 发送邀请消息到聊天室
+    wsService.send({
+      type: 2,
+      userId: -1,
+      data: {
+        type: 'chat',
+        content: {
+          message: {
+            id: `${Date.now()}`,
+            content: `[invite]${roomId}[/invite]`,
+            sender: {
+              id: String(currentUser.id),
+              name: currentUser.userName || '游客',
+              avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+              level: currentUser.level || 1,
+              isAdmin: currentUser.userRole === 'admin',
+            },
+            timestamp: new Date(),
+          }
+        }
+      }
+    });
+
+    messageApi.success('邀请已发送到聊天室');
+  };
+
   if (!gameStarted) {
     return (
       <div className="min-h-screen bg-gradient-to-br  to-indigo-50 flex items-center justify-center p-4">
@@ -548,6 +607,17 @@ function App() {
                       </span>
                     </div>
                     <div className="flex items-center gap-4">
+                      {/* 添加发送邀请按钮 */}
+                      {onlineStatus === 'waiting' && (
+                        <Button
+                          type="primary"
+                          size="small"
+                          onClick={handleSendInvitation}
+                          className="bg-purple-500 hover:bg-purple-600"
+                        >
+                          发送邀请
+                        </Button>
+                      )}
                       {/* 对手信息 */}
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full overflow-hidden">

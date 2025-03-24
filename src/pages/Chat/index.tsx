@@ -22,6 +22,7 @@ import EmoticonPicker from '@/components/EmoticonPicker';
 import {getCosCredentialUsingGet, uploadTo111666UsingPost} from "@/services/backend/fileController";
 import {uploadFileByMinioUsingPost} from "@/services/backend/fileController";
 import { wsService } from '@/services/websocket';
+import { history } from '@umijs/max';
 
 interface Message {
   id: string;
@@ -839,6 +840,37 @@ const ChatRoom: React.FC = () => {
     setTimeout(scrollToBottom, 100);
   };
 
+  // 修改 handleInviteClick 函数
+  const handleInviteClick = (roomId: string) => {
+    // 跳转到游戏页面并设置房间号
+    history.push(`/game/piece?roomId=${roomId}&mode=online`);
+  };
+
+  // 修改 MessageContent 组件的渲染逻辑
+  const renderMessageContent = (content: string) => {
+    // 检查是否是邀请消息
+    const inviteMatch = content.match(/\[invite\](.*?)\[\/invite\]/);
+    if (inviteMatch) {
+      const roomId = inviteMatch[1];
+      return (
+        <div className={styles.inviteMessage}>
+          <div className={styles.inviteContent}>
+            <span className={styles.inviteText}>🎮 五子棋对战邀请</span>
+            <Button
+              type="primary"
+              size="small"
+              onClick={() => handleInviteClick(roomId)}
+              className={styles.inviteButton}
+            >
+              加入对战
+            </Button>
+          </div>
+        </div>
+      );
+    }
+    return <MessageContent content={content} />;
+  };
+
   return (
     <div className={`${styles.chatRoom} ${isUserListCollapsed ? styles.collapsed : ''}`}>
       {contextHolder}
@@ -910,11 +942,11 @@ const ChatRoom: React.FC = () => {
                     </span>
                   </div>
                   <div className={styles.quotedMessageContent}>
-                    <MessageContent content={msg.quotedMessage.content}/>
+                    {renderMessageContent(msg.quotedMessage.content)}
                   </div>
                 </div>
               )}
-              <MessageContent content={msg.content}/>
+              {renderMessageContent(msg.content)}
             </div>
             <div className={styles.messageFooter}>
               <span className={styles.timestamp}>
@@ -987,7 +1019,7 @@ const ChatRoom: React.FC = () => {
             <div className={styles.quotePreviewContent}>
               <span className={styles.quotePreviewSender}>{quotedMessage.sender.name}:</span>
               <span className={styles.quotePreviewText}>
-                <MessageContent content={quotedMessage.content}/>
+                {renderMessageContent(quotedMessage.content)}
               </span>
             </div>
             <Button
