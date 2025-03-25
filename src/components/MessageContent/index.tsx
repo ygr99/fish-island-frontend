@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {Card, Image, Button} from 'antd';
-import {BilibiliOutlined, LinkOutlined, FileOutlined, DownloadOutlined} from '@ant-design/icons';
+import {BilibiliOutlined, LinkOutlined, FileOutlined, DownloadOutlined, StarOutlined, StarFilled} from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -11,20 +11,32 @@ import {parseWebPageUsingGet} from '@/services/backend/webParserController';
 
 const DOUYIN_ICON = 'https://lf1-cdn-tos.bytegoofy.com/goofy/ies/douyin_web/public/favicon.ico';
 const CODEFATHER_ICON = 'https://www.codefather.cn/favicon.ico';
+const STORAGE_KEY = 'favorite_emoticons';
 
 interface MessageContentProps {
   content: string;
 }
 
 interface WebPageInfo {
-  title?: string;
-  description?: string;
+  title?: any;
+  description?: any;
   favicon?: string;
 }
 
+interface Emoticon {
+  thumbSrc: string;
+  idx: number;
+  source: string;
+  isError?: boolean;
+}
+
 const MessageContent: React.FC<MessageContentProps> = ({content}) => {
-  const [webPages, setWebPages] = useState<Record<string, WebPageInfo>>({});
+  const [webPages, setWebPages] = useState<Record<any, WebPageInfo>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
+  const [favoriteEmoticons, setFavoriteEmoticons] = useState<Emoticon[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  });
   // URL匹配正则表达式
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   // 图片标签匹配正则表达式
@@ -72,7 +84,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
   const handleFileDownload = (url: string) => {
     // 从URL中提取文件名
     const fileName = url.split('/').pop() || '未知文件';
-    
+
     // 创建一个临时的a标签来触发下载
     const link = document.createElement('a');
     link.href = url;
@@ -82,11 +94,63 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
     document.body.removeChild(link);
   };
 
+  // 检查是否是收藏的表情
+  const isFavorite = (url: string) => {
+    return favoriteEmoticons.some(
+      (fav) => fav.thumbSrc === url
+    );
+  };
+
+  // 切换收藏状态
+  const toggleFavorite = (url: string) => {
+    const newEmoticon: Emoticon = {
+      thumbSrc: url,
+      idx: Date.now(), // 使用时间戳作为唯一标识
+      source: 'chat',
+      isError: false
+    };
+
+    const newFavorites = isFavorite(url)
+      ? favoriteEmoticons.filter(
+          (fav) => fav.thumbSrc !== url
+        )
+      : [...favoriteEmoticons, newEmoticon];
+
+    setFavoriteEmoticons(newFavorites);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newFavorites));
+  };
+
+  // 渲染图片
+  const renderImage = (url: string, key: string) => {
+    return (
+      <div key={key} className={styles.imageContainer}>
+        <Image
+          src={url}
+          alt="图片"
+          className={styles.messageImage}
+          preview={{
+            mask: false
+          }}
+        />
+        <Button
+          type="text"
+          size="small"
+          icon={isFavorite(url) ? <StarFilled style={{ color: '#ffd700' }} /> : <StarOutlined />}
+          className={styles.favoriteButton}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleFavorite(url);
+          }}
+        />
+      </div>
+    );
+  };
+
   // 渲染文件
   const renderFile = (url: string, key: string) => {
     const fileName = url.split('/').pop() || '未知文件';
     const fileExt = fileName.split('.').pop()?.toLowerCase() || '';
-    
+
     // 获取文件图标
     const getFileIcon = (ext: string) => {
       // 可以根据文件类型返回不同的图标
@@ -113,8 +177,8 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
               {fileName}
             </span>
           </div>
-          <Button 
-            type="link" 
+          <Button
+            type="link"
             className={styles.downloadButton}
             onClick={() => handleFileDownload(url)}
           >
@@ -254,6 +318,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
       fetchWebPageInfo(url);
     }
 
+    // @ts-ignore
     return (
       <Card
         key={key}
@@ -303,6 +368,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
         const textBeforeImg = content.slice(lastIndex, match.index);
         // 处理文本中的URL
         const urlParts = textBeforeImg.split(urlRegex);
+        // eslint-disable-next-line @typescript-eslint/no-loop-func
         urlParts.forEach((urlPart, urlIndex) => {
           if (urlPart.match(urlRegex)) {
             parts.push(renderUrl(urlPart, `url-${match!.index}-${urlIndex}`));
@@ -314,6 +380,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
                 rehypePlugins={[rehypeRaw, rehypePrism]}
                 components={{
                   // 自定义链接渲染，避免与我们的URL渲染冲突
+                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
                   a: ({node, ...props}) => {
                     const href = props.href || '';
                     if (href.match(urlRegex)) {
@@ -322,10 +389,12 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
                     return <a {...props} target="_blank" rel="noopener noreferrer" />;
                   },
                   // 自定义图片渲染，避免与我们的图片标签冲突
+                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
                   img: ({node, ...props}) => {
                     const src = props.src || '';
                     if (src.match(/^https?:\/\//)) {
-                      return <Image src={src} alt={props.alt || ''} style={{maxWidth: '200px', borderRadius: '4px'}} />;
+                      // @ts-ignore
+                      return renderImage(src, `img-${match.index}`);
                     }
                     return <img {...props} />;
                   },
@@ -338,14 +407,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
         });
       }
       // 添加图片组件
-      parts.push(
-        <Image
-          key={`img-${match.index}`}
-          src={match[1]}
-          alt="聊天图片"
-          style={{maxWidth: '200px', borderRadius: '4px'}}
-        />
-      );
+      parts.push(renderImage(match[1], `img-${match.index}`));
       lastIndex = match.index + match[0].length;
     }
 
@@ -360,6 +422,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
         const textBeforeFile = remainingContent.slice(fileLastIndex, fileMatch.index);
         // 处理文本中的URL
         const urlParts = textBeforeFile.split(urlRegex);
+        // eslint-disable-next-line @typescript-eslint/no-loop-func
         urlParts.forEach((urlPart, urlIndex) => {
           if (urlPart.match(urlRegex)) {
             parts.push(renderUrl(urlPart, `url-file-${fileMatch!.index}-${urlIndex}`));
@@ -370,6 +433,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeRaw, rehypePrism]}
                 components={{
+                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
                   a: ({node, ...props}) => {
                     const href = props.href || '';
                     if (href.match(urlRegex)) {
@@ -377,10 +441,11 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
                     }
                     return <a {...props} target="_blank" rel="noopener noreferrer" />;
                   },
+                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
                   img: ({node, ...props}) => {
                     const src = props.src || '';
                     if (src.match(/^https?:\/\//)) {
-                      return <Image src={src} alt={props.alt || ''} style={{maxWidth: '200px', borderRadius: '4px'}} />;
+                      return renderImage(src, `img-file-${fileMatch!.index}-${urlIndex}`);
                     }
                     return <img {...props} />;
                   },
@@ -411,6 +476,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeRaw, rehypePrism]}
               components={{
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 a: ({node, ...props}) => {
                   const href = props.href || '';
                   if (href.match(urlRegex)) {
@@ -418,10 +484,11 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
                   }
                   return <a {...props} target="_blank" rel="noopener noreferrer" />;
                 },
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 img: ({node, ...props}) => {
                   const src = props.src || '';
                   if (src.match(/^https?:\/\//)) {
-                    return <Image src={src} alt={props.alt || ''} style={{maxWidth: '200px', borderRadius: '4px'}} />;
+                    return renderImage(src, `img-final-${urlIndex}`);
                   }
                   return <img {...props} />;
                 },

@@ -637,7 +637,14 @@ const ChatRoom: React.FC = () => {
               handleMentionUser(user);
             }}
           >
-            <Avatar src={user.avatar} size={48}/>
+            <div className={styles.avatarWithFrame}>
+              <Avatar src={user.avatar} size={48}/>
+              {/*<img*/}
+              {/*  src="https://api.oss.cqbo.com/moyu/头像框%20(97)_爱给网_aigei_com.png"*/}
+              {/*  className={styles.avatarFrame}*/}
+              {/*  alt="avatar-frame"*/}
+              {/*/>*/}
+            </div>
             <div className={styles.floatingFish}>🐟</div>
           </div>
           <div className={styles.userInfoCardTitle}>
@@ -919,7 +926,14 @@ const ChatRoom: React.FC = () => {
                   trigger="hover"
                   placement="top"
                 >
-                  <Avatar src={msg.sender.avatar} size={32}/>
+                  <div className={styles.avatarWithFrame}>
+                    <Avatar src={msg.sender.avatar} size={32}/>
+                    {/*<img*/}
+                    {/*  src="https://api.oss.cqbo.com/moyu/头像框%20(97)_爱给网_aigei_com.png"*/}
+                    {/*  className={styles.avatarFrame}*/}
+                    {/*  alt="avatar-frame"*/}
+                    {/*/>*/}
+                  </div>
                 </Popover>
               </div>
               <div className={styles.senderInfo}>
@@ -997,7 +1011,14 @@ const ChatRoom: React.FC = () => {
                 trigger="hover"
                 placement="right"
               >
-                <Avatar src={user.avatar} size={28}/>
+                <div className={styles.avatarWithFrame}>
+                  <Avatar src={user.avatar} size={28}/>
+                  {/*<img*/}
+                  {/*  src="https://api.oss.cqbo.com/moyu/头像框%20(97)_爱给网_aigei_com.png"*/}
+                  {/*  className={styles.avatarFrame}*/}
+                  {/*  alt="avatar-frame"*/}
+                  {/*/>*/}
+                </div>
               </Popover>
             </div>
             <div className={styles.userInfo}>
