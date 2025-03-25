@@ -5,6 +5,9 @@
   flex-direction: column;
   gap: 10px;
   padding: 10px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 
   .searchInput {
     margin-bottom: 10px;
@@ -17,6 +20,8 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
     max-height: 300px;
+    padding: 4px;
+    background: #fff;
 
     .loading {
       grid-column: span 3;
@@ -26,16 +31,77 @@
       height: 100px;
     }
 
-    .emoticonItem {
-      width: 100%;
-      height: 80px;
-      object-fit: cover;
+    .emoticonItemWrapper {
+      position: relative;
       border-radius: 4px;
-      cursor: pointer;
-      transition: transform 0.2s;
+      overflow: hidden;
+      background: #fff;
+      transition: all 0.2s;
 
       &:hover {
-        transform: scale(1.05);
+        transform: scale(1.02);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+        .favoriteButton {
+          opacity: 1;
+        }
+      }
+
+      .emoticonItem {
+        width: 100%;
+        height: 80px;
+        object-fit: cover;
+        cursor: pointer;
+      }
+
+      .favoriteButton {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        opacity: 0;
+        transition: all 0.2s;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 50%;
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        cursor: pointer;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.9);
+          transform: scale(1.1);
+        }
+
+        :global {
+          .anticon-star {
+            color: #faad14;
+            font-size: 16px;
+          }
+        }
+      }
+    }
+  }
+
+  .tabs {
+    background: #fff;
+    :global {
+      .ant-tabs-nav {
+        margin-bottom: 8px;
+      }
+
+      .ant-tabs-tab {
+        padding: 8px 16px;
+        transition: all 0.3s;
+      }
+
+      .ant-tabs-tab-active {
+        font-weight: 500;
+      }
+
+      .ant-tabs-ink-bar {
+        background: #1890ff;
       }
     }
   }

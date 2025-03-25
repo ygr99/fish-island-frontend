@@ -47,6 +47,14 @@ const SideAnnouncement: React.FC = () => {
         { emoji: '✨', text: '机器人模式改变，海龟汤改为问答助手' },
       ],
       date: '2025-03-22',
+    },{
+      id: 7,
+      title: 'V1.2.7 版本更新',
+      content: [
+        { emoji: '✨', text: '新增表情包收藏功能' },
+        { emoji: '✨', text: '优化用户名称显示' },
+      ],
+      date: '2025-03-22',
     }
   ]);
 

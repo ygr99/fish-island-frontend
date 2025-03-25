@@ -223,7 +223,7 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
             }}>
               <img
                 src={config.image}
-                alt="cover"
+                alt="自定义背景图片"
                 style={{
                   width: '100%',
                   height: '100%',
@@ -242,8 +242,11 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
               alignItems: 'center',
               backgroundColor: '#ffffff'
             }}>
-              <img src="https://www.baidu.com/img/flexible/logo/pc/result.png" alt="logo"
-                   style={{width: '270px', marginBottom: '20px'}}/>
+              <img 
+                src="https://www.baidu.com/img/flexible/logo/pc/result.png" 
+                alt="百度搜索"
+                style={{width: '270px', marginBottom: '20px'}}
+              />
               <div style={{
                 width: '500px',
                 display: 'flex',

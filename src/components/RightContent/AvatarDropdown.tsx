@@ -726,7 +726,18 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               <Avatar size="default" icon={<UserOutlined/>}/>
             )}
           </div>
-          <span className="anticon">{currentUser?.userName ?? '无名'}</span>
+          <Tooltip title={currentUser?.userName ?? '无名'}>
+            <span style={{ 
+              maxWidth: '80px', 
+              overflow: 'hidden', 
+              textOverflow: 'ellipsis', 
+              whiteSpace: 'nowrap',
+              display: 'inline-block',
+              verticalAlign: 'middle'
+            }}>
+              {currentUser?.userName?.length > 5 ? `${currentUser.userName.slice(0, 5)}...` : (currentUser?.userName ?? '无名')}
+            </span>
+          </Tooltip>
         </Space>
       </HeaderDropdown>
 
