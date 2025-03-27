@@ -1,8 +1,11 @@
-import {Col, Row, Card, Badge, Image, List, Typography, Tooltip, Tabs, Modal, Skeleton} from 'antd';
+import {Col, Row, Card, Badge, Image, List, Typography, Tooltip, Tabs, Modal, Skeleton, Select, Button, Space} from 'antd';
 import React, {useState, useEffect} from 'react';
 import {getHotPostListUsingPost} from '@/services/backend/hotPostController';
 import dayjs from "dayjs";
 import relativeTime from 'dayjs/plugin/relativeTime';
+import { SettingOutlined } from '@ant-design/icons';
+
+const STORAGE_KEY = 'selected_source_ids';
 
 const Index: React.FC = () => {
   const [hostPostVoList, setHostPostVoList] = useState<API.HotPostVO[]>([]);
@@ -11,6 +14,9 @@ const Index: React.FC = () => {
   const [categories, setCategories] = useState<string[]>([]);
   const [isMusicOpen, setIsMusicOpen] = useState(false);
   const [currentMusic, setCurrentMusic] = useState("//music.163.com/outchain/player?type=2&id=2674443509&auto=0&height=66");
+  const [selectedSourceIds, setSelectedSourceIds] = useState<number[]>([]);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [tempSelectedSourceIds, setTempSelectedSourceIds] = useState<number[]>([]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -21,6 +27,14 @@ const Index: React.FC = () => {
         const uniqueCategories = Array.from(new Set(result.data.map((item: API.HotPostVO) => item.category || '')));
         // @ts-ignore
         setCategories(uniqueCategories.filter(Boolean));
+        
+        // 从本地存储读取数据源设置
+        const storedIds = localStorage.getItem(STORAGE_KEY);
+        if (storedIds) {
+          const parsedIds = JSON.parse(storedIds);
+          setSelectedSourceIds(parsedIds);
+          setTempSelectedSourceIds(parsedIds);
+        }
       }
     } catch (error) {
       console.error('Error fetching hot post list:', error);
@@ -46,10 +60,13 @@ const Index: React.FC = () => {
     return emojiMap[category] || '🎯';
   };
 
-  // @ts-ignore
+  // 过滤数据源
   const filteredList = activeTab === 'all'
-    ? hostPostVoList
-    : hostPostVoList.filter(item => item.category as any === activeTab);
+    ? hostPostVoList.filter(item => selectedSourceIds.length === 0 || selectedSourceIds.includes(item.id as number))
+    : hostPostVoList.filter(item => 
+        (item.category as any === activeTab) && 
+        (selectedSourceIds.length === 0 || selectedSourceIds.includes(item.id as number))
+      );
 
   const items = [
     {key: 'all', label: '🌟 全部'},
@@ -59,6 +76,11 @@ const Index: React.FC = () => {
     }))
   ];
 
+  const handleSettingsSave = () => {
+    setSelectedSourceIds(tempSelectedSourceIds);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tempSelectedSourceIds));
+    setIsSettingsOpen(false);
+  };
 
   return (
     <>
@@ -67,10 +89,10 @@ const Index: React.FC = () => {
         footer={null}
         open={isMusicOpen}
         onCancel={() => {
-          setCurrentMusic("about:blank"); // 先设置为空白页面
+          setCurrentMusic("about:blank");
           setTimeout(() => {
             setIsMusicOpen(false);
-            setCurrentMusic(""); // 最后清空
+            setCurrentMusic("");
           }, 100);
         }}
         bodyStyle={{ padding: 0 }}
@@ -84,12 +106,57 @@ const Index: React.FC = () => {
           src={currentMusic}
         />
       </Modal>
-      <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        items={items}
-        style={{marginBottom: 16}}
-      />
+
+      <Modal
+        title="数据源设置"
+        open={isSettingsOpen}
+        onOk={handleSettingsSave}
+        onCancel={() => {
+          setIsSettingsOpen(false);
+          setTempSelectedSourceIds(selectedSourceIds);
+        }}
+        width={600}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Typography.Text type="secondary">
+            选择你想要显示的数据源，设置会被保存到本地
+          </Typography.Text>
+        </div>
+        <Select
+          mode="multiple"
+          placeholder="选择数据源"
+          style={{ width: '100%' }}
+          value={tempSelectedSourceIds}
+          onChange={setTempSelectedSourceIds}
+          options={hostPostVoList.map(item => ({
+            label: item.name,
+            value: item.id
+          }))}
+        />
+      </Modal>
+
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={items}
+          style={{ flex: 1 }}
+        />
+        <Space>
+          <Typography.Text type="secondary" style={{ marginRight: 8 }}>
+            {selectedSourceIds.length > 0 
+              ? `已选择 ${selectedSourceIds.length} 个数据源` 
+              : '显示全部数据源'}
+          </Typography.Text>
+          <Button 
+            type="text" 
+            icon={<SettingOutlined />} 
+            onClick={() => setIsSettingsOpen(true)}
+          >
+            设置
+          </Button>
+        </Space>
+      </div>
       <Row gutter={[16, 16]}>
         {loading ? (
           // 加载状态下显示骨架屏

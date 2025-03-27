@@ -193,7 +193,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   // 获取假期信息
   const fetchHolidayInfo = async () => {
     try {
-      const response = await fetch('https://fish.codebug.icu/holiday/next');
+      const response = await fetch('https://moyuapi.codebug.icu/holiday/next');
       const data = await response.json();
       if (data.code === 200) {
         setHolidayInfo(data.data);
@@ -721,16 +721,32 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         <Space>
           <div style={{position: 'relative'}}>
             {currentUser?.userAvatar ? (
-              <Avatar size="default" src={currentUser?.userAvatar}/>
+              <div style={{position: 'relative'}}>
+                <Avatar size="default" src={currentUser?.userAvatar}/>
+                {currentUser?.avatarFramerUrl && (
+                  <img
+                    src={currentUser.avatarFramerUrl}
+                    style={{
+                      position: 'absolute',
+                      top: '-8px',
+                      left: '-8px',
+                      width: 'calc(100% + 16px)',
+                      height: 'calc(100% + 16px)',
+                      pointerEvents: 'none'
+                    }}
+                    alt="头像框"
+                  />
+                )}
+              </div>
             ) : (
               <Avatar size="default" icon={<UserOutlined/>}/>
             )}
           </div>
           <Tooltip title={currentUser?.userName ?? '无名'}>
-            <span style={{ 
-              maxWidth: '80px', 
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis', 
+            <span style={{
+              maxWidth: '80px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
               display: 'inline-block',
               verticalAlign: 'middle'

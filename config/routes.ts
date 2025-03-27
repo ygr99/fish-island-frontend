@@ -31,6 +31,7 @@ export default [
       { icon: 'DesktopOutlined', path: '/utils/json', component: './Utils/JsonFormat', name: 'JSON格式化', requireAuth: false },
     ],
   },
+  { icon: 'PictureOutlined', path: '/avatarFrames', component: './Utils/AvatarFrames', name: '头像框兑换', requireAuth: true },
   {
     path: '/github',
     icon: 'github',

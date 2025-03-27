@@ -2,6 +2,7 @@
 /* eslint-disable */
 // API 更新时间：
 // API 唯一标识：
+import * as avatarFrameController from './avatarFrameController';
 import * as chatController from './chatController';
 import * as fileController from './fileController';
 import * as hotPostController from './hotPostController';
@@ -13,6 +14,7 @@ import * as todoController from './todoController';
 import * as userController from './userController';
 import * as webParserController from './webParserController';
 export default {
+  avatarFrameController,
   webParserController,
   chatController,
   fileController,

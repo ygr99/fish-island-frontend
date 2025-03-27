@@ -20,39 +20,11 @@ const SideAnnouncement: React.FC = () => {
   const announcementRef = useRef<HTMLDivElement>(null);
   const [announcements] = useState<Announcement[]>([
     {
-      id: 4,
-      title: 'V1.2.4 版本更新',
+      id: 8,
+      title: 'V1.2.8 版本更新',
       content: [
-        { emoji: '✨', text: '新增假期倒计时' },
-        { emoji: '✨', text: '聊天室支持 shift + enter 换行' },
-        { emoji: '✨', text: '优化注册，使用邮箱验证码注册' },
-        { emoji: '✨', text: '新增音乐播放器' },
-      ],
-      date: '2025-03-19',
-    },
-    {
-      id: 5,
-      title: 'V1.2.5 版本更新',
-      content: [
-        { emoji: '✨', text: '新增五子棋简易聊天框' },
-        { emoji: '✨', text: '新增播放器隐藏按钮' },
-      ],
-      date: '2025-03-20',
-    },
-    {
-      id: 6,
-      title: 'V1.2.6 版本更新',
-      content: [
-        { emoji: '✨', text: '优化五子棋在线对战' },
-        { emoji: '✨', text: '机器人模式改变，海龟汤改为问答助手' },
-      ],
-      date: '2025-03-22',
-    },{
-      id: 7,
-      title: 'V1.2.7 版本更新',
-      content: [
-        { emoji: '✨', text: '新增表情包收藏功能' },
-        { emoji: '✨', text: '优化用户名称显示' },
+        { emoji: '✨', text: '新增头像框兑换功能' },
+        { emoji: '✨', text: '优化前端访问速度' },
       ],
       date: '2025-03-22',
     }

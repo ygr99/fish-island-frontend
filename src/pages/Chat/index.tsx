@@ -45,6 +45,7 @@ interface User {
   points?: number;
   region?: string;
   country?: string;
+  avatarFramerUrl?: string;
 }
 
 const ChatRoom: React.FC = () => {
@@ -145,6 +146,7 @@ const ChatRoom: React.FC = () => {
           isAdmin: user.isAdmin || false,
           status: '在线',
           points: user.points || 0,
+          avatarFramerUrl: user.avatarFramerUrl,
         }));
 
         // 添加机器人用户
@@ -157,7 +159,8 @@ const ChatRoom: React.FC = () => {
           status: '在线',
           points: 9999,
           region: '鱼塘',
-          country: '摸鱼岛'
+          country: '摸鱼岛',
+          avatarFramerUrl: '',
         };
         onlineUsersList.unshift(botUser);
 
@@ -171,6 +174,7 @@ const ChatRoom: React.FC = () => {
             isAdmin: currentUser.userRole === 'admin',
             status: '在线',
             points: currentUser.points || 0,
+            avatarFramerUrl: currentUser.avatarFramerUrl,
           });
         }
 
@@ -216,7 +220,7 @@ const ChatRoom: React.FC = () => {
               isAdmin: record.messageWrapper?.message?.sender?.isAdmin || false,
               region: record.messageWrapper?.message?.sender?.region || '未知地区',
               country: record.messageWrapper?.message?.sender?.country ,
-
+              avatarFramerUrl: record.messageWrapper?.message?.sender?.avatarFramerUrl,
             },
             timestamp: new Date(record.messageWrapper?.message?.timestamp || Date.now()),
             quotedMessage: record.messageWrapper?.message?.quotedMessage ? {
@@ -229,7 +233,8 @@ const ChatRoom: React.FC = () => {
                 level: record.messageWrapper.message.quotedMessage.sender?.level || 1,
                 points: record.messageWrapper.message.quotedMessage.sender?.points || 0,
                 isAdmin: record.messageWrapper.message.quotedMessage.sender?.isAdmin || false,
-                region: record.messageWrapper?.message.quotedMessage?.sender?.region || '未知地区'
+                region: record.messageWrapper?.message.quotedMessage?.sender?.region || '未知地区',
+                avatarFramerUrl: record.messageWrapper?.message.quotedMessage?.sender?.avatarFramerUrl,
               },
               timestamp: new Date(record.messageWrapper.message.quotedMessage.timestamp || Date.now())
             } : undefined,
@@ -555,7 +560,8 @@ const ChatRoom: React.FC = () => {
         points: currentUser.points || 0,
         isAdmin: currentUser.userRole === 'admin',
         region: userIpInfo?.region || '未知地区',
-        country: userIpInfo?.country || '未知国家'
+        country: userIpInfo?.country || '未知国家',
+        avatarFramerUrl: currentUser.avatarFramerUrl,
       },
       timestamp: new Date(),
       quotedMessage: quotedMessage || undefined,
@@ -639,11 +645,13 @@ const ChatRoom: React.FC = () => {
           >
             <div className={styles.avatarWithFrame}>
               <Avatar src={user.avatar} size={48}/>
-              {/*<img*/}
-              {/*  src="https://api.oss.cqbo.com/moyu/头像框%20(97)_爱给网_aigei_com.png"*/}
-              {/*  className={styles.avatarFrame}*/}
-              {/*  alt="avatar-frame"*/}
-              {/*/>*/}
+              {user.avatarFramerUrl && (
+                <img
+                  src={user.avatarFramerUrl}
+                  className={styles.avatarFrame}
+                  alt="avatar-frame"
+                />
+              )}
             </div>
             <div className={styles.floatingFish}>🐟</div>
           </div>
@@ -819,6 +827,7 @@ const ChatRoom: React.FC = () => {
         avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
         level: currentUser.level || 1,
         isAdmin: currentUser.userRole === 'admin',
+        avatarFramerUrl: currentUser.avatarFramerUrl,
       },
       timestamp: new Date(),
     };
@@ -928,11 +937,13 @@ const ChatRoom: React.FC = () => {
                 >
                   <div className={styles.avatarWithFrame}>
                     <Avatar src={msg.sender.avatar} size={32}/>
-                    {/*<img*/}
-                    {/*  src="https://api.oss.cqbo.com/moyu/头像框%20(97)_爱给网_aigei_com.png"*/}
-                    {/*  className={styles.avatarFrame}*/}
-                    {/*  alt="avatar-frame"*/}
-                    {/*/>*/}
+                    {msg.sender.avatarFramerUrl && (
+                      <img
+                        src={msg.sender.avatarFramerUrl}
+                        className={styles.avatarFrame}
+                        alt="avatar-frame"
+                      />
+                    )}
                   </div>
                 </Popover>
               </div>
@@ -1013,11 +1024,6 @@ const ChatRoom: React.FC = () => {
               >
                 <div className={styles.avatarWithFrame}>
                   <Avatar src={user.avatar} size={28}/>
-                  {/*<img*/}
-                  {/*  src="https://api.oss.cqbo.com/moyu/头像框%20(97)_爱给网_aigei_com.png"*/}
-                  {/*  className={styles.avatarFrame}*/}
-                  {/*  alt="avatar-frame"*/}
-                  {/*/>*/}
                 </div>
               </Popover>
             </div>

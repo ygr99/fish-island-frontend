@@ -36,7 +36,7 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
     setLoading(true);
     try {
       const response = await fetch(
-        `https://fish.codebug.icu/sogou-api/napi/wap/emoji/searchlist?keyword=${encodeURIComponent(searchKeyword)}&spver=&rcer=&tag=0&routeName=emosearch`
+        `https://moyuapi.codebug.icu/sogou-api/napi/wap/emoji/searchlist?keyword=${encodeURIComponent(searchKeyword)}&spver=&rcer=&tag=0&routeName=emosearch`
       );
       const data = await response.json();
       if (data.status === 0 && data.data.emotions) {
@@ -60,16 +60,16 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
 
   const handleImageError = (emoticon: Emoticon, isSearchTab: boolean) => {
     if (isSearchTab) {
-      setEmoticons(prev => 
-        prev.map(e => 
+      setEmoticons(prev =>
+        prev.map(e =>
           e.idx === emoticon.idx && e.thumbSrc === emoticon.thumbSrc
             ? { ...e, isError: true }
             : e
         )
       );
     } else {
-      setFavoriteEmoticons(prev => 
-        prev.map(e => 
+      setFavoriteEmoticons(prev =>
+        prev.map(e =>
           e.idx === emoticon.idx && e.thumbSrc === emoticon.thumbSrc
             ? { ...e, isError: true }
             : e
@@ -92,7 +92,7 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
           (fav) => !(fav.thumbSrc === emoticon.thumbSrc && fav.idx === emoticon.idx)
         )
       : [...favoriteEmoticons, { ...emoticon, isError: false }];
-    
+
     setFavoriteEmoticons(newFavorites);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newFavorites));
   };
@@ -172,4 +172,4 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
   );
 };
 
-export default EmoticonPicker; 
+export default EmoticonPicker;

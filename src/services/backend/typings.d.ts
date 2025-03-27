@@ -1,4 +1,31 @@
 declare namespace API {
+  type AvatarFrame = {
+    createTime?: string;
+    frameId?: number;
+    isDelete?: number;
+    name?: string;
+    points?: number;
+    updateTime?: string;
+    url?: string;
+  };
+
+  type AvatarFrameQueryRequest = {
+    current?: number;
+    id?: number;
+    pageSize?: number;
+    searchText?: string;
+    sortField?: string;
+    sortOrder?: string;
+  };
+
+  type AvatarFrameVO = {
+    hasOwned?: boolean;
+    id?: number;
+    name?: string;
+    points?: number;
+    url?: string;
+  };
+
   type BaseResponseBoolean_ = {
     code?: number;
     data?: boolean;
@@ -14,6 +41,12 @@ declare namespace API {
   type BaseResponseInt_ = {
     code?: number;
     data?: number;
+    message?: string;
+  };
+
+  type BaseResponseListAvatarFrame_ = {
+    code?: number;
+    data?: AvatarFrame[];
     message?: string;
   };
 
@@ -38,6 +71,12 @@ declare namespace API {
   type BaseResponseLong_ = {
     code?: number;
     data?: number;
+    message?: string;
+  };
+
+  type BaseResponsePageAvatarFrameVO_ = {
+    code?: number;
+    data?: PageAvatarFrameVO_;
     message?: string;
   };
 
@@ -128,6 +167,11 @@ declare namespace API {
     id?: number;
   };
 
+  type exchangeFrameUsingPOSTParams = {
+    /** frameId */
+    frameId: number;
+  };
+
   type generatePresignedDownloadUrlUsingGETParams = {
     /** fileName */
     fileName: string;
@@ -177,6 +221,7 @@ declare namespace API {
   };
 
   type LoginUserVO = {
+    avatarFramerUrl?: string;
     createTime?: string;
     email?: string;
     id?: number;
@@ -215,6 +260,19 @@ declare namespace API {
   type OrderItem = {
     asc?: boolean;
     column?: string;
+  };
+
+  type PageAvatarFrameVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: AvatarFrameVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
   };
 
   type PagePost_ = {
@@ -404,6 +462,7 @@ declare namespace API {
 
   type Sender = {
     avatar?: string;
+    avatarFramerUrl?: string;
     country?: string;
     id?: string;
     isAdmin?: boolean;
@@ -413,7 +472,13 @@ declare namespace API {
     region?: string;
   };
 
+  type setCurrentFrameUsingPOSTParams = {
+    /** frameId */
+    frameId: number;
+  };
+
   type TokenLoginUserVo = {
+    avatarFramerUrl?: string;
     createTime?: string;
     email?: string;
     id?: number;
@@ -438,6 +503,8 @@ declare namespace API {
   };
 
   type User = {
+    avatarFramerList?: string;
+    avatarFramerUrl?: string;
     createTime?: string;
     email?: string;
     id?: number;
@@ -463,6 +530,8 @@ declare namespace API {
   type UserChatResponse = {
     /** 用户头像 */
     avatar?: string;
+    /** 头像框 URL */
+    avatarFramerUrl?: string;
     /** 用户 ID */
     id?: string;
     /** 是否是管理员 */
