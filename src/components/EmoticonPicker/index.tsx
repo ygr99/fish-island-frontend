@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Input, Spin, Tabs, Button } from 'antd';
+import { Input, Spin, Tabs, Button, Divider } from 'antd';
 import { StarOutlined, StarFilled } from '@ant-design/icons';
 import styles from './index.less';
 import { debounce } from 'lodash';
@@ -232,47 +232,60 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
     );
   };
 
+  const renderSearchTab = () => (
+    <>
+      <Input
+        placeholder="搜索表情包..."
+        value={keyword}
+        onChange={(e) => setKeyword(e.target.value)}
+        className={styles.searchInput}
+      />
+      {keyword.trim() ? (
+        <div className={styles.emoticonList}>
+          {renderEmoticonList(emoticons, true)}
+        </div>
+      ) : (
+        <>
+          <div className={styles.sectionTitle}>我的收藏</div>
+          <div className={styles.emoticonList}>
+            {renderEmoticonList(favoriteEmoticons, false)}
+          </div>
+        </>
+      )}
+    </>
+  );
+
+  const renderBaiduTab = () => (
+    <>
+      <Input
+        placeholder="搜索百度表情包..."
+        value={keyword}
+        onChange={(e) => setKeyword(e.target.value)}
+        className={styles.searchInput}
+      />
+      {keyword.trim() ? (
+        renderBaiduEmoticonList(baiduEmoticons)
+      ) : (
+        <>
+          <div className={styles.sectionTitle}>我的收藏</div>
+          <div className={styles.emoticonList}>
+            {renderEmoticonList(favoriteEmoticons, false)}
+          </div>
+        </>
+      )}
+    </>
+  );
+
   const items = [
     {
       key: 'search',
       label: '搜狗表情',
-      children: (
-        <>
-          <Input
-            placeholder="搜索表情包..."
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            className={styles.searchInput}
-          />
-          <div className={styles.emoticonList}>
-            {renderEmoticonList(emoticons, true)}
-          </div>
-        </>
-      ),
+      children: renderSearchTab(),
     },
     {
       key: 'baidu',
       label: '百度表情',
-      children: (
-        <>
-          <Input
-            placeholder="搜索百度表情包..."
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            className={styles.searchInput}
-          />
-          {renderBaiduEmoticonList(baiduEmoticons)}
-        </>
-      ),
-    },
-    {
-      key: 'favorites',
-      label: '收藏表情',
-      children: (
-        <div className={styles.emoticonList}>
-          {renderEmoticonList(favoriteEmoticons, false)}
-        </div>
-      ),
+      children: renderBaiduTab(),
     },
   ];
 
