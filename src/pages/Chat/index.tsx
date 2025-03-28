@@ -446,10 +446,25 @@ const ChatRoom: React.FC = () => {
     const otherUserMessage = data.data.message;
     if (otherUserMessage.sender.id !== String(currentUser?.id)) {
       setMessages(prev => {
+        // 添加新消息
         const newMessages = [...prev, {...otherUserMessage}];
-        handleMentionNotification(otherUserMessage);
+        
+        // 检查是否在底部
+        const container = messageContainerRef.current;
+        if (container) {
+          const threshold = 30; // 30px的阈值
+          const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+          const isNearBottom = distanceFromBottom <= threshold;
+          
+          // 只有在底部时才限制消息数量
+          if (isNearBottom && newMessages.length > 25) {
+            return newMessages.slice(-25);
+          }
+        }
         return newMessages;
       });
+      
+      handleMentionNotification(otherUserMessage);
 
       // 实时检查是否在底部
       const container = messageContainerRef.current;
