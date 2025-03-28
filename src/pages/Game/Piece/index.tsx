@@ -61,6 +61,8 @@ function App() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInputValue, setChatInputValue] = useState('');
   const [activeTab, setActiveTab] = useState<'chat' | 'history'>('chat');
+  const [hasSentInvitation, setHasSentInvitation] = useState(false);
+  const [invitationCooldown, setInvitationCooldown] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 添加从路由获取房间号的逻辑
@@ -442,6 +444,11 @@ function App() {
       return;
     }
 
+    if (hasSentInvitation) {
+      messageApi.warning('你已经发送过邀请了，请等待60秒后再试');
+      return;
+    }
+
     // 发送邀请消息到聊天室
     wsService.send({
       type: 2,
@@ -465,7 +472,21 @@ function App() {
       }
     });
 
+    setHasSentInvitation(true);
+    setInvitationCooldown(60);
     messageApi.success('邀请已发送到聊天室');
+
+    // 设置60秒冷却时间
+    const timer = setInterval(() => {
+      setInvitationCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setHasSentInvitation(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
   };
 
   if (!gameStarted) {
@@ -613,9 +634,10 @@ function App() {
                           type="primary"
                           size="small"
                           onClick={handleSendInvitation}
+                          disabled={hasSentInvitation}
                           className="bg-purple-500 hover:bg-purple-600"
                         >
-                          发送邀请
+                          {hasSentInvitation ? `冷却中 (${invitationCooldown}s)` : '发送邀请'}
                         </Button>
                       )}
                       {/* 对手信息 */}
