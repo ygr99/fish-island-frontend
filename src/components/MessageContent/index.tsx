@@ -1,13 +1,14 @@
 import React, {useState} from 'react';
-import {Card, Image, Button} from 'antd';
+import {Card, Image, Button, message} from 'antd';
 import {BilibiliOutlined, LinkOutlined, FileOutlined, DownloadOutlined, StarOutlined, StarFilled} from '@ant-design/icons';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypePrism from 'rehype-prism-plus';
 import 'prismjs/themes/prism-tomorrow.css';
 import styles from './index.less';
 import {parseWebPageUsingGet} from '@/services/backend/webParserController';
+import DOMPurify from 'dompurify';
 
 const DOUYIN_ICON = 'https://lf1-cdn-tos.bytegoofy.com/goofy/ies/douyin_web/public/favicon.ico';
 const CODEFATHER_ICON = 'https://www.codefather.cn/favicon.ico';
@@ -356,7 +357,55 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
     );
   };
 
+  // 添加安全的 HTML 渲染函数
+  const sanitizeHtml = (html: string) => {
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'code', 'pre', 'blockquote', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'target', 'rel', 'class'],
+      FORBID_TAGS: ['iframe', 'script', 'style', 'form', 'input', 'button', 'textarea', 'select', 'option', 'object', 'embed', 'param', 'meta', 'link'],
+      FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onmouseout', 'onmouseenter', 'onmouseleave', 'onblur', 'onfocus', 'onchange', 'onsubmit', 'onreset', 'onkeydown', 'onkeypress', 'onkeyup', 'onmousedown', 'onmouseup', 'onmousemove', 'onmousewheel', 'onwheel', 'onresize', 'onscroll', 'onabort', 'oncanplay', 'oncanplaythrough', 'oncuechange', 'ondurationchange', 'onemptied', 'onended', 'onerror', 'onloadeddata', 'onloadedmetadata', 'onloadstart', 'onpause', 'onplay', 'onplaying', 'onprogress', 'onratechange', 'onseeked', 'onseeking', 'onstalled', 'onsuspend', 'ontimeupdate', 'onvolumechange', 'onwaiting', 'onbeforecopy', 'onbeforecut', 'onbeforepaste', 'oncopy', 'oncut', 'onpaste', 'onselect', 'onselectionchange', 'onselectstart', 'oncontextmenu', 'ondrag', 'ondragend', 'ondragenter', 'ondragleave', 'ondragover', 'ondragstart', 'ondrop', 'onblur', 'onfocus', 'onfocusin', 'onfocusout', 'onkeydown', 'onkeypress', 'onkeyup', 'onclick', 'ondblclick', 'onmousedown', 'onmouseenter', 'onmouseleave', 'onmousemove', 'onmouseout', 'onmouseover', 'onmouseup', 'onwheel', 'onresize', 'onscroll', 'onabort', 'oncanplay', 'oncanplaythrough', 'oncuechange', 'ondurationchange', 'onemptied', 'onended', 'onerror', 'onloadeddata', 'onloadedmetadata', 'onloadstart', 'onpause', 'onplay', 'onplaying', 'onprogress', 'onratechange', 'onseeked', 'onseeking', 'onstalled', 'onsuspend', 'ontimeupdate', 'onvolumechange', 'onwaiting', 'onbeforecopy', 'onbeforecut', 'onbeforepaste', 'oncopy', 'oncut', 'onpaste', 'onselect', 'onselectionchange', 'onselectstart', 'oncontextmenu', 'ondrag', 'ondragend', 'ondragenter', 'ondragleave', 'ondragover', 'ondragstart', 'ondrop'],
+    });
+  };
+
+  // 修改检测 iframe 语法的函数
+  const checkIframeSyntax = (text: string) => {
+    const iframeRegex = /<iframe[^>]*>.*?<\/iframe>/gi;
+    return iframeRegex.test(text);
+  };
+
+  // 修改 ReactMarkdown 组件的配置
+  const markdownComponents: Components = {
+    // 自定义链接渲染，避免与我们的URL渲染冲突
+    a: ({node, ...props}: { node?: any; [key: string]: any }) => {
+      const href = props.href || '';
+      if (href.match(urlRegex)) {
+        return renderUrl(href, `markdown-url-${Date.now()}`);
+      }
+      return <a {...props} target="_blank" rel="noopener noreferrer" />;
+    },
+    // 自定义图片渲染，避免与我们的图片标签冲突
+    img: ({node, ...props}: { node?: any; [key: string]: any }) => {
+      const src = props.src || '';
+      if (src.match(/^https?:\/\//)) {
+        return renderImage(src, `img-${Date.now()}`);
+      }
+      return <img {...props} alt={props.alt || '图片'} />;
+    },
+    // 自定义 iframe 渲染，直接返回 null
+    iframe: () => null,
+    // 自定义 script 渲染，直接返回 null
+    script: () => null,
+    // 自定义 style 渲染，直接返回 null
+    style: () => null,
+  };
+
+  // 修改 parseContent 函数
   const parseContent = () => {
+    // 检查是否包含 iframe 语法
+    if (checkIframeSyntax(content)) {
+      return <div className={styles.messageContent}>消息包含不安全的 iframe 标签，已被过滤</div>;
+    }
+
     let parts: React.ReactNode[] = [];
     let lastIndex = 0;
     let match: RegExpExecArray | null;
@@ -368,7 +417,6 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
         const textBeforeImg = content.slice(lastIndex, match.index);
         // 处理文本中的URL
         const urlParts = textBeforeImg.split(urlRegex);
-        // eslint-disable-next-line @typescript-eslint/no-loop-func
         urlParts.forEach((urlPart, urlIndex) => {
           if (urlPart.match(urlRegex)) {
             parts.push(renderUrl(urlPart, `url-${match!.index}-${urlIndex}`));
@@ -378,29 +426,9 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
                 key={`markdown-${match!.index}-${urlIndex}`}
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeRaw, rehypePrism]}
-                components={{
-                  // 自定义链接渲染，避免与我们的URL渲染冲突
-                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                  a: ({node, ...props}) => {
-                    const href = props.href || '';
-                    if (href.match(urlRegex)) {
-                      return renderUrl(href, `markdown-url-${match!.index}-${urlIndex}`);
-                    }
-                    return <a {...props} target="_blank" rel="noopener noreferrer" />;
-                  },
-                  // 自定义图片渲染，避免与我们的图片标签冲突
-                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                  img: ({node, ...props}) => {
-                    const src = props.src || '';
-                    if (src.match(/^https?:\/\//)) {
-                      // @ts-ignore
-                      return renderImage(src, `img-${match.index}`);
-                    }
-                    return <img {...props} />;
-                  },
-                }}
+                components={markdownComponents}
               >
-                {urlPart}
+                {sanitizeHtml(urlPart)}
               </ReactMarkdown>
             );
           }
@@ -422,7 +450,6 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
         const textBeforeFile = remainingContent.slice(fileLastIndex, fileMatch.index);
         // 处理文本中的URL
         const urlParts = textBeforeFile.split(urlRegex);
-        // eslint-disable-next-line @typescript-eslint/no-loop-func
         urlParts.forEach((urlPart, urlIndex) => {
           if (urlPart.match(urlRegex)) {
             parts.push(renderUrl(urlPart, `url-file-${fileMatch!.index}-${urlIndex}`));
@@ -432,26 +459,9 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
                 key={`markdown-file-${fileMatch!.index}-${urlIndex}`}
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeRaw, rehypePrism]}
-                components={{
-                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                  a: ({node, ...props}) => {
-                    const href = props.href || '';
-                    if (href.match(urlRegex)) {
-                      return renderUrl(href, `markdown-url-file-${fileMatch!.index}-${urlIndex}`);
-                    }
-                    return <a {...props} target="_blank" rel="noopener noreferrer" />;
-                  },
-                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                  img: ({node, ...props}) => {
-                    const src = props.src || '';
-                    if (src.match(/^https?:\/\//)) {
-                      return renderImage(src, `img-file-${fileMatch!.index}-${urlIndex}`);
-                    }
-                    return <img {...props} />;
-                  },
-                }}
+                components={markdownComponents}
               >
-                {urlPart}
+                {sanitizeHtml(urlPart)}
               </ReactMarkdown>
             );
           }
@@ -475,26 +485,9 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
               key={`markdown-final-${urlIndex}`}
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeRaw, rehypePrism]}
-              components={{
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                a: ({node, ...props}) => {
-                  const href = props.href || '';
-                  if (href.match(urlRegex)) {
-                    return renderUrl(href, `markdown-url-final-${urlIndex}`);
-                  }
-                  return <a {...props} target="_blank" rel="noopener noreferrer" />;
-                },
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                img: ({node, ...props}) => {
-                  const src = props.src || '';
-                  if (src.match(/^https?:\/\//)) {
-                    return renderImage(src, `img-final-${urlIndex}`);
-                  }
-                  return <img {...props} />;
-                },
-              }}
+              components={markdownComponents}
             >
-              {urlPart}
+              {sanitizeHtml(urlPart)}
             </ReactMarkdown>
           );
         }

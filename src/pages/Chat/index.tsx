@@ -532,6 +532,13 @@ const ChatRoom: React.FC = () => {
   const handleSend = (customContent?: string) => {
     let content = customContent || inputValue;
 
+    // 检查是否包含 iframe 标签
+    const iframeRegex = /<iframe[^>]*>.*?<\/iframe>/gi;
+    if (iframeRegex.test(content)) {
+      messageApi.warning('为了安全考虑，不支持 iframe 标签');
+      return;
+    }
+
     // 如果有待发送的图片，将其添加到消息内容中
     if (pendingImageUrl) {
       content = `[img]${pendingImageUrl}[/img]${content}`;
