@@ -474,6 +474,37 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     } else {
       setMusicPlayer(null);
     }
+
+    // 添加清理函数
+    return () => {
+      setMusicPlayer(null);
+      // 移除所有音乐播放器相关的DOM元素
+      const elementsToRemove = [
+        '.music-player-container',
+        '#myhkTips',
+        '.myhk-player',
+        '.myhk-player-container',
+        '.myhk-player-controls',
+        '.myhk-player-progress',
+        '.myhk-player-volume',
+        '.myhk-player-playlist',
+        '.switch-player'  // 添加 switch-player 元素
+      ];
+      
+      elementsToRemove.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+          element.remove();
+        });
+      });
+
+      // 移除可能添加的全局样式
+      const styleId = 'myhk-player-styles';
+      const styleElement = document.getElementById(styleId);
+      if (styleElement) {
+        styleElement.remove();
+      }
+    };
   }, [isMusicVisible]);
 
   const menuItems = [
