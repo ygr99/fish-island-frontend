@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Dropdown } from 'antd';
-import { SearchOutlined, DownOutlined } from '@ant-design/icons';
+import { Input, Dropdown, Button } from 'antd';
+import { SearchOutlined, DownOutlined, SwapOutlined } from '@ant-design/icons';
 import styles from './index.less';
 import moment from 'moment';
 import 'moment/locale/zh-cn';
@@ -106,6 +106,10 @@ const Home: React.FC = () => {
     e.preventDefault();
   };
 
+  const handleSwitchToFishMode = () => {
+    window.location.href = '/index';
+  };
+
   return (
     <div 
       className={styles.container} 
@@ -114,6 +118,15 @@ const Home: React.FC = () => {
         backgroundImage: `url(${wallpaper})` 
       }}
     >
+      <Button
+        type="text"
+        icon={<SwapOutlined />}
+        onClick={handleSwitchToFishMode}
+        className={styles.themeSwitch}
+        style={{ color: '#ffffff', fontSize: '16px' }}
+      >
+        摸鱼模式
+      </Button>
       <Dropdown 
         overlay={<WallpaperMenu onWallpaperChange={setWallpaper} />} 
         trigger={['contextMenu']}

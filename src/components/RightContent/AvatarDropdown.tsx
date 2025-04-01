@@ -12,7 +12,7 @@ import {
   UserOutlined,
   EditOutlined,
   UploadOutlined,
-
+  AppstoreOutlined,
 } from '@ant-design/icons';
 import {history, useModel} from '@umijs/max';
 import {
@@ -520,6 +520,11 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       label: isMusicVisible ? '隐藏音乐播放器' : '显示音乐播放器',
     },
     {
+      key: 'switchTab',
+      icon: <AppstoreOutlined/>,
+      label: '切换到标签页',
+    },
+    {
       key: 'logout',
       icon: <LogoutOutlined/>,
       label: '退出登录',
@@ -563,6 +568,10 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         const newValue = !isMusicVisible;
         setIsMusicVisible(newValue);
         localStorage.setItem('musicPlayerVisibility', newValue.toString());
+        return;
+      }
+      if (key === 'switchTab') {
+        history.push('/home');
         return;
       }
       history.push(`/account/${key}`);
