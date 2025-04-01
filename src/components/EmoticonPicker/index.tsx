@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Input, Spin, Button } from 'antd';
+import { Input, Spin, Button, Tooltip } from 'antd';
 import { StarOutlined, StarFilled } from '@ant-design/icons';
 import styles from './index.less';
 import { debounce } from 'lodash';
@@ -135,13 +135,28 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
       .filter(emoticon => !emoticon.isError)
       .map((emoticon) => (
         <div key={`${emoticon.idx}-${emoticon.thumbSrc}`} className={styles.emoticonItemWrapper}>
-          <img
-            src={emoticon.thumbSrc}
-            alt="emoticon"
-            className={styles.emoticonItem}
-            onClick={() => onSelect(emoticon.thumbSrc)}
-            onError={() => handleImageError(emoticon)}
-          />
+          <Tooltip
+            title={
+              <div className={styles.previewContainer}>
+                <img
+                  src={emoticon.thumbSrc}
+                  alt="preview"
+                  className={styles.previewImage}
+                />
+              </div>
+            }
+            placement="right"
+            overlayClassName={styles.tooltipOverlay}
+            mouseEnterDelay={0.5}
+          >
+            <img
+              src={emoticon.thumbSrc}
+              alt="emoticon"
+              className={styles.emoticonItem}
+              onClick={() => onSelect(emoticon.thumbSrc)}
+              onError={() => handleImageError(emoticon)}
+            />
+          </Tooltip>
           <Button
             type="text"
             size="small"
@@ -163,13 +178,28 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
           .filter(emoticon => !emoticon.isError)
           .map((emoticon) => (
             <div key={emoticon.url} className={styles.emoticonItemWrapper}>
-              <img
-                src={emoticon.url}
-                alt="emoticon"
-                className={styles.emoticonItem}
-                onClick={() => onSelect(emoticon.url)}
-                onError={() => handleImageError(emoticon)}
-              />
+              <Tooltip
+                title={
+                  <div className={styles.previewContainer}>
+                    <img
+                      src={emoticon.url}
+                      alt="preview"
+                      className={styles.previewImage}
+                    />
+                  </div>
+                }
+                placement="right"
+                overlayClassName={styles.tooltipOverlay}
+                mouseEnterDelay={0.5}
+              >
+                <img
+                  src={emoticon.url}
+                  alt="emoticon"
+                  className={styles.emoticonItem}
+                  onClick={() => onSelect(emoticon.url)}
+                  onError={() => handleImageError(emoticon)}
+                />
+              </Tooltip>
             </div>
           ))}
         {baiduLoading && (

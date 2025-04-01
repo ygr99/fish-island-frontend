@@ -60,6 +60,7 @@
         height: 80px;
         object-fit: cover;
         cursor: pointer;
+        transition: transform 0.2s ease;
       }
 
       .favoriteButton {
@@ -89,6 +90,39 @@
           }
         }
       }
+    }
+  }
+}
+
+.previewContainer {
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.previewImage {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition: transform 0.2s ease;
+}
+
+:global {
+  .tooltipOverlay {
+    .ant-tooltip-inner {
+      padding: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+    
+    .ant-tooltip-arrow {
+      display: none;
     }
   }
 } 
