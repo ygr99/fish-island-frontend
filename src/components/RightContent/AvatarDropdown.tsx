@@ -13,6 +13,7 @@ import {
   EditOutlined,
   UploadOutlined,
   AppstoreOutlined,
+  SwapOutlined,
 } from '@ant-design/icons';
 import {history, useModel} from '@umijs/max';
 import {
@@ -464,6 +465,56 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     return savedVisibility === null ? true : savedVisibility === 'true';
   });
 
+  // 添加标签页模式按钮样式
+  const tabModeButtonStyle = useEmotionCss(() => ({
+    color: '#ffffff',
+    fontSize: '16px',
+    position: 'fixed',
+    top: '16px',
+    right: '16px',
+    zIndex: 1000,
+    background: '#ffa768',
+    border: 'none',
+    padding: '8px',
+    borderRadius: '50%',
+    boxShadow: '0 2px 8px rgba(255, 167, 104, 0.3)',
+    transition: 'all 0.3s ease',
+    opacity: 0,
+    transform: 'translateY(-20px)',
+    animation: 'slideIn 0.5s ease forwards',
+    width: '40px',
+    height: '40px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: '0 4px 12px rgba(255, 167, 104, 0.4)',
+      background: '#ffa768',
+      color: '#ffffff',
+    },
+    '&:active': {
+      background: '#ffa768',
+      color: '#ffffff',
+    },
+    '& .anticon': {
+      fontSize: '20px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    '@keyframes slideIn': {
+      '0%': {
+        opacity: 0,
+        transform: 'translateY(-20px)',
+      },
+      '100%': {
+        opacity: 1,
+        transform: 'translateY(0)',
+      }
+    }
+  }));
+
   const [musicPlayer, setMusicPlayer] = useState<React.ComponentType<any> | null>(null);
 
   useEffect(() => {
@@ -551,11 +602,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       label: isMusicVisible ? '隐藏音乐播放器' : '显示音乐播放器',
     },
     {
-      key: 'switchTab',
-      icon: <AppstoreOutlined/>,
-      label: '切换到标签页',
-    },
-    {
       key: 'logout',
       icon: <LogoutOutlined/>,
       label: '退出登录',
@@ -599,10 +645,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         const newValue = !isMusicVisible;
         setIsMusicVisible(newValue);
         localStorage.setItem('musicPlayerVisibility', newValue.toString());
-        return;
-      }
-      if (key === 'switchTab') {
-        history.push('/home');
         return;
       }
       history.push(`/account/${key}`);
@@ -751,6 +793,25 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
 
   return (
     <div style={{display: 'flex', alignItems: 'center'}}>
+      <Tooltip title="跳转到标签模式" placement="left">
+        <Button
+          type="text"
+          icon={<SwapOutlined />}
+          onClick={() => history.push('/home')}
+          className={tabModeButtonStyle}
+          style={{ 
+            background: '#ffa768',
+            borderRadius: '50%',
+            padding: 0,
+            width: '40px',
+            height: '40px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        />
+      </Tooltip>
+
       <HeaderDropdown
         menu={{
           selectedKeys: [],
