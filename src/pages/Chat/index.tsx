@@ -1031,7 +1031,9 @@ const ChatRoom: React.FC = () => {
         <div className={styles.userListHeader}>
           在线成员 ({onlineUsers.length})
         </div>
-        {onlineUsers.map(user => (
+        {[...onlineUsers]
+          .sort((a, b) => (b.points || 0) - (a.points || 0))
+          .map(user => (
           <div
             key={user.id}
             className={styles.userItem}
