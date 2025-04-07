@@ -55,6 +55,8 @@ function App() {
   const [opponentLastMove, setOpponentLastMove] = useState<Position | null>(initialState?.gameState?.opponentLastMove || null);
   const [winningLine, setWinningLine] = useState<WinningLine | null>(initialState?.gameState?.winningLine || null);
   const [showRestartModal, setShowRestartModal] = useState(false);
+  // 添加游戏结束弹框状态
+  const [showGameEndModal, setShowGameEndModal] = useState(false);
 
   // 添加聊天相关的状态
   const [showChat, setShowChat] = useState(true);
@@ -146,6 +148,10 @@ function App() {
     if (winResult) {
       setWinner(player);
       setWinningLine(winResult);
+      // 游戏结束时显示弹框
+      if (gameMode === 'online') {
+        setShowGameEndModal(true);
+      }
     } else {
       setPlayerColor(player === 'black' ? 'white' : 'black')
       setCurrentPlayer(player === 'black' ? 'white' : 'black'); // 切换回本地玩家回合
@@ -301,6 +307,8 @@ function App() {
       if (winResult) {
         setWinner(playerColor);
         setWinningLine(winResult);
+        // 游戏结束时显示弹框
+        setShowGameEndModal(true);
       }
 
       setCurrentPlayer(opponentColor); // 切换回合显示
@@ -487,6 +495,28 @@ function App() {
         return prev - 1;
       });
     }, 1000);
+  };
+
+  // 添加退出房间函数
+  const handleExitRoom = () => {
+    setGameStarted(false);
+    setGameMode('single');
+    setBoard(createEmptyBoard());
+    setCurrentPlayer('black');
+    setWinner(null);
+    setMoves([]);
+    setLastMove(null);
+    setOpponentLastMove(null);
+    setWinningLine(null);
+    setChatMessages([]);
+    setChatInputValue('');
+    setRoomId('');
+    setShowGameEndModal(false);
+  };
+
+  // 添加继续游戏函数
+  const handleContinueGame = () => {
+    setShowGameEndModal(false);
   };
 
   if (!gameStarted) {
@@ -988,6 +1018,39 @@ function App() {
                 className="w-full px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
               >
                 取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 游戏结束弹框 */}
+      {showGameEndModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-gray-800">游戏结束</h3>
+              {/* eslint-disable-next-line react/button-has-type */}
+              <button
+                onClick={() => setShowGameEndModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5"/>
+              </button>
+            </div>
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <Trophy className="w-8 h-8 text-yellow-600"/>
+              <span className="text-lg font-medium text-gray-800">
+                {winner === playerColor ? '恭喜你赢了！' : '对手小胜，再接再厉'}
+              </span>
+            </div>
+            <div className="space-y-3">
+              <button
+                type={"button"}
+                onClick={handleExitRoom}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-gray-300 transition-colors flex items-center justify-center gap-2"
+              >
+                <span className="font-medium text-gray-800">退出房间</span>
               </button>
             </div>
           </div>
