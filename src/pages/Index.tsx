@@ -70,10 +70,19 @@ const Index: React.FC = () => {
 
   const items = [
     {key: 'all', label: '🌟 全部'},
-    ...categories.map(category => ({
-      key: category,
-      label: `${getCategoryEmoji(category)} ${hostPostVoList.find(item => item.category as any === category)?.categoryName || category}`
-    }))
+    ...categories
+      .filter(category => {
+        // 如果用户没有选择任何数据源，显示所有分类
+        if (selectedSourceIds.length === 0) return true;
+        // 检查该分类下是否有选中的数据源
+        return hostPostVoList.some(item => 
+          String(item.category) === String(category) && selectedSourceIds.includes(item.id as number)
+        );
+      })
+      .map(category => ({
+        key: category,
+        label: `${getCategoryEmoji(category)} ${hostPostVoList.find(item => String(item.category) === String(category))?.categoryName || category}`
+      }))
   ];
 
   const handleSettingsSave = () => {
@@ -143,11 +152,6 @@ const Index: React.FC = () => {
           style={{ flex: 1 }}
         />
         <Space>
-          <Typography.Text type="secondary" style={{ marginRight: 8 }}>
-            {selectedSourceIds.length > 0 
-              ? `已选择 ${selectedSourceIds.length} 个数据源` 
-              : '显示全部数据源'}
-          </Typography.Text>
           <Button 
             type="text" 
             icon={<SettingOutlined />} 
