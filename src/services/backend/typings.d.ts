@@ -74,9 +74,27 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseMockInterview_ = {
+    code?: number;
+    data?: MockInterview;
+    message?: string;
+  };
+
   type BaseResponsePageAvatarFrameVO_ = {
     code?: number;
     data?: PageAvatarFrameVO_;
+    message?: string;
+  };
+
+  type BaseResponsePageEmoticonFavour_ = {
+    code?: number;
+    data?: PageEmoticonFavour_;
+    message?: string;
+  };
+
+  type BaseResponsePageMockInterview_ = {
+    code?: number;
+    data?: PageMockInterview_;
     message?: string;
   };
 
@@ -167,9 +185,21 @@ declare namespace API {
     id?: number;
   };
 
+  type EmoticonFavour = {
+    createTime?: string;
+    emoticonSrc?: string;
+    id?: number;
+    updateTime?: string;
+    userId?: number;
+  };
+
   type exchangeFrameUsingPOSTParams = {
     /** frameId */
     frameId: number;
+  };
+
+  type FluxString_ = {
+    prefetch?: number;
   };
 
   type generatePresignedDownloadUrlUsingGETParams = {
@@ -185,6 +215,11 @@ declare namespace API {
   type getMinioPresignedUsingGETParams = {
     /** fileName */
     fileName?: string;
+  };
+
+  type getMockInterviewByIdUsingGETParams = {
+    /** id */
+    id?: number;
   };
 
   type getPostVoByIdUsingGETParams = {
@@ -257,6 +292,44 @@ declare namespace API {
     message?: Message;
   };
 
+  type MockInterview = {
+    createTime?: string;
+    difficulty?: string;
+    id?: number;
+    isDelete?: number;
+    jobPosition?: string;
+    messages?: string;
+    status?: number;
+    updateTime?: string;
+    userId?: number;
+    workExperience?: string;
+  };
+
+  type MockInterviewAddRequest = {
+    difficulty?: string;
+    jobPosition?: string;
+    workExperience?: string;
+  };
+
+  type MockInterviewEventRequest = {
+    event?: string;
+    id?: number;
+    message?: string;
+  };
+
+  type MockInterviewQueryRequest = {
+    current?: number;
+    difficulty?: string;
+    id?: number;
+    jobPosition?: string;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+    status?: number;
+    userId?: number;
+    workExperience?: string;
+  };
+
   type OrderItem = {
     asc?: boolean;
     column?: string;
@@ -270,6 +343,32 @@ declare namespace API {
     orders?: OrderItem[];
     pages?: number;
     records?: AvatarFrameVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageEmoticonFavour_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: EmoticonFavour[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageMockInterview_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: MockInterview[];
     searchCount?: boolean;
     size?: number;
     total?: number;
@@ -299,6 +398,13 @@ declare namespace API {
     searchCount?: boolean;
     size?: number;
     total?: number;
+  };
+
+  type PageRequest = {
+    current?: number;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
   };
 
   type PageRoomMessageVo_ = {
@@ -477,6 +583,11 @@ declare namespace API {
     frameId: number;
   };
 
+  type streamChatUsingGETParams = {
+    /** prompt */
+    prompt: string;
+  };
+
   type TokenLoginUserVo = {
     avatarFramerUrl?: string;
     createTime?: string;
@@ -569,6 +680,7 @@ declare namespace API {
     sortField?: string;
     sortOrder?: string;
     unionId?: string;
+    userAccount?: string;
     userName?: string;
     userProfile?: string;
     userRole?: string;

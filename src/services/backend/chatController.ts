@@ -24,3 +24,18 @@ export async function getOnlineUserListUsingGet(options?: { [key: string]: any }
     ...(options || {}),
   });
 }
+
+/** streamChat GET /api/chat/stream */
+export async function streamChatUsingGet(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.streamChatUsingGETParams,
+  options?: { [key: string]: any },
+) {
+  return request<API.FluxString_>('/api/chat/stream', {
+    method: 'GET',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  });
+}

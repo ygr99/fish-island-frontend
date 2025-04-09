@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Input, Spin, Button, Tooltip } from 'antd';
+import { Input, Spin, Button, Tooltip, message } from 'antd';
 import { StarOutlined, StarFilled } from '@ant-design/icons';
 import styles from './index.less';
 import { debounce } from 'lodash';
+import { 
+  addEmoticonFavourUsingPost, 
+  deleteEmoticonFavourUsingPost, 
+  listEmoticonFavourByPageUsingPost 
+} from '@/services/backend/emoticonFavourController';
 
 interface Emoticon {
   thumbSrc: string;
@@ -20,7 +25,6 @@ interface EmoticonPickerProps {
   onSelect: (url: string) => void;
 }
 
-const STORAGE_KEY = 'favorite_emoticons';
 const PAGE_SIZE = 12;
 
 const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
@@ -29,11 +33,90 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
   const [baiduLoading, setBaiduLoading] = useState(false);
   const [baiduPage, setBaiduPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [favoriteEmoticons, setFavoriteEmoticons] = useState<Emoticon[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [favoriteEmoticons, setFavoriteEmoticons] = useState<API.EmoticonFavour[]>([]);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [favoritePage, setFavoritePage] = useState(1);
+  const [favoriteHasMore, setFavoriteHasMore] = useState(true);
   const baiduListRef = useRef<HTMLDivElement>(null);
+  const favoriteListRef = useRef<HTMLDivElement>(null);
+
+  // 获取收藏的表情包
+  const fetchFavoriteEmoticons = async (page: number = 1) => {
+    setFavoriteLoading(true);
+    try {
+      const response = await listEmoticonFavourByPageUsingPost({
+        current: page,
+        pageSize: PAGE_SIZE,
+      });
+      
+      if (response.code === 0 && response.data) {
+        const { records, total } = response.data;
+        if (page === 1) {
+          setFavoriteEmoticons(records || []);
+        } else {
+          setFavoriteEmoticons(prev => [...prev, ...(records || [])]);
+        }
+        setFavoriteHasMore((records?.length || 0) * page < (total || 0));
+        setFavoritePage(page);
+      } else {
+        message.error('获取收藏表情包失败');
+      }
+    } catch (error) {
+      console.error('获取收藏表情包失败:', error);
+      message.error('获取收藏表情包失败');
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
+
+  // 添加收藏
+  const addFavorite = async (emoticonSrc: string) => {
+    try {
+      const response = await addEmoticonFavourUsingPost(emoticonSrc);
+      if (response.code === 0) {
+        message.success('收藏成功');
+        // 刷新收藏列表
+        fetchFavoriteEmoticons(1);
+      } else {
+        message.error('收藏失败');
+      }
+    } catch (error) {
+      console.error('收藏失败:', error);
+      message.error('收藏失败');
+    }
+  };
+
+  // 取消收藏
+  const removeFavorite = async (id: number) => {
+    try {
+      const response = await deleteEmoticonFavourUsingPost({ id });
+      if (response.code === 0) {
+        message.success('取消收藏成功');
+        // 刷新收藏列表
+        fetchFavoriteEmoticons(1);
+      } else {
+        message.error('取消收藏失败');
+      }
+    } catch (error) {
+      console.error('取消收藏失败:', error);
+      message.error('取消收藏失败');
+    }
+  };
+
+  // 检查是否已收藏
+  const isFavorite = (emoticonSrc: string) => {
+    return favoriteEmoticons.some(fav => fav.emoticonSrc === emoticonSrc);
+  };
+
+  // 切换收藏状态
+  const toggleFavorite = (emoticonSrc: string) => {
+    const favorite = favoriteEmoticons.find(fav => fav.emoticonSrc === emoticonSrc);
+    if (favorite) {
+      removeFavorite(favorite.id!);
+    } else {
+      addFavorite(emoticonSrc);
+    }
+  };
 
   const searchBaiduEmoticons = async (searchKeyword: string, page: number = 1) => {
     if (!searchKeyword.trim()) {
@@ -76,6 +159,11 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
   }, [keyword]);
 
   useEffect(() => {
+    // 初始加载收藏表情包
+    fetchFavoriteEmoticons(1);
+  }, []);
+
+  useEffect(() => {
     const handleScroll = () => {
       if (!baiduListRef.current || baiduLoading || !hasMore) return;
 
@@ -92,83 +180,69 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
     }
   }, [baiduLoading, hasMore, baiduPage, keyword]);
 
-  const handleImageError = (emoticon: Emoticon | BaiduEmoticon) => {
-    if ('idx' in emoticon) {
-      setFavoriteEmoticons(prev =>
-        prev.map(e =>
-          e.idx === emoticon.idx && e.thumbSrc === emoticon.thumbSrc
-            ? { ...e, isError: true }
-            : e
-        )
-      );
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(favoriteEmoticons));
-    } else {
-      setBaiduEmoticons(prev =>
-        prev.map(e =>
-          e.url === emoticon.url
-            ? { ...e, isError: true }
-            : e
-        )
-      );
-    }
-  };
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!favoriteListRef.current || favoriteLoading || !favoriteHasMore) return;
 
-  const isFavorite = (emoticon: Emoticon) => {
-    return favoriteEmoticons.some(
-      (fav) => fav.thumbSrc === emoticon.thumbSrc && fav.idx === emoticon.idx
+      const { scrollTop, scrollHeight, clientHeight } = favoriteListRef.current;
+      if (scrollHeight - scrollTop - clientHeight < 50) {
+        fetchFavoriteEmoticons(favoritePage + 1);
+      }
+    };
+
+    const listElement = favoriteListRef.current;
+    if (listElement) {
+      listElement.addEventListener('scroll', handleScroll);
+      return () => listElement.removeEventListener('scroll', handleScroll);
+    }
+  }, [favoriteLoading, favoriteHasMore, favoritePage]);
+
+  const handleImageError = (emoticon: BaiduEmoticon) => {
+    setBaiduEmoticons(prev =>
+      prev.map(e =>
+        e.url === emoticon.url
+          ? { ...e, isError: true }
+          : e
+      )
     );
   };
 
-  const toggleFavorite = (emoticon: Emoticon) => {
-    const newFavorites = isFavorite(emoticon)
-      ? favoriteEmoticons.filter(
-          (fav) => !(fav.thumbSrc === emoticon.thumbSrc && fav.idx === emoticon.idx)
-        )
-      : [...favoriteEmoticons, { ...emoticon, isError: false }];
-
-    setFavoriteEmoticons(newFavorites);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newFavorites));
-  };
-
-  const renderEmoticonList = (items: Emoticon[]) => {
-    return items
-      .filter(emoticon => !emoticon.isError)
-      .map((emoticon) => (
-        <div key={`${emoticon.idx}-${emoticon.thumbSrc}`} className={styles.emoticonItemWrapper}>
-          <Tooltip
-            title={
-              <div className={styles.previewContainer}>
-                <img
-                  src={emoticon.thumbSrc}
-                  alt="preview"
-                  className={styles.previewImage}
-                />
-              </div>
-            }
-            placement="right"
-            overlayClassName={styles.tooltipOverlay}
-            mouseEnterDelay={0.5}
-          >
-            <img
-              src={emoticon.thumbSrc}
-              alt="emoticon"
-              className={styles.emoticonItem}
-              onClick={() => onSelect(emoticon.thumbSrc)}
-              onError={() => handleImageError(emoticon)}
-            />
-          </Tooltip>
-          <Button
-            type="text"
-            size="small"
-            icon={isFavorite(emoticon) ? <StarFilled /> : <StarOutlined />}
-            className={styles.favoriteButton}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleFavorite(emoticon);
-            }}
+  const renderEmoticonList = (items: API.EmoticonFavour[]) => {
+    return items.map((emoticon) => (
+      <div key={emoticon.id} className={styles.emoticonItemWrapper}>
+        <Tooltip
+          title={
+            <div className={styles.previewContainer}>
+              <img
+                src={emoticon.emoticonSrc}
+                alt="preview"
+                className={styles.previewImage}
+              />
+            </div>
+          }
+          placement="right"
+          overlayClassName={styles.tooltipOverlay}
+          mouseEnterDelay={0.5}
+        >
+          <img
+            src={emoticon.emoticonSrc}
+            alt="emoticon"
+            className={styles.emoticonItem}
+            onClick={() => onSelect(emoticon.emoticonSrc!)}
           />
-        </div>
-      ));
+        </Tooltip>
+        <Button
+          type="text"
+          size="small"
+          icon={<StarFilled />}
+          className={styles.favoriteButton}
+          onClick={(e) => {
+            e.stopPropagation();
+            removeFavorite(emoticon.id!);
+          }}
+        />
+      </div>
+    ));
   };
 
   const renderBaiduEmoticonList = (items: BaiduEmoticon[]) => {
@@ -200,6 +274,16 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
                   onError={() => handleImageError(emoticon)}
                 />
               </Tooltip>
+              <Button
+                type="text"
+                size="small"
+                icon={isFavorite(emoticon.url) ? <StarFilled /> : <StarOutlined />}
+                className={styles.favoriteButton}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFavorite(emoticon.url);
+                }}
+              />
             </div>
           ))}
         {baiduLoading && (
@@ -224,8 +308,13 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
       ) : (
         <>
           <div className={styles.sectionTitle}>我的收藏</div>
-          <div className={styles.emoticonList}>
+          <div ref={favoriteListRef} className={styles.emoticonList}>
             {renderEmoticonList(favoriteEmoticons)}
+            {favoriteLoading && (
+              <div className={styles.loading}>
+                <Spin />
+              </div>
+            )}
           </div>
         </>
       )}
