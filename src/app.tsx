@@ -91,7 +91,7 @@ const useBossKey = () => {
 
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.ctrlKey && event.shiftKey && event.key === 'B') {
-        setIsBossMode(prev => !prev); // 切换老板模式
+        history.push('/home'); // 跳转到 home 路由
       } else if (event.ctrlKey && event.shiftKey && event.key === 'S') {
         setShowSettings(true); // 打开设置
       }

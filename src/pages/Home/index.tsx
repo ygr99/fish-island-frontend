@@ -84,6 +84,26 @@ const Home: React.FC = () => {
     };
   }, []);
 
+  // 添加键盘快捷键监听
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 检查是否按下了 Ctrl+Shift+B
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'b') {
+        console.log('快捷键触发: Ctrl+Shift+B');
+        e.preventDefault(); // 阻止默认行为
+        handleSwitchToFishMode();
+      }
+    };
+
+    // 添加事件监听器
+    window.addEventListener('keydown', handleKeyDown);
+
+    // 清理函数
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   const handleSearch = (value: string) => {
     if (!value.trim()) return;
     window.open(`${currentEngine.url}${encodeURIComponent(value)}`, '_blank');
