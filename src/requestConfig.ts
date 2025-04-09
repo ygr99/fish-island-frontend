@@ -60,8 +60,9 @@ export const requestConfig: RequestConfig = {
         !location.pathname.includes('/user/login')
       ) {
         // 跳转至登录页
-        window.location.href = `/user/login?redirect=${window.location.href}`;
-        throw new Error('请先登录');
+        message.error('请先登录');
+        // window.location.href = `/user/login?redirect=${window.location.href}`;
+        // throw new Error('请先登录');
       }
 
       if (code !== 0 && data.code !== 40100) {
