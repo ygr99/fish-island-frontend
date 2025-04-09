@@ -165,6 +165,12 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     };
   });
 
+  // 添加默认网站配置
+  const defaultSiteConfig = {
+    siteName: '摸鱼岛',
+    siteIcon: 'https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png'
+  };
+
   const [isMoneyVisible, setIsMoneyVisible] = useState(() => {
     const savedVisibility = localStorage.getItem('moneyButtonVisibility');
     return savedVisibility === null ? true : savedVisibility === 'true';
@@ -1291,6 +1297,31 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               </Button>
               <Button onClick={() => setIsSiteConfigOpen(false)}>
                 取消
+              </Button>
+              <Button 
+                onClick={() => {
+                  // 重置为默认配置
+                  siteConfigForm.setFieldsValue(defaultSiteConfig);
+                  setSiteConfig(defaultSiteConfig);
+                  localStorage.setItem('siteConfig', JSON.stringify(defaultSiteConfig));
+                  
+                  // 更新网站图标
+                  const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+                  if (link) {
+                    link.href = defaultSiteConfig.siteIcon;
+                  } else {
+                    const newLink = document.createElement('link');
+                    newLink.rel = 'icon';
+                    newLink.href = defaultSiteConfig.siteIcon;
+                    document.head.appendChild(newLink);
+                  }
+                  
+                  // 更新网站标题
+                  document.title = defaultSiteConfig.siteName;
+                  message.success('网站设置已重置为默认样式');
+                }}
+              >
+                重置为默认样式
               </Button>
             </Space>
           </Form.Item>
