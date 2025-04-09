@@ -8,6 +8,8 @@ import {
   deleteEmoticonFavourUsingPost, 
   listEmoticonFavourByPageUsingPost 
 } from '@/services/backend/emoticonFavourController';
+import eventBus from '@/utils/eventBus';
+import { EMOTICON_FAVORITE_CHANGED } from '@/components/MessageContent';
 
 interface Emoticon {
   thumbSrc: string;
@@ -161,6 +163,19 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
   useEffect(() => {
     // 初始加载收藏表情包
     fetchFavoriteEmoticons(1);
+    
+    // 监听收藏变化事件
+    const handleFavoriteChanged = () => {
+      // 刷新收藏列表
+      fetchFavoriteEmoticons(1);
+    };
+    
+    eventBus.on(EMOTICON_FAVORITE_CHANGED, handleFavoriteChanged);
+    
+    // 组件卸载时取消订阅
+    return () => {
+      eventBus.off(EMOTICON_FAVORITE_CHANGED, handleFavoriteChanged);
+    };
   }, []);
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {Card, Image, Button, message} from 'antd';
 import {BilibiliOutlined, LinkOutlined, FileOutlined, DownloadOutlined, StarOutlined, StarFilled} from '@ant-design/icons';
 import ReactMarkdown, { Components } from 'react-markdown';
@@ -9,6 +9,15 @@ import 'prismjs/themes/prism-tomorrow.css';
 import styles from './index.less';
 import {parseWebPageUsingGet} from '@/services/backend/webParserController';
 import DOMPurify from 'dompurify';
+import { 
+  addEmoticonFavourUsingPost, 
+  deleteEmoticonFavourUsingPost, 
+  listEmoticonFavourByPageUsingPost 
+} from '@/services/backend/emoticonFavourController';
+import eventBus from '@/utils/eventBus';
+
+// 定义事件名称常量
+export const EMOTICON_FAVORITE_CHANGED = 'emoticon_favorite_changed';
 
 const DOUYIN_ICON = 'https://lf1-cdn-tos.bytegoofy.com/goofy/ies/douyin_web/public/favicon.ico';
 const CODEFATHER_ICON = 'https://www.codefather.cn/favicon.ico';
@@ -34,16 +43,93 @@ interface Emoticon {
 const MessageContent: React.FC<MessageContentProps> = ({content}) => {
   const [webPages, setWebPages] = useState<Record<any, WebPageInfo>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
-  const [favoriteEmoticons, setFavoriteEmoticons] = useState<Emoticon[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [favoriteEmoticons, setFavoriteEmoticons] = useState<API.EmoticonFavour[]>([]);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
   // URL匹配正则表达式
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   // 图片标签匹配正则表达式
   const imgRegex = /\[img\](.*?)\[\/img\]/g;
   // 文件标签匹配正则表达式
   const fileRegex = /\[file\](.*?)\[\/file\]/g;
+
+  // 获取收藏的表情包
+  const fetchFavoriteEmoticons = async () => {
+    setFavoriteLoading(true);
+    try {
+      const response = await listEmoticonFavourByPageUsingPost({
+        current: 1,
+        pageSize: 100, // 获取足够多的收藏表情
+      });
+      
+      if (response.code === 0 && response.data) {
+        setFavoriteEmoticons(response.data.records || []);
+      }
+    } catch (error) {
+      console.error('获取收藏表情包失败:', error);
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
+
+  // 添加收藏
+  const addFavorite = async (emoticonSrc: string) => {
+    try {
+      const response = await addEmoticonFavourUsingPost(emoticonSrc);
+      if (response.code === 0) {
+        message.success('收藏成功');
+        // 刷新收藏列表
+        fetchFavoriteEmoticons();
+        // 触发事件通知其他组件刷新收藏列表
+        eventBus.emit(EMOTICON_FAVORITE_CHANGED, 'add', emoticonSrc);
+      } else {
+        message.error('收藏失败');
+      }
+    } catch (error) {
+      console.error('收藏失败:', error);
+      message.error('收藏失败');
+    }
+  };
+
+  // 取消收藏
+  const removeFavorite = async (id: number) => {
+    try {
+      const response = await deleteEmoticonFavourUsingPost({ id });
+      if (response.code === 0) {
+        message.success('取消收藏成功');
+        // 刷新收藏列表
+        fetchFavoriteEmoticons();
+        // 触发事件通知其他组件刷新收藏列表
+        eventBus.emit(EMOTICON_FAVORITE_CHANGED, 'remove', id);
+      } else {
+        message.error('取消收藏失败');
+      }
+    } catch (error) {
+      console.error('取消收藏失败:', error);
+      message.error('取消收藏失败');
+    }
+  };
+
+  // 检查是否是收藏的表情
+  const isFavorite = (url: string) => {
+    return favoriteEmoticons.some(
+      (fav) => fav.emoticonSrc === url
+    );
+  };
+
+  // 切换收藏状态
+  const toggleFavorite = (url: string) => {
+    const favorite = favoriteEmoticons.find(fav => fav.emoticonSrc === url);
+    if (favorite) {
+      removeFavorite(favorite.id!);
+    } else {
+      addFavorite(url);
+    }
+  };
+
+  // 在组件加载时获取收藏的表情包
+  useEffect(() => {
+    fetchFavoriteEmoticons();
+  }, []);
 
   // 截断文本到指定长度
   const truncateText = (text: string, maxLength: number = 20) => {
@@ -93,32 +179,6 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  // 检查是否是收藏的表情
-  const isFavorite = (url: string) => {
-    return favoriteEmoticons.some(
-      (fav) => fav.thumbSrc === url
-    );
-  };
-
-  // 切换收藏状态
-  const toggleFavorite = (url: string) => {
-    const newEmoticon: Emoticon = {
-      thumbSrc: url,
-      idx: Date.now(), // 使用时间戳作为唯一标识
-      source: 'chat',
-      isError: false
-    };
-
-    const newFavorites = isFavorite(url)
-      ? favoriteEmoticons.filter(
-          (fav) => fav.thumbSrc !== url
-        )
-      : [...favoriteEmoticons, newEmoticon];
-
-    setFavoriteEmoticons(newFavorites);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newFavorites));
   };
 
   // 渲染图片
