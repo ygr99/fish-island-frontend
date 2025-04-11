@@ -330,6 +330,15 @@ const ChatRoom: React.FC = () => {
   const handleImageUpload = async (file: File) => {
     try {
       setUploading(true);
+
+      // 如果文件大小超过 1MB，进行压缩
+      if (file.size > 1024 * 1024) {
+        const compressedFile = await compressImage(file);
+        if (compressedFile) {
+          file = compressedFile;
+        }
+      }
+
       const res = await uploadTo111666UsingPost(
         {},  // body 参数
         file,  // 文件参数
@@ -353,6 +362,72 @@ const ChatRoom: React.FC = () => {
       setUploading(false);
     }
   };
+
+  // 添加图片压缩函数
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (e) => {
+        const img = new Image();
+        img.src = e.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // 如果图片尺寸过大，先缩小尺寸
+          const maxDimension = 2000; // 最大尺寸
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = Math.round((height * maxDimension) / width);
+              width = maxDimension;
+            } else {
+              width = Math.round((width * maxDimension) / height);
+              height = maxDimension;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('无法创建画布上下文'));
+            return;
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // 尝试不同的质量级别，直到文件大小小于 1MB
+          let quality = 0.9;
+          let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+          
+          while (compressedDataUrl.length > 1024 * 1024 && quality > 0.1) {
+            quality -= 0.1;
+            compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+          }
+          
+          // 将 DataURL 转换回 File 对象
+          const arr = compressedDataUrl.split(',');
+          const mime = arr[0].match(/:(.*?);/)?.[1];
+          const bstr = atob(arr[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+          
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+          }
+          
+          const compressedFile = new File([u8arr], file.name, { type: mime || 'image/jpeg' });
+          resolve(compressedFile);
+        };
+        img.onerror = () => reject(new Error('图片加载失败'));
+      };
+      reader.onerror = () => reject(new Error('文件读取失败'));
+    });
+  };
+
   // 处理粘贴事件
   const handlePaste = async (e: React.ClipboardEvent) => {
     const items = e.clipboardData.items;
