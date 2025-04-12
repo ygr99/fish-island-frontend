@@ -2,7 +2,9 @@ import {
   updateMyUserUsingPost,
   userLogoutUsingPost,
   signInUsingPost,
-  getLoginUserUsingGet
+  getLoginUserUsingGet,
+  userEmailBindToAccountUsingPost,
+  userEmailSendUsingPost
 } from '@/services/backend/userController';
 import {getCosCredentialUsingGet, uploadFileByMinioUsingPost} from '@/services/backend/fileController';
 import {
@@ -120,6 +122,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const [siteConfigForm] = Form.useForm();
   const [selectedAvatar, setSelectedAvatar] = useState<string>('');
   const [previewAvatar, setPreviewAvatar] = useState<string>('');
+  const [emailCountdown, setEmailCountdown] = useState(0);
+  const [emailCode, setEmailCode] = useState('');
 
   // 默认头像列表
   const defaultAvatars = [
@@ -547,7 +551,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         '.myhk-player-playlist',
         '.switch-player'  // 添加 switch-player 元素
       ];
-      
+
       elementsToRemove.forEach(selector => {
         const elements = document.querySelectorAll(selector);
         elements.forEach(element => {
@@ -657,6 +661,68 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     },
     [setInitialState, currentUser?.userAvatar, isMoneyVisible, isMusicVisible],
   );
+
+  // 发送邮箱验证码
+  const handleSendEmailCode = async () => {
+    const email = editProfileForm.getFieldValue('email');
+    if (!email) {
+      message.error('请输入邮箱地址');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      message.error('请输入正确的邮箱地址');
+      return;
+    }
+    try {
+      const res = await userEmailSendUsingPost({
+        email: email,
+      });
+      if (res.code === 0) {
+        message.success('验证码已发送到邮箱');
+        setEmailCountdown(60);
+        const timer = setInterval(() => {
+          setEmailCountdown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    } catch (error: any) {
+      message.error(`发送验证码失败：${error.message}`);
+    }
+  };
+
+  // 处理邮箱绑定
+  const handleEmailBind = async () => {
+    const email = editProfileForm.getFieldValue('email');
+    const code = editProfileForm.getFieldValue('emailCode');
+    if (!email || !code) {
+      message.error('请填写邮箱和验证码');
+      return;
+    }
+    try {
+      const res = await userEmailBindToAccountUsingPost({
+        email: email,
+        code: code,
+      });
+      if (res.code === 0) {
+        message.success('邮箱绑定成功');
+        // 更新用户信息
+        const userInfo = await getLoginUserUsingGet();
+        if (userInfo.data) {
+          setInitialState((s) => ({
+            ...s,
+            currentUser: userInfo.data,
+          }));
+        }
+      }
+    } catch (error: any) {
+      message.error(`邮箱绑定失败：${error.message}`);
+    }
+  };
 
   if (!currentUser) {
     return (
@@ -805,7 +871,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           icon={<SwapOutlined />}
           onClick={() => history.push('/home')}
           className={tabModeButtonStyle}
-          style={{ 
+          style={{
             background: '#ffa768',
             borderRadius: '50%',
             padding: 0,
@@ -971,6 +1037,66 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               ))}
             </div>
           </Form.Item>
+
+          {!currentUser?.email ? (
+            <>
+              <Form.Item
+                name="email"
+                label="绑邮箱"
+                rules={[
+                  {required: true, message: '请输入邮箱地址！'},
+                  {type: 'email', message: '请输入正确的邮箱地址！'}
+                ]}
+              >
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <Input placeholder="请输入要绑定的邮箱地址" style={{ flex: 1 }} />
+                  <Button
+                    type="primary"
+                    onClick={handleSendEmailCode}
+                    disabled={emailCountdown > 0}
+                  >
+                    {emailCountdown > 0 ? `${emailCountdown}秒` : '获取验证码'}
+                  </Button>
+                </div>
+              </Form.Item>
+
+              <Form.Item
+                name="emailCode"
+                label="验证码"
+                rules={[{required: true, message: '请输入验证码！'}]}
+              >
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                  <Input placeholder="请输入验证码" style={{ flex: 1 }} />
+                  <Button
+                    type="primary"
+                    onClick={handleEmailBind}
+                    style={{
+                      background: '#52c41a',
+                      borderColor: '#52c41a',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    绑定邮箱
+                  </Button>
+                </div>
+              </Form.Item>
+            </>
+          ) : (
+            <Form.Item label="已绑定邮箱">
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '4px 11px',
+                background: '#f6ffed',
+                border: '1px solid #b7eb8f',
+                borderRadius: '6px'
+              }}>
+                <span style={{ color: '#52c41a' }}>✓</span>
+                <span style={{ color: '#333' }}>{currentUser.email}</span>
+              </div>
+            </Form.Item>
+          )}
 
           <Form.Item
             name="userProfile"
@@ -1298,13 +1424,13 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               <Button onClick={() => setIsSiteConfigOpen(false)}>
                 取消
               </Button>
-              <Button 
+              <Button
                 onClick={() => {
                   // 重置为默认配置
                   siteConfigForm.setFieldsValue(defaultSiteConfig);
                   setSiteConfig(defaultSiteConfig);
                   localStorage.setItem('siteConfig', JSON.stringify(defaultSiteConfig));
-                  
+
                   // 更新网站图标
                   const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
                   if (link) {
@@ -1315,7 +1441,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                     newLink.href = defaultSiteConfig.siteIcon;
                     document.head.appendChild(newLink);
                   }
-                  
+
                   // 更新网站标题
                   document.title = defaultSiteConfig.siteName;
                   message.success('网站设置已重置为默认样式');
