@@ -10,6 +10,7 @@ import {
 } from '@/services/backend/emoticonFavourController';
 import eventBus from '@/utils/eventBus';
 import { EMOTICON_FAVORITE_CHANGED } from '@/components/MessageContent';
+import { useModel } from '@umijs/max';
 
 interface Emoticon {
   thumbSrc: string;
@@ -30,6 +31,8 @@ interface EmoticonPickerProps {
 const PAGE_SIZE = 12;
 
 const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
+  const { initialState } = useModel('@@initialState');
+  const { currentUser } = initialState || {};
   const [keyword, setKeyword] = useState('');
   const [baiduEmoticons, setBaiduEmoticons] = useState<BaiduEmoticon[]>([]);
   const [baiduLoading, setBaiduLoading] = useState(false);
@@ -41,9 +44,21 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
   const [favoriteHasMore, setFavoriteHasMore] = useState(true);
   const baiduListRef = useRef<HTMLDivElement>(null);
   const favoriteListRef = useRef<HTMLDivElement>(null);
+  const hasFetchedFavorites = useRef(false);
 
   // 获取收藏的表情包
   const fetchFavoriteEmoticons = async (page: number = 1) => {
+    // 如果用户未登录，不获取收藏表情
+    if (!currentUser?.id) {
+      setFavoriteEmoticons([]);
+      return;
+    }
+
+    // 如果已经获取过第一页，且不是加载更多，则不再重复获取
+    if (page === 1 && hasFetchedFavorites.current) {
+      return;
+    }
+
     setFavoriteLoading(true);
     try {
       const response = await listEmoticonFavourByPageUsingPost({
@@ -55,6 +70,7 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
         const { records, total } = response.data;
         if (page === 1) {
           setFavoriteEmoticons(records || []);
+          hasFetchedFavorites.current = true;
         } else {
           setFavoriteEmoticons(prev => [...prev, ...(records || [])]);
         }
@@ -166,7 +182,7 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
     
     // 监听收藏变化事件
     const handleFavoriteChanged = () => {
-      // 刷新收藏列表
+      hasFetchedFavorites.current = false; // 重置标志，允许重新获取
       fetchFavoriteEmoticons(1);
     };
     
@@ -176,7 +192,7 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
     return () => {
       eventBus.off(EMOTICON_FAVORITE_CHANGED, handleFavoriteChanged);
     };
-  }, []);
+  }, [currentUser?.id]);
 
   useEffect(() => {
     const handleScroll = () => {
