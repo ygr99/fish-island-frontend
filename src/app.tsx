@@ -197,9 +197,25 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const [showAnnouncement, setShowAnnouncement] = useState(true);
 
-  // 监听路由变化
+  // 注册 Service Worker
+  const registerServiceWorker = () => {
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => {
+            console.log('ServiceWorker registration successful');
+          })
+          .catch(err => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+      });
+    }
+  };
+
+  // 在 useEffect 中调用注册函数
   useEffect(() => {
     listenRouteChange();
+    registerServiceWorker();
   }, []);
 
   if (isBossMode) {
