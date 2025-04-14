@@ -1402,16 +1402,21 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           onFinish={(values) => {
             setSiteConfig(values);
             localStorage.setItem('siteConfig', JSON.stringify(values));
-            // 更新网站图标
-            const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
-            if (link) {
-              link.href = values.siteIcon;
-            } else {
+            
+            // 更新所有图标相关的标签
+            const iconTypes = ['icon', 'shortcut icon', 'apple-touch-icon'];
+            iconTypes.forEach(type => {
+              // 移除所有现有的图标标签
+              const existingLinks = document.querySelectorAll(`link[rel="${type}"]`);
+              existingLinks.forEach(link => link.remove());
+              
+              // 创建新的图标标签
               const newLink = document.createElement('link');
-              newLink.rel = 'icon';
+              newLink.rel = type;
               newLink.href = values.siteIcon;
               document.head.appendChild(newLink);
-            }
+            });
+            
             // 更新网站标题
             document.title = values.siteName;
             message.success('网站设置已保存');
@@ -1508,16 +1513,19 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                   setSiteConfig(defaultSiteConfig);
                   localStorage.setItem('siteConfig', JSON.stringify(defaultSiteConfig));
 
-                  // 更新网站图标
-                  const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
-                  if (link) {
-                    link.href = defaultSiteConfig.siteIcon;
-                  } else {
+                  // 更新所有图标相关的标签
+                  const iconTypes = ['icon', 'shortcut icon', 'apple-touch-icon'];
+                  iconTypes.forEach(type => {
+                    // 移除所有现有的图标标签
+                    const existingLinks = document.querySelectorAll(`link[rel="${type}"]`);
+                    existingLinks.forEach(link => link.remove());
+                    
+                    // 创建新的图标标签
                     const newLink = document.createElement('link');
-                    newLink.rel = 'icon';
+                    newLink.rel = type;
                     newLink.href = defaultSiteConfig.siteIcon;
                     document.head.appendChild(newLink);
-                  }
+                  });
 
                   // 更新网站标题
                   document.title = defaultSiteConfig.siteName;
