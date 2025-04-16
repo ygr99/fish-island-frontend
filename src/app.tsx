@@ -12,6 +12,7 @@ import SideAnnouncement from '@/components/SideAnnouncement';
 import routes from '../config/routes';
 import GlobalTitle from '@/components/GlobalTitle';
 import {Board, Player, Position, Move, WinningLine} from '@/game';
+import {unregisterServiceWorker} from './utils/unregisterServiceWorker';
 
 const loginPath = '/user/login';
 
@@ -149,6 +150,9 @@ interface InitialState {
  * @see  https://umijs.org/zh-CN/plugins/plugin-initial-state
  * */
 export async function getInitialState(): Promise<InitialState> {
+  // 注销 Service Worker
+  await unregisterServiceWorker();
+  
   const initialState: InitialState = {
     currentUser: undefined,
     gameState: undefined,

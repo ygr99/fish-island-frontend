@@ -923,10 +923,15 @@ const ChatRoom: React.FC = () => {
         name: currentUser.userName || '游客',
         avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
         level: currentUser.level || 1,
+        points: currentUser.points || 0,
         isAdmin: currentUser.userRole === 'admin',
+        region: userIpInfo?.region || '未知地区',
+        country: userIpInfo?.country || '未知国家',
         avatarFramerUrl: currentUser.avatarFramerUrl,
       },
       timestamp: new Date(),
+      region: userIpInfo?.region || '未知地区',
+      country: userIpInfo?.country || '未知国家'
     };
 
     // 新发送的消息添加到列表末尾
