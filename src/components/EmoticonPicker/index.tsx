@@ -74,7 +74,12 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
         } else {
           setFavoriteEmoticons(prev => [...prev, ...(records || [])]);
         }
-        setFavoriteHasMore((records?.length || 0) * page < (total || 0));
+        // 如果当前页没有记录，或者已经加载完所有记录，则设置没有更多数据
+        if (!records || records.length === 0 || (records?.length || 0) * page >= (total || 0)) {
+          setFavoriteHasMore(false);
+        } else {
+          setFavoriteHasMore((records?.length || 0) * page < (total || 0));
+        }
         setFavoritePage(page);
       } else {
         message.error('获取收藏表情包失败');
@@ -338,7 +343,6 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
         renderBaiduEmoticonList(baiduEmoticons)
       ) : (
         <>
-          <div className={styles.sectionTitle}>我的收藏</div>
           <div ref={favoriteListRef} className={styles.emoticonList}>
             {renderEmoticonList(favoriteEmoticons)}
             {favoriteLoading && (
