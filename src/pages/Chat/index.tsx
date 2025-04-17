@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState, useCallback, useMemo} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {Alert, Avatar, Button, Input, message, Popover, Spin, Popconfirm, Modal} from 'antd';
 import COS from 'cos-js-sdk-v5';
 import data from '@emoji-mart/data';
@@ -23,7 +23,6 @@ import {getCosCredentialUsingGet, uploadTo111666UsingPost} from "@/services/back
 import {uploadFileByMinioUsingPost} from "@/services/backend/fileController";
 import { wsService } from '@/services/websocket';
 import { history } from '@umijs/max';
-import _ from 'lodash';
 
 interface Message {
   id: string;
@@ -50,9 +49,6 @@ interface User {
 }
 
 const ChatRoom: React.FC = () => {
-  // 常量定义
-  const DEBOUNCE_DELAY = 300;
-
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isEmojiPickerVisible, setIsEmojiPickerVisible] = useState(false);
@@ -97,52 +93,6 @@ const ChatRoom: React.FC = () => {
   const [userIpInfo, setUserIpInfo] = useState<{ region: string; country: string } | null>(null);
 
   const inputRef = useRef<any>(null);  // 添加输入框的ref
-
-  // 优化预加载逻辑，使用 useMemo 缓存预加载结果
-  const preloadComponents = useCallback(async () => {
-    try {
-      // 并行加载组件和API数据
-      const [messageContentModule, emoticonPickerModule, apiData] = await Promise.all([
-        import('@/components/MessageContent'),
-        import('@/components/EmoticonPicker'),
-        listMessageVoByPageUsingPost({ current: 1, pageSize: 5 })
-      ]);
-      
-      // 预加载头像
-      if (onlineUsers.length > 0) {
-        onlineUsers.forEach(user => {
-          if (user.avatar) {
-            const img = new Image();
-            img.src = user.avatar;
-          }
-        });
-      }
-    } catch (error) {
-      console.error('预加载失败:', error);
-    }
-  }, [onlineUsers]);
-
-  // 挂载时执行预加载
-  useEffect(() => {
-    preloadComponents();
-  }, []);
-
-  // 优化防抖逻辑
-  const debouncedSendMessage = useMemo(
-    () => _.debounce((content: string) => {
-      if (content.trim()) {
-        handleSend(content);
-      }
-    }, DEBOUNCE_DELAY),
-    []
-  );
-
-  // 优化输入处理函数
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setInputValue(value);
-    debouncedSendMessage(value);
-  }, [debouncedSendMessage]);
 
   // 修改 getIpInfo 函数
   const getIpInfo = async () => {
@@ -213,11 +163,7 @@ const ChatRoom: React.FC = () => {
           avatarFramerUrl: '',
         };
         onlineUsersList.unshift(botUser);
-        onlineUsersList.forEach(user => {
-              const img = new Image();
-              img.src = user.avatar || 'default-avatar.png'; // 添加默认头像
-              img.onload = () => console.log(`预加载头像完成: ${user.id}`);
-            });
+
         // 如果当前用户已登录且不在列表中，将其添加到列表
         if (currentUser?.id && !onlineUsersList.some(user => user.id === String(currentUser.id))) {
           onlineUsersList.push({
@@ -231,7 +177,7 @@ const ChatRoom: React.FC = () => {
             avatarFramerUrl: currentUser.avatarFramerUrl,
           });
         }
-        
+
         setOnlineUsers(onlineUsersList);
       }
     } catch (error) {
@@ -348,23 +294,23 @@ const ChatRoom: React.FC = () => {
     setIsNearBottom(isAtBottom);
   };
 
-  // 优化滚动处理，使用 throttle 限制滚动事件触发频率
-  const handleScroll = useCallback(
-    _.throttle(() => {
-      const container = messageContainerRef.current;
-      if (!container || loading || !hasMore) return;
+  // 监听滚动事件
+  const handleScroll = () => {
+    const container = messageContainerRef.current;
+    if (!container || loading || !hasMore) return;
 
-      checkIfNearBottom();
+    // 检查是否在底部
+    checkIfNearBottom();
 
-      if (container.scrollTop === 0) {
-        const nextPage = current + 1;
-        if (hasMore) {
-          loadHistoryMessages(nextPage);
-        }
+    // 当滚动到顶部时加载更多
+    if (container.scrollTop === 0) {
+      // 更新当前页码，加载下一页
+      const nextPage = current + 1;
+      if (hasMore) {
+        loadHistoryMessages(nextPage);
       }
-    }, 200),
-    [loading, hasMore, current]
-  );
+    }
+  };
 
   // 初始化时加载历史消息
   useEffect(() => {
@@ -379,14 +325,6 @@ const ChatRoom: React.FC = () => {
       return () => container.removeEventListener('scroll', handleScroll);
     }
   }, [loading, hasMore, current]);
-
-  // 清理防抖和节流函数
-  useEffect(() => {
-    return () => {
-      debouncedSendMessage.cancel();
-      handleScroll.cancel();
-    };
-  }, [debouncedSendMessage, handleScroll]);
 
   // 处理图片上传
   const handleImageUpload = async (file: File) => {
@@ -437,7 +375,7 @@ const ChatRoom: React.FC = () => {
           const canvas = document.createElement('canvas');
           let width = img.width;
           let height = img.height;
-          
+
           // 如果图片尺寸过大，先缩小尺寸
           const maxDimension = 2000; // 最大尺寸
           if (width > maxDimension || height > maxDimension) {
@@ -449,38 +387,38 @@ const ChatRoom: React.FC = () => {
               height = maxDimension;
             }
           }
-          
+
           canvas.width = width;
           canvas.height = height;
-          
+
           const ctx = canvas.getContext('2d');
           if (!ctx) {
             reject(new Error('无法创建画布上下文'));
             return;
           }
-          
+
           ctx.drawImage(img, 0, 0, width, height);
-          
+
           // 尝试不同的质量级别，直到文件大小小于 1MB
           let quality = 0.9;
           let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-          
+
           while (compressedDataUrl.length > 1024 * 1024 && quality > 0.1) {
             quality -= 0.1;
             compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
           }
-          
+
           // 将 DataURL 转换回 File 对象
           const arr = compressedDataUrl.split(',');
           const mime = arr[0].match(/:(.*?);/)?.[1];
           const bstr = atob(arr[1]);
           let n = bstr.length;
           const u8arr = new Uint8Array(n);
-          
+
           while (n--) {
             u8arr[n] = bstr.charCodeAt(n);
           }
-          
+
           const compressedFile = new File([u8arr], file.name, { type: mime || 'image/jpeg' });
           resolve(compressedFile);
         };
@@ -578,27 +516,42 @@ const ChatRoom: React.FC = () => {
     }
   };
 
-  // 优化 WebSocket 消息处理
-  const handleChatMessage = useCallback((data: any) => {
+  // 添加 WebSocket 消息处理函数
+  const handleChatMessage = (data: any) => {
     const otherUserMessage = data.data.message;
     if (otherUserMessage.sender.id !== String(currentUser?.id)) {
       setMessages(prev => {
+        // 添加新消息
         const newMessages = [...prev, {...otherUserMessage}];
-        
-        // 只在底部时限制消息数量
-        if (isNearBottom && newMessages.length > 25) {
-          return newMessages.slice(-25);
+
+        // 检查是否在底部
+        const container = messageContainerRef.current;
+        if (container) {
+          const threshold = 30; // 30px的阈值
+          const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+          const isNearBottom = distanceFromBottom <= threshold;
+
+          // 只有在底部时才限制消息数量
+          if (isNearBottom && newMessages.length > 25) {
+            return newMessages.slice(-25);
+          }
         }
         return newMessages;
       });
-      
+
       handleMentionNotification(otherUserMessage);
 
-      if (isNearBottom) {
-        requestAnimationFrame(scrollToBottom);
+      // 实时检查是否在底部
+      const container = messageContainerRef.current;
+      if (container) {
+        const threshold = 30; // 30px的阈值，在底部附近就会自动滚动
+        const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+        if (distanceFromBottom <= threshold) {
+          setTimeout(scrollToBottom, 100);
+        }
       }
     }
-  }, [currentUser?.id, isNearBottom]);
+  };
 
   const handleUserMessageRevoke = (data: any) => {
     setMessages(prev => prev.filter(msg => msg.id !== data.data));
@@ -970,15 +923,10 @@ const ChatRoom: React.FC = () => {
         name: currentUser.userName || '游客',
         avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
         level: currentUser.level || 1,
-        points: currentUser.points || 0,
         isAdmin: currentUser.userRole === 'admin',
-        region: userIpInfo?.region || '未知地区',
-        country: userIpInfo?.country || '未知国家',
         avatarFramerUrl: currentUser.avatarFramerUrl,
       },
       timestamp: new Date(),
-      region: userIpInfo?.region || '未知地区',
-      country: userIpInfo?.country || '未知国家'
     };
 
     // 新发送的消息添加到列表末尾
@@ -1036,125 +984,6 @@ const ChatRoom: React.FC = () => {
     return <MessageContent content={content} />;
   };
 
-  // 优化消息渲染，使用 useMemo 缓存消息列表
-  const renderedMessages = useMemo(() => {
-    return messages.map((msg) => (
-      <div
-        key={msg.id}
-        id={`message-${msg.id}`}
-        className={`${styles.messageItem} ${
-          currentUser?.id && String(msg.sender.id) === String(currentUser.id) ? styles.self : ''
-        } ${notifications.some(n => n.id === msg.id) ? styles.mentioned : ''}`}
-      >
-        <div className={styles.messageHeader}>
-          <div
-            className={styles.avatar}
-            onClick={() => handleMentionUser(msg.sender)}
-            style={{cursor: 'pointer'}}
-          >
-            <Popover
-              content={<UserInfoCard user={msg.sender}/>}
-              trigger="hover"
-              placement="top"
-            >
-              <div className={styles.avatarWithFrame}>
-                <Avatar src={msg.sender.avatar} size={32}/>
-                {msg.sender.avatarFramerUrl && (
-                  <img
-                    src={msg.sender.avatarFramerUrl}
-                    className={styles.avatarFrame}
-                    alt="avatar-frame"
-                  />
-                )}
-              </div>
-            </Popover>
-          </div>
-          <div className={styles.senderInfo}>
-            <span className={styles.senderName}>
-              {msg.sender.name}
-              {getAdminTag(msg.sender.isAdmin, msg.sender.level)}
-              <span className={styles.levelBadge}>
-                {getLevelEmoji(msg.sender.level)} {msg.sender.level}
-              </span>
-            </span>
-          </div>
-        </div>
-        <div className={styles.messageContent}>
-          {msg.quotedMessage && (
-            <div className={styles.quotedMessage}>
-              <div className={styles.quotedMessageHeader}>
-                <span className={styles.quotedMessageSender}>{msg.quotedMessage.sender.name}</span>
-                <span className={styles.quotedMessageTime}>
-                  {new Date(msg.quotedMessage.timestamp).toLocaleTimeString()}
-                </span>
-              </div>
-              <div className={styles.quotedMessageContent}>
-                {renderMessageContent(msg.quotedMessage.content)}
-              </div>
-            </div>
-          )}
-          {renderMessageContent(msg.content)}
-        </div>
-        <div className={styles.messageFooter}>
-          <span className={styles.timestamp}>
-            {new Date(msg.timestamp).toLocaleTimeString()}
-          </span>
-          {(currentUser?.id && String(msg.sender.id) === String(currentUser.id)) || currentUser?.userRole === 'admin' ? (
-            <Popconfirm
-              title="确定要撤回这条消息吗？"
-              onConfirm={() => handleRevokeMessage(msg.id)}
-              okText="确定"
-              cancelText="取消"
-            >
-              <span className={styles.revokeText}>撤回</span>
-            </Popconfirm>
-          ) : null}
-          <span
-            className={styles.quoteText}
-            onClick={() => handleQuoteMessage(msg)}
-          >
-            引用
-          </span>
-        </div>
-      </div>
-    ));
-  }, [messages, currentUser?.id, notifications]);
-
-  // 优化用户列表渲染，使用 useMemo 缓存用户列表
-  const renderedUserList = useMemo(() => {
-    return [...onlineUsers]
-      .sort((a, b) => (b.points || 0) - (a.points || 0))
-      .map(user => (
-        <div
-          key={user.id}
-          className={styles.userItem}
-          onClick={() => handleMentionUser(user)}
-          style={{cursor: 'pointer'}}
-        >
-          <div className={styles.avatarWrapper}>
-            <Popover
-              content={<UserInfoCard user={user}/>}
-              trigger="hover"
-              placement="right"
-            >
-              <div className={styles.avatarWithFrame}>
-                <Avatar src={user.avatar} size={28}/>
-              </div>
-            </Popover>
-          </div>
-          <div className={styles.userInfo}>
-            <div className={styles.userName}>
-              {user.name}
-            </div>
-            <div className={styles.userStatus}>{user.status}</div>
-          </div>
-          <span className={styles.levelBadge}>
-            {getLevelEmoji(user.level)}
-          </span>
-        </div>
-      ));
-  }, [onlineUsers]);
-
   return (
     <div className={`${styles.chatRoom} ${isUserListCollapsed ? styles.collapsed : ''}`}>
       {contextHolder}
@@ -1184,7 +1013,86 @@ const ChatRoom: React.FC = () => {
         onScroll={handleScroll}
       >
         {loading && <div className={styles.loadingWrapper}><Spin/></div>}
-        {renderedMessages}
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            id={`message-${msg.id}`}
+            className={`${styles.messageItem} ${
+              currentUser?.id && String(msg.sender.id) === String(currentUser.id) ? styles.self : ''
+            } ${notifications.some(n => n.id === msg.id) ? styles.mentioned : ''}`}
+          >
+            <div className={styles.messageHeader}>
+              <div
+                className={styles.avatar}
+                onClick={() => handleMentionUser(msg.sender)}
+                style={{cursor: 'pointer'}}
+              >
+                <Popover
+                  content={<UserInfoCard user={msg.sender}/>}
+                  trigger="hover"
+                  placement="top"
+                >
+                  <div className={styles.avatarWithFrame}>
+                    <Avatar src={msg.sender.avatar} size={32}/>
+                    {msg.sender.avatarFramerUrl && (
+                      <img
+                        src={msg.sender.avatarFramerUrl}
+                        className={styles.avatarFrame}
+                        alt="avatar-frame"
+                      />
+                    )}
+                  </div>
+                </Popover>
+              </div>
+              <div className={styles.senderInfo}>
+                <span className={styles.senderName}>
+                  {msg.sender.name}
+                  {getAdminTag(msg.sender.isAdmin, msg.sender.level)}
+                  <span className={styles.levelBadge}>
+                    {getLevelEmoji(msg.sender.level)} {msg.sender.level}
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div className={styles.messageContent}>
+              {msg.quotedMessage && (
+                <div className={styles.quotedMessage}>
+                  <div className={styles.quotedMessageHeader}>
+                    <span className={styles.quotedMessageSender}>{msg.quotedMessage.sender.name}</span>
+                    <span className={styles.quotedMessageTime}>
+                      {new Date(msg.quotedMessage.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <div className={styles.quotedMessageContent}>
+                    {renderMessageContent(msg.quotedMessage.content)}
+                  </div>
+                </div>
+              )}
+              {renderMessageContent(msg.content)}
+            </div>
+            <div className={styles.messageFooter}>
+              <span className={styles.timestamp}>
+                {new Date(msg.timestamp).toLocaleTimeString()}
+              </span>
+              {(currentUser?.id && String(msg.sender.id) === String(currentUser.id)) || currentUser?.userRole === 'admin' ? (
+                <Popconfirm
+                  title="确定要撤回这条消息吗？"
+                  onConfirm={() => handleRevokeMessage(msg.id)}
+                  okText="确定"
+                  cancelText="取消"
+                >
+                  <span className={styles.revokeText}>撤回</span>
+                </Popconfirm>
+              ) : null}
+              <span
+                className={styles.quoteText}
+                onClick={() => handleQuoteMessage(msg)}
+              >
+                引用
+              </span>
+            </div>
+          </div>
+        ))}
         <div ref={messagesEndRef}/>
       </div>
 
@@ -1198,7 +1106,37 @@ const ChatRoom: React.FC = () => {
         <div className={styles.userListHeader}>
           在线成员 ({onlineUsers.length})
         </div>
-        {renderedUserList}
+        {[...onlineUsers]
+          .sort((a, b) => (b.points || 0) - (a.points || 0))
+          .map(user => (
+            <div
+              key={user.id}
+              className={styles.userItem}
+              onClick={() => handleMentionUser(user)}
+              style={{cursor: 'pointer'}}
+            >
+              <div className={styles.avatarWrapper}>
+                <Popover
+                  content={<UserInfoCard user={user}/>}
+                  trigger="hover"
+                  placement="right"
+                >
+                  <div className={styles.avatarWithFrame}>
+                    <Avatar src={user.avatar} size={28}/>
+                  </div>
+                </Popover>
+              </div>
+              <div className={styles.userInfo}>
+                <div className={styles.userName}>
+                  {user.name}
+                </div>
+                <div className={styles.userStatus}>{user.status}</div>
+              </div>
+              <span className={styles.levelBadge}>
+              {getLevelEmoji(user.level)}
+            </span>
+            </div>
+          ))}
       </div>
 
       <div className={styles.inputArea}>
@@ -1299,12 +1237,17 @@ const ChatRoom: React.FC = () => {
           <Input.TextArea
             ref={inputRef}
             value={inputValue}
-            onChange={handleInputChange}
+            onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => {
-              if (e.nativeEvent.isComposing) return; // 防止输入法组合键触发
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
+              if (e.key === 'Enter') {
+                // 检查是否是输入法组合键
+                if (e.nativeEvent.isComposing) {
+                  return;
+                }
+                if (!e.shiftKey) {
+                  e.preventDefault(); // 阻止默认的换行行为
+                  handleSend();
+                }
               }
             }}
             onPaste={handlePaste}
