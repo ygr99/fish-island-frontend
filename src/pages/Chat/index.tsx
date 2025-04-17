@@ -47,6 +47,32 @@ interface User {
   country?: string;
   avatarFramerUrl?: string;
 }
+//预加载
+const preloadComponents = async () => {
+  // 组件
+  const { default: MessageContent } = await import('@/components/MessageContent');
+  const { default: EmoticonPicker } = await import('@/components/EmoticonPicker');
+  
+  // API数据
+  const dummyData = await listMessageVoByPageUsingPost({ current: 1, pageSize: 5 });
+};
+
+// 挂载时执行
+useEffect(() => {
+  preloadComponents();
+}, []);
+
+// 输入框防抖
+const DEBOUNCE_DELAY = 300;
+const debouncedSendMessage = useRef(_.debounce((content) => {
+  handleSend(content);
+}, DEBOUNCE_DELAY)).current;
+// 优化输入处理函数
+const handleInputChange = useCallback((e) => {
+  const value = e.target.value;
+  setInputValue(value);
+  debouncedSendMessage(value);
+}, [debouncedSendMessage]);
 
 const ChatRoom: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -163,7 +189,11 @@ const ChatRoom: React.FC = () => {
           avatarFramerUrl: '',
         };
         onlineUsersList.unshift(botUser);
-
+        onlineUsersList.forEach(user => {
+              const img = new Image();
+              img.src = user.avatar || 'default-avatar.png'; // 添加默认头像
+              img.onload = () => console.log(`预加载头像完成: ${user.id}`);
+            });
         // 如果当前用户已登录且不在列表中，将其添加到列表
         if (currentUser?.id && !onlineUsersList.some(user => user.id === String(currentUser.id))) {
           onlineUsersList.push({
@@ -177,7 +207,7 @@ const ChatRoom: React.FC = () => {
             avatarFramerUrl: currentUser.avatarFramerUrl,
           });
         }
-
+        
         setOnlineUsers(onlineUsersList);
       }
     } catch (error) {
@@ -1237,17 +1267,12 @@ const ChatRoom: React.FC = () => {
           <Input.TextArea
             ref={inputRef}
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                // 检查是否是输入法组合键
-                if (e.nativeEvent.isComposing) {
-                  return;
-                }
-                if (!e.shiftKey) {
-                  e.preventDefault(); // 阻止默认的换行行为
-                  handleSend();
-                }
+              if (e.nativeEvent.isComposing) return; // 防止输入法组合键触发
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
               }
             }}
             onPaste={handlePaste}
