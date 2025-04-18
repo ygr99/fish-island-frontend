@@ -55,6 +55,80 @@ type MoYuTimeType = {
   monthlySalary?: number;
 };
 
+// 修改检查文件大小函数
+const checkFileSize = (file: File): boolean => {
+  return file.size / 1024 / 1024 < 1;
+};
+
+// 修改压缩图片函数，添加质量自适应
+const compressImage = (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        // 如果图片尺寸大于 800px，等比例缩小
+        const maxSize = 800;
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = Math.round((height * maxSize) / width);
+            width = maxSize;
+          } else {
+            width = Math.round((width * maxSize) / height);
+            height = maxSize;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // 根据原始文件大小动态调整压缩质量
+        const fileSize = file.size / 1024 / 1024; // 转换为MB
+        let quality = 0.8; // 默认质量
+        
+        if (fileSize > 2) {
+          quality = 0.5;
+        } else if (fileSize > 1) {
+          quality = 0.6;
+        } else if (fileSize > 0.5) {
+          quality = 0.7;
+        }
+        
+        // 转换为 Blob
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            } else {
+              reject(new Error('图片压缩失败'));
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = () => {
+        reject(new Error('图片加载失败'));
+      };
+    };
+    reader.onerror = () => {
+      reject(new Error('文件读取失败'));
+    };
+  });
+};
+
 export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const [moYuData, setMoYuData] = useState<MoYuTimeType>({
     startTime: moment('08:30', 'HH:mm'),
@@ -406,11 +480,16 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const handleUpload = async (file: RcFile) => {
     try {
       setUploading(true);
+      
+      // 检查文件大小，如果超过1MB则进行压缩
+      const needCompress = !checkFileSize(file);
+      const fileToUpload = needCompress ? await compressImage(file) : file;
+      
       const res = await uploadFileByMinioUsingPost(
-        { biz: 'user_avatar' },  // 参数
-        {},  // body 参数
-        file,  // 文件参数
-        {  // 其他选项
+        { biz: 'user_avatar' },
+        {},
+        fileToUpload,
+        {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
