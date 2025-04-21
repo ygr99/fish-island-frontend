@@ -5,6 +5,8 @@ let faviconInterval: number | null = null;
 let originalFavicon: string | null = null;
 let faviconElement: HTMLLinkElement | null = null;
 let isFlashing = false;
+// 添加消息闪烁开关，默认为关闭
+let isNotificationEnabled = false;
 
 // 初始化 favicon 元素
 const initFavicon = () => {
@@ -44,7 +46,7 @@ const createColoredFavicon = (color: string) => {
 
 // 开始标题闪烁
 export const startTitleFlash = (newMessage: string) => {
-  if (titleInterval) return;
+  if (titleInterval || !isNotificationEnabled) return;
 
   let isOriginal = true;
   titleInterval = window.setInterval(() => {
@@ -64,8 +66,10 @@ export const stopTitleFlash = () => {
 
 // 开始图标闪烁
 export const startIconFlash = () => {
+  if (!isNotificationEnabled) return null;
+  
   initFavicon();
-  if (!faviconElement) return;
+  if (!faviconElement) return null;
 
   const colors = ['#ff4d4f', '#1890ff']; // 红色和蓝色交替
   let colorIndex = 0;
@@ -95,7 +99,7 @@ export const stopIconFlash = (interval: number) => {
 
 // 处理页面可见性变化
 const handleVisibilityChange = () => {
-  if (document.hidden && isFlashing) {
+  if (document.hidden && isFlashing && isNotificationEnabled) {
     // 当页面隐藏时，触发任务栏闪动
     document.title = `【新消息】${originalTitle}`;
   } else if (!document.hidden) {
@@ -106,6 +110,8 @@ const handleVisibilityChange = () => {
 
 // 开始所有通知效果
 export const startNotification = (message: string) => {
+  if (!isNotificationEnabled) return null;
+  
   isFlashing = true;
   startTitleFlash(message);
   document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -118,4 +124,26 @@ export const stopNotification = (iconInterval: number) => {
   stopTitleFlash();
   stopIconFlash(iconInterval);
   document.removeEventListener('visibilitychange', handleVisibilityChange);
+};
+
+// 设置通知开关状态
+export const setNotificationEnabled = (enabled: boolean) => {
+  isNotificationEnabled = enabled;
+  
+  // 如果禁用通知，立即停止所有闪烁效果
+  if (!enabled) {
+    stopTitleFlash();
+    if (faviconInterval) {
+      stopIconFlash(faviconInterval);
+    }
+    document.title = originalTitle;
+    if (faviconElement && originalFavicon) {
+      faviconElement.href = originalFavicon;
+    }
+  }
+};
+
+// 获取通知开关状态
+export const getNotificationEnabled = () => {
+  return isNotificationEnabled;
 }; 

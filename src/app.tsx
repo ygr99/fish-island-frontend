@@ -13,6 +13,7 @@ import routes from '../config/routes';
 import GlobalTitle from '@/components/GlobalTitle';
 import {Board, Player, Position, Move, WinningLine} from '@/game';
 import {unregisterServiceWorker} from './utils/unregisterServiceWorker';
+import {setNotificationEnabled} from './utils/notification';
 
 const loginPath = '/user/login';
 
@@ -162,7 +163,7 @@ export async function getInitialState(): Promise<InitialState> {
   // 应用网站设置
   const savedSiteConfig = localStorage.getItem('siteConfig');
   if (savedSiteConfig) {
-    const {siteName, siteIcon} = JSON.parse(savedSiteConfig);
+    const {siteName, siteIcon, notificationEnabled} = JSON.parse(savedSiteConfig);
     // 更新所有图标相关的标签
     const iconTypes = ['icon', 'shortcut icon', 'apple-touch-icon'];
     iconTypes.forEach(type => {
@@ -181,6 +182,11 @@ export async function getInitialState(): Promise<InitialState> {
     document.title = siteName;
     // 更新默认设置中的标题
     defaultSettings.title = siteName;
+    
+    // 更新通知设置
+    if (notificationEnabled !== undefined) {
+      setNotificationEnabled(notificationEnabled);
+    }
   }
 
   // 检查当前路由是否需要登录验证

@@ -44,6 +44,7 @@ import './app.css';
 import {RcFile} from "antd/lib/upload";
 import COS from 'cos-js-sdk-v5';
 import LoginRegister from '../LoginRegister';
+import {getNotificationEnabled, setNotificationEnabled} from '@/utils/notification';
 lazy(() => import('@/components/MusicPlayer'));
 export type GlobalHeaderRightProps = {
   menu?: boolean;
@@ -240,14 +241,16 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     const savedConfig = localStorage.getItem('siteConfig');
     return savedConfig ? JSON.parse(savedConfig) : {
       siteName: '摸鱼岛',
-      siteIcon: 'https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png'
+      siteIcon: 'https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png',
+      notificationEnabled: true
     };
   });
 
   // 添加默认网站配置
   const defaultSiteConfig = {
     siteName: '摸鱼岛',
-    siteIcon: 'https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png'
+    siteIcon: 'https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png',
+    notificationEnabled: true
   };
 
   const [isMoneyVisible, setIsMoneyVisible] = useState(() => {
@@ -880,6 +883,17 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     }
   };
 
+  // 在组件加载时获取通知设置
+  useEffect(() => {
+    const savedConfig = localStorage.getItem('siteConfig');
+    if (savedConfig) {
+      const config = JSON.parse(savedConfig);
+      if (config.notificationEnabled !== undefined) {
+        setNotificationEnabled(config.notificationEnabled);
+      }
+    }
+  }, []);
+
   if (!currentUser) {
     return (
       <>
@@ -1482,6 +1496,9 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             setSiteConfig(values);
             localStorage.setItem('siteConfig', JSON.stringify(values));
             
+            // 更新通知设置
+            setNotificationEnabled(values.notificationEnabled);
+            
             // 更新所有图标相关的标签
             const iconTypes = ['icon', 'shortcut icon', 'apple-touch-icon'];
             iconTypes.forEach(type => {
@@ -1577,6 +1594,18 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             </div>
           </Form.Item>
 
+          <Form.Item
+            label="消息闪烁"
+            name="notificationEnabled"
+            valuePropName="checked"
+            help="关闭后，收到新消息时标题和图标不会闪烁"
+          >
+            <Switch
+              checkedChildren="开启"
+              unCheckedChildren="关闭"
+            />
+          </Form.Item>
+
           <Form.Item>
             <Space>
               <Button type="primary" htmlType="submit">
@@ -1591,6 +1620,9 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                   siteConfigForm.setFieldsValue(defaultSiteConfig);
                   setSiteConfig(defaultSiteConfig);
                   localStorage.setItem('siteConfig', JSON.stringify(defaultSiteConfig));
+                  
+                  // 更新通知设置
+                  setNotificationEnabled(defaultSiteConfig.notificationEnabled);
 
                   // 更新所有图标相关的标签
                   const iconTypes = ['icon', 'shortcut icon', 'apple-touch-icon'];
