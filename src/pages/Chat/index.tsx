@@ -94,6 +94,12 @@ const ChatRoom: React.FC = () => {
 
   const inputRef = useRef<any>(null);  // 添加输入框的ref
 
+  const [isMentionListVisible, setIsMentionListVisible] = useState(false);
+  const [mentionListPosition, setMentionListPosition] = useState({ top: 0, left: 0 });
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [mentionSearchText, setMentionSearchText] = useState('');
+  const mentionListRef = useRef<HTMLDivElement>(null);
+
   // 修改 getIpInfo 函数
   const getIpInfo = async () => {
     try {
@@ -713,20 +719,74 @@ const ChatRoom: React.FC = () => {
     messageApi.info('消息已撤回');
   };
 
-  // 修改handleMentionUser函数
-  const handleMentionUser = (user: User) => {
-    const mentionText = `@${user.name} `;
-    setInputValue(prev => {
-      // 如果当前输入框已经有这个@，就不重复添加
-      if (prev.includes(mentionText)) {
-        return prev;
+  // 处理@输入
+  const handleMentionInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setInputValue(value);
+    
+    // 检查是否输入了@
+    const lastAtPos = value.lastIndexOf('@');
+    if (lastAtPos !== -1) {
+      const searchText = value.slice(lastAtPos + 1);
+      setMentionSearchText(searchText);
+      
+      // 过滤在线用户，添加安全检查
+      const filtered = onlineUsers.filter(user => {
+        if (!user || !user.name) return false;
+        return user.name.toLowerCase().includes(searchText.toLowerCase());
+      });
+      setFilteredUsers(filtered);
+      
+      // 获取输入框位置
+      const textarea = e.target;
+      const rect = textarea.getBoundingClientRect();
+      const cursorPos = textarea.selectionStart;
+      const lineHeight = parseInt(getComputedStyle(textarea).lineHeight);
+      const lines = value.slice(0, cursorPos).split('\n');
+      const currentLine = lines[lines.length - 1];
+      const currentLinePos = currentLine.length;
+      
+      // 根据过滤结果数量调整位置
+      const itemHeight = 40; // 每个选项的高度
+      const maxItems = 3; // 最多显示3条数据时紧贴显示
+      const listHeight = Math.min(filtered.length, maxItems) * itemHeight;
+      const topOffset = filtered.length <= maxItems ? -listHeight : -200; // 数据较少时紧贴输入框
+      
+      setMentionListPosition({
+        top: rect.top + topOffset,
+        left: rect.left + (currentLinePos * 8) // 8是字符的近似宽度
+      });
+      
+      setIsMentionListVisible(true);
+    } else {
+      setIsMentionListVisible(false);
+    }
+  };
+
+  // 点击空白处隐藏成员列表
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (mentionListRef.current && !mentionListRef.current.contains(event.target as Node)) {
+        setIsMentionListVisible(false);
       }
-      return prev + mentionText;
-    });
-    // 让输入框获得焦点
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 0);
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // 选择@成员
+  const handleSelectMention = (user: User) => {
+    const value = inputValue;
+    const lastAtPos = value.lastIndexOf('@');
+    if (lastAtPos !== -1) {
+      const newValue = value.slice(0, lastAtPos) + `@${user.name} ` + value.slice(lastAtPos + mentionSearchText.length + 1);
+      setInputValue(newValue);
+      setIsMentionListVisible(false);
+      setMentionSearchText('');
+    }
   };
 
   const UserInfoCard: React.FC<{ user: User }> = ({user}) => {
@@ -737,7 +797,7 @@ const ChatRoom: React.FC = () => {
             className={styles.avatarWrapper}
             onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
-              handleMentionUser(user);
+              handleSelectMention(user);
             }}
           >
             <div className={styles.avatarWithFrame}>
@@ -1042,7 +1102,7 @@ const ChatRoom: React.FC = () => {
             <div className={styles.messageHeader}>
               <div
                 className={styles.avatar}
-                onClick={() => handleMentionUser(msg.sender)}
+                onClick={() => handleSelectMention(msg.sender)}
                 style={{cursor: 'pointer'}}
               >
                 <Popover
@@ -1130,7 +1190,7 @@ const ChatRoom: React.FC = () => {
             <div
               key={user.id}
               className={styles.userItem}
-              onClick={() => handleMentionUser(user)}
+              onClick={() => handleSelectMention(user)}
               style={{cursor: 'pointer'}}
             >
               <div className={styles.avatarWrapper}>
@@ -1255,15 +1315,14 @@ const ChatRoom: React.FC = () => {
           <Input.TextArea
             ref={inputRef}
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={handleMentionInput}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                // 检查是否是输入法组合键
                 if (e.nativeEvent.isComposing) {
                   return;
                 }
                 if (!e.shiftKey) {
-                  e.preventDefault(); // 阻止默认的换行行为
+                  e.preventDefault();
                   handleSend();
                 }
               }
@@ -1275,6 +1334,29 @@ const ChatRoom: React.FC = () => {
             autoSize={{ minRows: 1, maxRows: 4 }}
             className={styles.chatTextArea}
           />
+          {isMentionListVisible && filteredUsers.length > 0 && (
+            <div 
+              ref={mentionListRef}
+              className={styles.mentionList}
+              style={{
+                position: 'fixed',
+                top: mentionListPosition.top,
+                left: mentionListPosition.left,
+                zIndex: 1000
+              }}
+            >
+              {filteredUsers.map(user => (
+                <div
+                  key={user.id}
+                  className={styles.mentionItem}
+                  onClick={() => handleSelectMention(user)}
+                >
+                  <Avatar src={user.avatar} size={24} />
+                  <span className={styles.mentionName}>{user.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <span className={styles.inputCounter}>
             {inputValue.length}/200
           </span>
