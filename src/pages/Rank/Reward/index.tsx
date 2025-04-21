@@ -84,7 +84,6 @@ export default function DonationLeaderboard() {
           <Title level={2} className="header-title">
             <TrophyOutlined className="header-icon" />
             打赏榜
-            <TrophyOutlined className="header-icon" />
           </Title>
           <Button
             type="primary"
