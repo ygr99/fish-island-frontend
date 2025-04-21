@@ -115,6 +115,9 @@ function App() {
   // 添加一个标志位，用于跟踪是否已经完成了初始化
   const wsInitialized = useRef<boolean>(false);
 
+  // App组件中的状态定义部分添加新的状态变量
+  const [forceBoardFlip, setForceBoardFlip] = useState<boolean>(false);
+
   // 同步更新ref中的棋盘状态
   useEffect(() => {
     boardRef.current = board;
@@ -1904,6 +1907,11 @@ function App() {
     );
   }
 
+  // 添加一个切换棋盘方向的函数
+  const toggleBoardDirection = () => {
+    setForceBoardFlip(!forceBoardFlip);
+  };
+
   return (
     <div className="min-h-screen bg-indigo-50">
       <div className="container mx-auto px-4 py-8">
@@ -2100,24 +2108,38 @@ function App() {
                     {gameMode === 'single' && (
                       <div className="flex items-center gap-2">
                         <span className="w-5 h-5 flex items-center justify-center">🧠</span>
-                        <span>AI 难度: 高级</span>
+                        <span>AI 难度: 小学生</span>
                       </div>
                     )}
                   </div>
                 </div>
               )}
 
-              <div className="flex justify-center">
-                <ChessBoard
-                  board={board}
-                  onPieceSelect={handlePieceSelect}
-                  onMoveSelect={handleMoveSelect}
-                  selectedPosition={selectedPosition}
-                  validMoves={validMoves}
-                  lastMove={lastMove}
-                  checkPosition={checkPosition}
-                  disabled={isThinking || (currentPlayer !== playerColor) || !!winInfo}
-                />
+              <div className="flex flex-col items-center w-full">
+                <div className="flex justify-center w-full">
+                  <ChessBoard
+                    board={board}
+                    onPieceSelect={handlePieceSelect}
+                    onMoveSelect={handleMoveSelect}
+                    selectedPosition={selectedPosition}
+                    validMoves={validMoves}
+                    lastMove={lastMove}
+                    checkPosition={checkPosition}
+                    disabled={isThinking || (currentPlayer !== playerColor) || !!winInfo}
+                    isFlipped={playerColor === 'black' ? !forceBoardFlip : forceBoardFlip} // 根据玩家颜色和手动翻转设置决定是否翻转棋盘
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleBoardDirection}
+                  className="mt-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 16H15V10H21L12 2L3 10H9V16Z" fill="currentColor"/>
+                    <path d="M15 8H9V14H3L12 22L21 14H15V8Z" fill="currentColor" fillOpacity="0.3"/>
+                  </svg>
+                  <span className="font-medium">切换棋盘方向</span>
+                </button>
               </div>
 
               {/* 吃子特效 */}

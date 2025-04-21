@@ -413,7 +413,7 @@ export function findGeneral(board: Board, player: Player): Position | null {
 export function isInCheck(
   board: Board,
   player: Player,
-  silent: boolean = false // 添加silent参数
+  silent: boolean = true // 添加silent参数
 ): CheckStatus {
   // 使用全局静默模式或传入的silent参数
   const isSilent = GLOBAL_SILENT_MODE || silent;
@@ -589,13 +589,14 @@ export function getAIMove(board: Board, player: Player): { from: Position, to: P
                 return { from: fromPos, to: toPos };
               }
 
-              // 使用简单评估进行浅层搜索，减少计算量
-              const score = minimax(newBoard, 1, false, -Infinity, Infinity, player, opponent);
+              // 提高搜索深度到3，使AI能够考虑更远的后果
+              const score = minimax(newBoard, 3, false, -Infinity, Infinity, player, opponent);
 
               possibleMoves.push({ from: fromPos, to: toPos, score });
 
-              // 如果已经检查了超过100个走法且已运行超过1秒，提前停止
-              if (movesChecked > 100 && (Date.now() - startTime) > 1000) {
+              // 如果已经检查了超过150个走法且已运行超过1.5秒，提前停止
+              // 增加计算量确保选出更好的走法
+              if (movesChecked > 150 && (Date.now() - startTime) > 1500) {
                 console.log(`AI搜索提前停止: 已检查${movesChecked}个走法，耗时${Date.now() - startTime}ms`);
                 break;
               }
@@ -625,15 +626,15 @@ export function getAIMove(board: Board, player: Player): { from: Position, to: P
       });
     }
 
-    // 选择最佳走法，但有小概率选择次优走法以增加变化
+    // 选择最佳走法，高级AI应该总是选择最佳走法
     if (possibleMoves.length > 0) {
-      // 高级AI主要选择最佳走法，仅有小概率选择次优走法
+      // 高级AI不应随机选择次优走法，减少随机性提高棋力
       const randomFactor = Math.random();
-      if (randomFactor > 0.9 && possibleMoves.length > 1) {
-        // 10%的概率选择第二好的走法
+      if (randomFactor > 0.95 && possibleMoves.length > 1) {
+        // 仅5%的概率选择第二好的走法，保持一定的不可预测性
         return possibleMoves[1];
       } else {
-        // 90%的概率选择最佳走法
+        // 95%的概率选择最佳走法
         return possibleMoves[0];
       }
     }
@@ -664,6 +665,15 @@ function minimax(board: Board, depth: number, isMaximizing: boolean, alpha: numb
   // 达到搜索深度或游戏结束，评估当前局面
   if (depth === 0) {
     return evaluateBoard(board, currentPlayer, opponent);
+  }
+
+  // 检查终局条件
+  if (isCheckmate(board, opponent)) {
+    return 100000 + depth * 1000; // 尽快获胜，加上深度因子
+  }
+
+  if (isCheckmate(board, currentPlayer)) {
+    return -100000 - depth * 1000; // 尽量避免被将死，减去深度因子
   }
 
   // 为了提高性能，仅考虑最重要的一些移动
@@ -699,8 +709,9 @@ function minimax(board: Board, depth: number, isMaximizing: boolean, alpha: numb
   // 对移动进行排序，优先考虑更有希望的移动
   allMoves.sort((a, b) => isMaximizing ? b.score - a.score : a.score - b.score);
 
-  // 只考虑前10个最有希望的移动，以提高性能
-  const movesToConsider = allMoves.slice(0, Math.min(10, allMoves.length));
+  // 只考虑前15个最有希望的移动，以提高性能
+  // 增加考虑的移动数量提高棋力
+  const movesToConsider = allMoves.slice(0, Math.min(15, allMoves.length));
 
   if (isMaximizing) {
     // AI回合，寻找最大分数
@@ -751,17 +762,17 @@ function minimax(board: Board, depth: number, isMaximizing: boolean, alpha: numb
   }
 }
 
-// 快速评估棋盘，用于移动排序
+// 快速评估函数 - 增强版
 function quickEvaluate(board: Board, piece: Piece, movePos: Position, player: Player, opponent: Player, isMaximizing: boolean): number {
-  // 棋子价值表
+  // 棋子价值表 - 调整价值以反映高级象棋认知
   const pieceValues: Record<PieceType, number> = {
     'general': 10000,
     'advisor': 200,
     'elephant': 250,
-    'horse': 500,
-    'chariot': 900,
-    'cannon': 450,
-    'soldier': 100
+    'horse': 550,  // 提高马的价值
+    'chariot': 950, // 提高车的价值
+    'cannon': 500,  // 提高炮的价值
+    'soldier': 120   // 提高兵的价值
   };
 
   let score = 0;
@@ -769,7 +780,7 @@ function quickEvaluate(board: Board, piece: Piece, movePos: Position, player: Pl
   // 1. 如果能吃子，加分
   const targetPiece = board[movePos.row][movePos.col];
   if (targetPiece) {
-    score += pieceValues[targetPiece.type];
+    score += pieceValues[targetPiece.type] * 1.2; // 提高吃子价值
 
     // 如果能吃将/帅，给极高分数
     if (targetPiece.type === 'general') {
@@ -782,15 +793,46 @@ function quickEvaluate(board: Board, piece: Piece, movePos: Position, player: Pl
     const hasCrossedRiver = (piece.player === 'red' && movePos.row < 5) ||
                           (piece.player === 'black' && movePos.row > 4);
     if (hasCrossedRiver) {
-      score += 50;
+      score += 70; // 提高过河兵价值
     }
   }
 
-  // 3. 如果是车/马/炮控制中心，加分
+  // 3. 控制中心点和要道
   if (['chariot', 'horse', 'cannon'].includes(piece.type)) {
     // 估计中心控制
     const centerScore = 8 - Math.abs(movePos.col - 4) - Math.abs(movePos.row - 4.5);
-    score += centerScore * 5;
+    score += centerScore * 8; // 提高中心控制价值
+
+    // 额外考虑控制要道
+    if (movePos.col === 4) {
+      score += 20; // 控制中路要道
+    }
+  }
+
+  // 4. 增加马、车、炮的机动性奖励
+  if (piece.type === 'horse') {
+    // 马靠近中心更灵活
+    const mobilityBonus = 6 - (Math.abs(movePos.col - 4) + Math.abs(movePos.row - 4.5)) / 2;
+    score += mobilityBonus * 10;
+  } else if (piece.type === 'chariot') {
+    // 车在开阔位置更有价值
+    score += countOpenLines(board, movePos) * 15;
+  } else if (piece.type === 'cannon') {
+    // 炮有潜在的炮架更有价值
+    let potentialPawnCount = 0;
+    // 检查横向和纵向的潜在炮架
+    for (let r = 0; r < BOARD_ROWS; r++) {
+      if (board[r][movePos.col] !== null) potentialPawnCount++;
+    }
+    for (let c = 0; c < BOARD_COLS; c++) {
+      if (board[movePos.row][c] !== null) potentialPawnCount++;
+    }
+    score += potentialPawnCount * 5;
+  }
+
+  // 5. 考虑安全性
+  if (isPieceEndangered(board, movePos, piece.player)) {
+    score -= pieceValues[piece.type] / 2; // 如果棋子处于危险中，减分
   }
 
   return isMaximizing ? score : -score;
@@ -1105,7 +1147,7 @@ function evaluateMove(board: Board, fromPos: Position, toPos: Position, player: 
   return evaluateBoard(newBoard, player, opponent);
 }
 
-// 评估整个棋盘的分数
+// 评估整个棋盘的分数 - 增强版
 function evaluateBoard(board: Board, player: Player, opponent: Player): number {
   let score = 0;
 
@@ -1126,15 +1168,15 @@ function evaluateBoard(board: Board, player: Player, opponent: Player): number {
   // 基础分 - 棋子价值
   const pieceValues: Record<PieceType, number> = {
     'general': 10000,  // 将/帅
-    'advisor': 200,    // 士/仕
-    'elephant': 250,   // 象/相
-    'horse': 500,      // 马
-    'chariot': 900,    // 车
-    'cannon': 450,     // 炮
-    'soldier': 100     // 兵/卒
+    'advisor': 220,    // 士/仕 - 提高价值
+    'elephant': 270,   // 象/相 - 提高价值
+    'horse': 600,      // 马 - 显著提高价值
+    'chariot': 1000,   // 车 - 显著提高价值
+    'cannon': 550,     // 炮 - 提高价值
+    'soldier': 130     // 兵/卒 - 提高价值
   };
 
-  // 针对不同阶段的棋子价值调整
+  // 针对不同阶段的棋子价值调整 - 增强版
   const positionValues: Record<PieceType, number[][]> = {
     'chariot': [
       [14, 14, 12, 18, 16, 18, 12, 14, 14],
@@ -1172,11 +1214,54 @@ function evaluateBoard(board: Board, player: Player, opponent: Player): number {
       [0, 0, 0, 0, 0, 0, 0, 0, 0],
       [0, 0, 0, 0, 0, 0, 0, 0, 0]
     ],
-    // 其他棋子可以根据需要添加
-    'general': Array(10).fill(Array(9).fill(0)),
-    'advisor': Array(10).fill(Array(9).fill(0)),
-    'elephant': Array(10).fill(Array(9).fill(0)),
-    'cannon': Array(10).fill(Array(9).fill(0))
+    'cannon': [
+      [6, 4, 0, -10, -12, -10, 0, 4, 6],
+      [2, 2, 0, -4, -14, -4, 0, 2, 2],
+      [2, 2, 0, -10, -8, -10, 0, 2, 2],
+      [0, 0, -2, 4, 10, 4, -2, 0, 0],
+      [0, 0, 0, 2, 8, 2, 0, 0, 0],
+      [-2, 0, 4, 2, 6, 2, 4, 0, -2],
+      [0, 0, 0, 2, 4, 2, 0, 0, 0],
+      [4, 0, 8, 6, 10, 6, 8, 0, 4],
+      [0, 2, 4, 6, 6, 6, 4, 2, 0],
+      [0, 0, 2, 6, 6, 6, 2, 0, 0]
+    ],
+    'advisor': [
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 20, 0, 20, 0, 0, 0],
+      [0, 0, 0, 0, 23, 0, 0, 0, 0],
+      [0, 0, 0, 20, 0, 20, 0, 0, 0]
+    ],
+    'elephant': [
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 20, 0, 0, 0, 20, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [18, 0, 0, 0, 25, 0, 0, 0, 18],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 20, 0, 0, 0, 20, 0, 0]
+    ],
+    'general': [
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 1, 3, 1, 0, 0, 0],
+      [0, 0, 0, 2, 8, 2, 0, 0, 0],
+      [0, 0, 0, 1, 3, 1, 0, 0, 0]
+    ]
   };
 
   // 计算总物质分数和位置分数
@@ -1205,18 +1290,47 @@ function evaluateBoard(board: Board, player: Player, opponent: Player): number {
 
           // 额外评估棋子的活动空间和威胁
           if (piece.type === 'chariot' || piece.type === 'horse' || piece.type === 'cannon') {
-            const mobilityScore = countOpenLines(board, { row, col }) * 10;
+            const mobilityScore = countOpenLines(board, { row, col }) * 15;
             score += mobilityScore;
 
-            const threatScore = countThreatenedPieces(board, { row, col }, player) * 15;
+            const threatScore = countThreatenedPieces(board, { row, col }, player) * 25;
             score += threatScore;
+
+            // 额外考虑棋子的保护
+            const protectionScore = countProtectedPieces(board, { row, col }, player) * 10;
+            score += protectionScore;
           }
 
-          // 如果是兵/卒，鼓励过河
+          // 如果是兵/卒，鼓励过河和接近底线
           if (piece.type === 'soldier') {
             const hasCrossedRiver = (player === 'red' && row < 5) || (player === 'black' && row > 4);
             if (hasCrossedRiver) {
-              score += 50;
+              score += 70;
+
+              // 接近底线额外加分
+              if (player === 'red') {
+                score += (5 - row) * 15; // 越接近底线(0)加分越多
+              } else {
+                score += row * 15; // 越接近底线(9)加分越多
+              }
+            }
+
+            // 横向延伸的兵更有威胁，加分鼓励横向发展
+            const adjacentCols = [col-1, col+1];
+            for (const c of adjacentCols) {
+              if (c >= 0 && c < BOARD_COLS) {
+                const adjacentPiece = board[row][c];
+                if (adjacentPiece && adjacentPiece.type === 'soldier' && adjacentPiece.player === player) {
+                  score += 20; // 横向连兵加分
+                }
+              }
+            }
+          }
+
+          // 士象在九宫中更有价值
+          if (piece.type === 'advisor' || piece.type === 'elephant') {
+            if (isInPalace({ row, col }, player)) {
+              score += 30;
             }
           }
         } else {
@@ -1224,7 +1338,18 @@ function evaluateBoard(board: Board, player: Player, opponent: Player): number {
 
           // 考虑是否威胁对方重要棋子
           if (isPieceEndangered(board, { row, col }, opponent)) {
-            score += materialValue / 2; // 威胁对方棋子加分
+            score += materialValue / 1.8; // 威胁对方棋子加分，但减少比例避免过度冒险
+          }
+
+          // 考虑对方棋子的控制力
+          if (piece.type === 'chariot' || piece.type === 'horse' || piece.type === 'cannon') {
+            const opponentMobilityScore = countOpenLines(board, { row, col }) * 12;
+            score -= opponentMobilityScore;
+
+            // 如果对方大子没有保护，更容易被吃
+            if (countProtectedPieces(board, { row, col }, opponent) === 0) {
+              score += 40;
+            }
           }
         }
       }
@@ -1233,15 +1358,78 @@ function evaluateBoard(board: Board, player: Player, opponent: Player): number {
 
   // 将军加分
   if (opponentInCheck.inCheck) {
-    score += 300;
+    score += 350;
+
+    // 多子将军威力更大
+    if (opponentInCheck.checkedBy && opponentInCheck.checkedBy.length > 1) {
+      score += 150 * opponentInCheck.checkedBy.length;
+    }
   }
 
   // 被将军减分
   if (playerInCheck.inCheck) {
-    score -= 250;
+    score -= 300;
+
+    // 多子将军危险更大
+    if (playerInCheck.checkedBy && playerInCheck.checkedBy.length > 1) {
+      score -= 150 * playerInCheck.checkedBy.length;
+    }
   }
 
+  // 棋子协同作战加分
+  score += evaluateCoordination(board, player) * 30;
+  score -= evaluateCoordination(board, opponent) * 25;
+
   return score;
+}
+
+// 评估棋子协同作战能力 - 新增函数
+function evaluateCoordination(board: Board, player: Player): number {
+  let coordinationScore = 0;
+
+  // 检查车马炮的协同
+  const majorPieces: { piece: Piece, pos: Position }[] = [];
+
+  // 收集所有大子
+  for (let row = 0; row < BOARD_ROWS; row++) {
+    for (let col = 0; col < BOARD_COLS; col++) {
+      const piece = board[row][col];
+      if (piece && piece.player === player &&
+          (piece.type === 'chariot' || piece.type === 'horse' || piece.type === 'cannon')) {
+        majorPieces.push({ piece, pos: { row, col } });
+      }
+    }
+  }
+
+  // 评估大子之间的协同
+  for (let i = 0; i < majorPieces.length; i++) {
+    for (let j = i + 1; j < majorPieces.length; j++) {
+      const p1 = majorPieces[i];
+      const p2 = majorPieces[j];
+
+      // 计算两个棋子之间的曼哈顿距离
+      const distance = Math.abs(p1.pos.row - p2.pos.row) + Math.abs(p1.pos.col - p2.pos.col);
+
+      // 距离适中的大子协同作战能力更强
+      if (distance >= 2 && distance <= 5) {
+        coordinationScore++;
+
+        // 车马组合特别强大
+        if ((p1.piece.type === 'chariot' && p2.piece.type === 'horse') ||
+            (p1.piece.type === 'horse' && p2.piece.type === 'chariot')) {
+          coordinationScore += 2;
+        }
+
+        // 车炮组合也很强大
+        if ((p1.piece.type === 'chariot' && p2.piece.type === 'cannon') ||
+            (p1.piece.type === 'cannon' && p2.piece.type === 'chariot')) {
+          coordinationScore += 1;
+        }
+      }
+    }
+  }
+
+  return coordinationScore;
 }
 
 // 添加一个包装函数，完全禁用AI思考过程的日志
