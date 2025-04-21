@@ -782,11 +782,21 @@ const ChatRoom: React.FC = () => {
     const value = inputValue;
     const lastAtPos = value.lastIndexOf('@');
     if (lastAtPos !== -1) {
+      // 如果已经输入了@，则替换当前@后面的内容
       const newValue = value.slice(0, lastAtPos) + `@${user.name} ` + value.slice(lastAtPos + mentionSearchText.length + 1);
       setInputValue(newValue);
-      setIsMentionListVisible(false);
-      setMentionSearchText('');
+    } else {
+      // 如果没有输入@，则在当前光标位置插入@用户名
+      const cursorPos = inputRef.current?.selectionStart || 0;
+      const newValue = value.slice(0, cursorPos) + `@${user.name} ` + value.slice(cursorPos);
+      setInputValue(newValue);
     }
+    setIsMentionListVisible(false);
+    setMentionSearchText('');
+    // 让输入框获得焦点
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
   };
 
   const UserInfoCard: React.FC<{ user: User }> = ({user}) => {
