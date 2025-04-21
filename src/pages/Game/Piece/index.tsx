@@ -466,7 +466,7 @@ function App() {
         content: {
           message: {
             id: `${Date.now()}`,
-            content: `[invite]${roomId}[/invite]`,
+            content: `[invite/chess]${roomId}[/invite]`,
             sender: {
               id: String(currentUser.id),
               name: currentUser.userName || '游客',
@@ -673,8 +673,8 @@ function App() {
                       {/* 对手信息 */}
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full overflow-hidden">
-                          <img 
-                            src={opponentInfo?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${opponentUserId || 'opponent'}`} 
+                          <img
+                            src={opponentInfo?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${opponentUserId || 'opponent'}`}
                             alt="对手头像"
                             className="w-full h-full object-cover"
                           />
@@ -701,8 +701,8 @@ function App() {
                           </div>
                         </div>
                         <div className="w-8 h-8 rounded-full overflow-hidden">
-                          <img 
-                            src={currentUser?.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.id || 'visitor'}`} 
+                          <img
+                            src={currentUser?.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.id || 'visitor'}`}
                             alt="玩家头像"
                             className="w-full h-full object-cover"
                           />
