@@ -8,12 +8,30 @@ const { Title, Text } = Typography
 // 模拟数据
 const initialDonors = [
   {
-    id: 1,
+    id: 1909418438377443329,
     name: "群主的小老弟在线炒粉",
     amount: 50,
     avatar: "https://api.oss.cqbo.com/moyu/user_avatar/1909418438377443329/z1yXHzI4-322084_2.webp",
     avatarFramerUrl: "https://api.oss.cqbo.com/moyu/avatar_frame/头像框 (588)_爱给网_aigei_com.png",
     message: "支持下，这开源项目还是不错的",
+    emoji: "🚀",
+  },
+  {
+    id: 1897542410243772418,
+    name: "99",
+    amount: 9.9,
+    avatar: "https://api.oss.cqbo.com/moyu/user_avatar/1897542410243772418/F1gbEOP3-aLSLb72YT0WNvqy.thumb.1000_0.gif",
+    avatarFramerUrl: "https://api.oss.cqbo.com/moyu/avatar_frame/头像框 (188)_爱给网_aigei_com.png",
+    message: "赶紧修bug，money少不了你的",
+    emoji: "🚀",
+  },
+  {
+    id: 1910613642551857153,
+    name: "突突突",
+    amount: 1.1,
+    avatar: "https://api.oss.cqbo.com/moyu/user_avatar/1910613642551857153/eoTGZt3s-ada08f3b61323d55c13d0eb0db0edd88.gif",
+    avatarFramerUrl: "",
+    message: "全给群主了",
     emoji: "🚀",
   }
 ]
@@ -68,9 +86,9 @@ export default function DonationLeaderboard() {
             打赏榜
             <TrophyOutlined className="header-icon" />
           </Title>
-          <Button 
-            type="primary" 
-            icon={<GiftOutlined />} 
+          <Button
+            type="primary"
+            icon={<GiftOutlined />}
             size="large"
             onClick={() => setIsModalVisible(true)}
           >
@@ -115,9 +133,9 @@ export default function DonationLeaderboard() {
         width={400}
       >
         <div style={{ textAlign: 'center' }}>
-          <img 
-            src="/img/391745205618_.pic.jpg" 
-            alt="打赏二维码" 
+          <img
+            src="/img/391745205618_.pic.jpg"
+            alt="打赏二维码"
             style={{ width: '100%', maxWidth: 300 }}
           />
           <p style={{ marginTop: 16, color: '#666' }}>感谢您的支持！</p>
