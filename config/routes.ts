@@ -36,11 +36,13 @@ export default [
   },
   { icon: 'PictureOutlined', path: '/avatarFrames', component: './Utils/AvatarFrames', name: '头像框兑换', requireAuth: true },
   {
-    path: '/github',
+    path: '/rank',
     icon: 'github',
     name: '支持网站',
     routes: [
       {path: 'https://github.com/lhccong/fish-island-backend', name: '狠狠点个 star 🌟'},
+      { icon: 'DesktopOutlined', path: '/rank/reward', component: './Rank/Reward', name: '打赏榜', requireAuth: false },
+
     ],
   },
   {
