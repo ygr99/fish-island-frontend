@@ -34,6 +34,7 @@ export default [
       { icon: 'DesktopOutlined', path: '/utils/compare', component: './Utils/Compare', name: '文本比对', requireAuth: false },
       { icon: 'TranslationOutlined', path: '/utils/translation', component: './Utils/Translation', name: '聚合翻译', requireAuth: false },
       { icon: 'GithubOutlined', path: '/utils/gitcommit', component: './Utils/GitCommit', name: 'Git提交内容生成', requireAuth: false },
+      { icon: 'RobotOutlined', path: '/utils/aiagent', component: './Utils/AIAgent', name: 'AI智能体', requireAuth: false },
     ],
   },
   { icon: 'PictureOutlined', path: '/avatarFrames', component: './Utils/AvatarFrames', name: '头像框兑换', requireAuth: true },
