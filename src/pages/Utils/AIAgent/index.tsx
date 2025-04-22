@@ -589,6 +589,17 @@ const AIAgent: React.FC = () => {
                 onClick={handleSendMessage}
                 disabled={!inputText.trim() || loading}
                 className="send-button"
+                style={{ 
+                  flexShrink: 0,
+                  borderRadius: '50%',
+                  width: '40px',
+                  height: '40px',
+                  minWidth: '40px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 0
+                }}
               />
             </div>
             <Text type="secondary" className="input-hint">
