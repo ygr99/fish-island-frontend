@@ -182,7 +182,7 @@ export async function getInitialState(): Promise<InitialState> {
     } catch (error: any) {
       // 如果未登录且需要登录验证，跳转到登录页
       if (location.pathname !== loginPath) {
-        history.push(loginPath);
+
       }
     }
   }
