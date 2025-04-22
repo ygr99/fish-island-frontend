@@ -260,8 +260,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
 
   const [holidayInfo, setHolidayInfo] = useState<{
     date: string;
-    days: number;
-    holiday: boolean;
     name: string;
   } | null>(null);
 
@@ -282,10 +280,23 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   // 获取假期信息
   const fetchHolidayInfo = async () => {
     try {
-      const response = await fetch('https://moyuapi.codebug.icu/holiday/next');
+      const response = await fetch('/data/2025-holiday.json');
       const data = await response.json();
-      if (data.code === 200) {
-        setHolidayInfo(data.data);
+      
+      // 获取当前日期
+      const now = moment();
+      
+      // 找到下一个假期
+      const nextHoliday = data.days.find((day: any) => {
+        const holidayDate = moment(day.date);
+        return day.isOffDay && holidayDate.isAfter(now);
+      });
+
+      if (nextHoliday) {
+        setHolidayInfo({
+          date: nextHoliday.date,
+          name: nextHoliday.name
+        });
       }
     } catch (error) {
       console.error('获取假期信息失败:', error);

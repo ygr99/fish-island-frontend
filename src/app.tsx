@@ -34,21 +34,6 @@ const listenRouteChange = () => {
     const pathname = location.pathname;
     let title = getSiteName();
 
-    // 根据路由设置不同的标题
-    if (pathname === '/index') {
-      title = '首页 - ' + title;
-    } else if (pathname === '/todo') {
-      title = '每日待办 - ' + title;
-    } else if (pathname === '/chat') {
-      title = '摸鱼室 - ' + title;
-    } else if (pathname.startsWith('/game')) {
-      title = '小游戏 - ' + title;
-    } else if (pathname.startsWith('/utils')) {
-      title = '工具箱 - ' + title;
-    } else if (pathname.startsWith('/admin')) {
-      title = '管理页 - ' + title;
-    }
-
     document.title = title;
 
     // 更新 meta 描述
@@ -153,7 +138,7 @@ interface InitialState {
 export async function getInitialState(): Promise<InitialState> {
   // 注销 Service Worker
   await unregisterServiceWorker();
-  
+
   const initialState: InitialState = {
     currentUser: undefined,
     gameState: undefined,
@@ -170,19 +155,19 @@ export async function getInitialState(): Promise<InitialState> {
       // 移除所有现有的图标标签
       const existingLinks = document.querySelectorAll(`link[rel="${type}"]`);
       existingLinks.forEach(link => link.remove());
-      
+
       // 创建新的图标标签
       const newLink = document.createElement('link');
       newLink.rel = type;
       newLink.href = siteIcon;
       document.head.appendChild(newLink);
     });
-    
+
     // 更新网站标题
     document.title = siteName;
     // 更新默认设置中的标题
     defaultSettings.title = siteName;
-    
+
     // 更新通知设置
     if (notificationEnabled !== undefined) {
       setNotificationEnabled(notificationEnabled);
@@ -272,8 +257,8 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
               alignItems: 'center',
               backgroundColor: '#ffffff'
             }}>
-              <img 
-                src="https://www.baidu.com/img/flexible/logo/pc/result.png" 
+              <img
+                src="https://www.baidu.com/img/flexible/logo/pc/result.png"
                 alt="百度搜索"
                 style={{width: '270px', marginBottom: '20px'}}
               />
