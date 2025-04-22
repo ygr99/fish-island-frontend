@@ -1,0 +1,64 @@
+/* Git提交内容生成工具样式 */
+.git-commit-card {
+  margin-bottom: 16px;
+}
+
+.git-commit-title {
+  margin-bottom: 8px;
+}
+
+.git-commit-result {
+  margin: 16px 0;
+}
+
+.git-commit-action-btn {
+  margin-right: 8px;
+}
+
+.emoji-search-input {
+  margin-bottom: 8px;
+}
+
+.history-item {
+  cursor: pointer;
+}
+
+.history-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* 预览样式 */
+.preview-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 16px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+/* 表单样式 */
+.git-commit-form .ant-form-item {
+  margin-bottom: 12px;
+}
+
+/* 自定义样式 */
+.custom-content .ant-tabs-content {
+  padding-top: 8px;
+}
+
+/* 帮助内容样式 */
+.help-content pre {
+  margin: 8px 0;
+}
+
+.help-content h4 {
+  margin-top: 16px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .git-commit-card .ant-form-inline .ant-form-item {
+    margin-right: 0;
+    margin-bottom: 8px;
+  }
+} 
