@@ -50,11 +50,11 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const hasFetchedFavorites = useRef(false);
   // URL匹配正则表达式
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const urlRegex = new RegExp('(https?://[^\\s]+)', 'g');
   // 图片标签匹配正则表达式
-  const imgRegex = /\[img\](.*?)\[\/img\]/g;
+  const imgRegex = new RegExp('\\[img\\](.*?)\\[/img\\]', 'g');
   // 文件标签匹配正则表达式
-  const fileRegex = /\[file\](.*?)\[\/file\]/g;
+  const fileRegex = new RegExp('\\[file\\](.*?)\\[/file\\]', 'g');
 
   // 获取收藏的表情包
   const fetchFavoriteEmoticons = async () => {
