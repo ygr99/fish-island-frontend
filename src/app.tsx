@@ -325,11 +325,11 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
           <GlobalTitle/>
           {children}
           <SideAnnouncement/>
-          <AnnouncementModal
-            visible={showAnnouncement}
-            onClose={() => setShowAnnouncement(false)}
-            title="系统公告"
-          />
+          {/*<AnnouncementModal*/}
+          {/*  visible={showAnnouncement}*/}
+          {/*  onClose={() => setShowAnnouncement(false)}*/}
+          {/*  title="系统公告"*/}
+          {/*/>*/}
         </>
       );
     },
