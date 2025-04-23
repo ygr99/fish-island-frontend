@@ -1,98 +1,92 @@
-import { useState, useEffect } from "react"
-import { Card, Avatar, Statistic, Typography, Divider, Tooltip, Button, Modal } from "antd"
+import { useState, useEffect, useRef } from "react"
+import { Card, Avatar, Statistic, Typography, Divider, Tooltip, Button, Modal, Spin, message } from "antd"
 import { CrownOutlined, RiseOutlined, HeartOutlined, GiftOutlined, TrophyOutlined } from "@ant-design/icons"
+import { listDonationVoByPageUsingPost } from "@/services/backend/donationRecordsController"
 import "./index.css"
 
 const { Title, Text } = Typography
 
-// 模拟数据
-const initialDonors = [
-  {
-    id: 1900004165649797122,
-    name: "abf",
-    amount: 66,
-    avatar: "https://codebug-1309318075.cos.ap-shanghai.myqcloud.com/fishMessage/52ae3b96-cbbb-4bcd-9d47-86f23ce821df_048727d3d6d1a726edbc77e6864ec533.gif",
-    avatarFramerUrl: "https://api.oss.cqbo.com/moyu/avatar_frame/头像框 (302)_爱给网_aigei_com.png",
-    message: "我要当第一",
-    emoji: "🚀",
-  },
-  {
-    id: 1909418438377443329,
-    name: "群主的小老弟在线炒粉",
-    amount: 50,
-    avatar: "https://api.oss.cqbo.com/moyu/user_avatar/1909418438377443329/z1yXHzI4-322084_2.webp",
-    avatarFramerUrl: "https://api.oss.cqbo.com/moyu/avatar_frame/头像框 (588)_爱给网_aigei_com.png",
-    message: "支持下，这开源项目还是不错的",
-    emoji: "🚀",
-  },
-  {
-    id: 1897542410243772418,
-    name: "99",
-    amount: 9.9,
-    avatar: "https://api.oss.cqbo.com/moyu/user_avatar/1897542410243772418/F1gbEOP3-aLSLb72YT0WNvqy.thumb.1000_0.gif",
-    avatarFramerUrl: "https://api.oss.cqbo.com/moyu/avatar_frame/头像框 (188)_爱给网_aigei_com.png",
-    message: "赶紧修bug，money少不了你的",
-    emoji: "🚀",
-  },
-  {
-    id: 1911697298754211842,
-    name: "主播是我义父",
-    amount: 5,
-    avatar: "https://img1.baidu.com/it/u=648366534,1664954226&fm=253&fmt=auto&app=120&f=JPEG?w=800&h=800",
-    avatarFramerUrl: "",
-    message: "主播我支持你",
-    emoji: "🚀",
-  },
-  {
-    id: 1900454124186603521,
-    name: "小呆呆暴揍猪猪侠",
-    amount: 2.22,
-    avatar: "https://pic4.zhimg.com/v2-73a6aaa7059e2f5f9ffdc95ef6799acf_b.gif",
-    avatarFramerUrl: "https://api.oss.cqbo.com/moyu/avatar_frame/头像框 (188)_爱给网_aigei_com.png",
-    message: "支持主播 2.22元",
-    emoji: "🚀",
-  },
-  {
-    id: 1910613642551857153,
-    name: "突突突",
-    amount: 1.1,
-    avatar: "https://api.oss.cqbo.com/moyu/user_avatar/1910613642551857153/eoTGZt3s-ada08f3b61323d55c13d0eb0db0edd88.gif",
-    avatarFramerUrl: "",
-    message: "全给群主了",
-    emoji: "🚀",
-  },
-  {
-    id: 1905463930479808513,
-    name: "贞德食泥鸭",
-    amount: 0.01,
-    avatar: "https://api.oss.cqbo.com/moyu/user_avatar/1905463930479808513/YCbpMqjq-Snipaste_2025-04-18_15-05-20.png",
-    avatarFramerUrl: "https://api.oss.cqbo.com/moyu/avatar_frame/头像框 (188)_爱给网_aigei_com.png",
-    message: "给主播打赏了0.01元",
-    emoji: "🚀",
-  },
-  {
-    id: 1914166668201922561,
-    name: "粉色大头龟",
-    amount: 0.01,
-    avatar: "https://img.picui.cn/free/2025/04/21/68060af660d05.gif",
-    avatarFramerUrl: "",
-    message: "给主播打赏了0.01元",
-    emoji: "🚀",
-  }
-]
-
 export default function DonationLeaderboard() {
-  const [donors, setDonors] = useState(initialDonors)
+  const [donors, setDonors] = useState<API.DonationRecordsVO[]>([])
   const [totalAmount, setTotalAmount] = useState(0)
   const [totalDonors, setTotalDonors] = useState(0)
   const [isModalVisible, setIsModalVisible] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 12
+  const containerRef = useRef<HTMLDivElement>(null)
 
+  // 获取打赏记录数据
+  const fetchDonationRecords = async (page: number, isLoadMore = false) => {
+    if (loading) return
+    
+    setLoading(true)
+    try {
+      const response = await listDonationVoByPageUsingPost({
+        current: page,
+        pageSize: pageSize,
+        sortField: 'amount',
+        sortOrder: 'descend'
+      })
+      
+      if (response.code === 0 && response.data) {
+        const { records, total } = response.data
+        
+        if (isLoadMore) {
+          setDonors(prev => [...prev, ...(records || [])])
+          // 累加总人数和总金额
+          setTotalDonors(prev => prev + (records?.length || 0))
+          
+          // 累加总金额
+          const newRecordsAmount = (records || []).reduce((sum, record) => sum + (record.amount || 0), 0)
+          setTotalAmount(prev => Number((prev + newRecordsAmount).toFixed(2)))
+        } else {
+          setDonors(records || [])
+          setTotalDonors(total || 0)
+          
+          // 计算总金额
+          const totalAmount = (records || []).reduce((sum, record) => sum + (record.amount || 0), 0)
+          setTotalAmount(Number(totalAmount.toFixed(2)))
+        }
+        
+        // 判断是否还有更多数据
+        setHasMore((records || []).length === pageSize)
+      } else {
+        message.error('获取打赏记录失败')
+      }
+    } catch (error) {
+      console.error('获取打赏记录出错:', error)
+      message.error('获取打赏记录出错')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 初始加载数据
   useEffect(() => {
-    // 计算总金额和总人数
-    const total = Number(donors.reduce((sum, donor) => sum + donor.amount, 0).toFixed(2))
-    setTotalAmount(total)
-    setTotalDonors(donors.length)
-  }, [donors])
+    fetchDonationRecords(1)
+  }, [])
+
+  // 监听滚动事件，实现下滑加载更多
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!containerRef.current || loading || !hasMore) return
+      
+      const { scrollTop, clientHeight, scrollHeight } = document.documentElement
+      const containerBottom = containerRef.current.getBoundingClientRect().bottom
+      
+      // 当滚动到距离底部100px时加载更多
+      if (window.innerHeight + scrollTop >= scrollHeight - 100) {
+        const nextPage = currentPage + 1
+        setCurrentPage(nextPage)
+        fetchDonationRecords(nextPage, true)
+      }
+    }
+    
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [loading, hasMore, currentPage])
 
   // 获取前三名的标识
   const getRankIcon = (index: number) => {
@@ -123,7 +117,7 @@ export default function DonationLeaderboard() {
   }
 
   return (
-    <div className="leaderboard-container">
+    <div className="leaderboard-container" ref={containerRef}>
       <div className="header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Title level={2} className="header-title">
@@ -201,10 +195,15 @@ export default function DonationLeaderboard() {
               <div className="donor-content">
                 <div className="avatar-container">
                   <div className="avatarWithFrame">
-                    <Avatar size={64} src={item.avatar} className={`avatar ${getRankClass(index)}`} />
-                    {item.avatarFramerUrl && (
+                    <Avatar 
+                      size={64} 
+                      src={item.donorUser?.userAvatar} 
+                      className={`avatar ${getRankClass(index)}`} 
+                    />
+                    {/* 检查是否有头像框URL，如果有则显示 */}
+                    {item.donorUser && 'avatarFramerUrl' in item.donorUser && item.donorUser.avatarFramerUrl && (
                       <img
-                        src={item.avatarFramerUrl}
+                        src={item.donorUser.avatarFramerUrl}
                         className="avatarFrame"
                         alt="avatar-frame"
                       />
@@ -220,9 +219,9 @@ export default function DonationLeaderboard() {
                 <div className="donor-info">
                   <div className="donor-header">
                     <Title level={5} className="donor-name">
-                      {item.name}{" "}
+                      {item.donorUser?.userName || '匿名用户'}{" "}
                       <Text type="secondary" className="donor-emoji">
-                        ({item.emoji})
+                        (🚀)
                       </Text>
                     </Title>
                     <Tooltip title="打赏金额">
@@ -230,7 +229,7 @@ export default function DonationLeaderboard() {
                     </Tooltip>
                   </div>
                   <Text type="secondary" className="donor-message">
-                    "{item.message}"
+                    "{item.remark || '感谢支持'}"
                   </Text>
                 </div>
               </div>
@@ -238,6 +237,24 @@ export default function DonationLeaderboard() {
           </li>
         ))}
       </ul>
+      
+      {loading && (
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <Spin tip="加载中..." />
+        </div>
+      )}
+      
+      {!loading && donors.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+          暂无打赏记录
+        </div>
+      )}
+      
+      {!loading && !hasMore && donors.length > 0 && (
+        <div style={{ textAlign: 'center', padding: '20px 0', color: '#999' }}>
+          没有更多数据了
+        </div>
+      )}
     </div>
   )
 }
