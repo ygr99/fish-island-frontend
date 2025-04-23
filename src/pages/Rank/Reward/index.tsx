@@ -14,13 +14,13 @@ export default function DonationLeaderboard() {
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
-  const pageSize = 12
+  const pageSize = 20
   const containerRef = useRef<HTMLDivElement>(null)
 
   // 获取打赏记录数据
   const fetchDonationRecords = async (page: number, isLoadMore = false) => {
     if (loading) return
-    
+
     setLoading(true)
     try {
       const response = await listDonationVoByPageUsingPost({
@@ -29,27 +29,27 @@ export default function DonationLeaderboard() {
         sortField: 'amount',
         sortOrder: 'descend'
       })
-      
+
       if (response.code === 0 && response.data) {
         const { records, total } = response.data
-        
+
         if (isLoadMore) {
           setDonors(prev => [...prev, ...(records || [])])
           // 累加总人数和总金额
           setTotalDonors(prev => prev + (records?.length || 0))
-          
+
           // 累加总金额
           const newRecordsAmount = (records || []).reduce((sum, record) => sum + (record.amount || 0), 0)
           setTotalAmount(prev => Number((prev + newRecordsAmount).toFixed(2)))
         } else {
           setDonors(records || [])
           setTotalDonors(total || 0)
-          
+
           // 计算总金额
           const totalAmount = (records || []).reduce((sum, record) => sum + (record.amount || 0), 0)
           setTotalAmount(Number(totalAmount.toFixed(2)))
         }
-        
+
         // 判断是否还有更多数据
         setHasMore((records || []).length === pageSize)
       } else {
@@ -72,10 +72,10 @@ export default function DonationLeaderboard() {
   useEffect(() => {
     const handleScroll = () => {
       if (!containerRef.current || loading || !hasMore) return
-      
+
       const { scrollTop, clientHeight, scrollHeight } = document.documentElement
       const containerBottom = containerRef.current.getBoundingClientRect().bottom
-      
+
       // 当滚动到距离底部100px时加载更多
       if (window.innerHeight + scrollTop >= scrollHeight - 100) {
         const nextPage = currentPage + 1
@@ -83,7 +83,7 @@ export default function DonationLeaderboard() {
         fetchDonationRecords(nextPage, true)
       }
     }
-    
+
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [loading, hasMore, currentPage])
@@ -195,10 +195,10 @@ export default function DonationLeaderboard() {
               <div className="donor-content">
                 <div className="avatar-container">
                   <div className="avatarWithFrame">
-                    <Avatar 
-                      size={64} 
-                      src={item.donorUser?.userAvatar} 
-                      className={`avatar ${getRankClass(index)}`} 
+                    <Avatar
+                      size={64}
+                      src={item.donorUser?.userAvatar}
+                      className={`avatar ${getRankClass(index)}`}
                     />
                     {/* 检查是否有头像框URL，如果有则显示 */}
                     {item.donorUser && 'avatarFramerUrl' in item.donorUser && item.donorUser.avatarFramerUrl && (
@@ -237,19 +237,19 @@ export default function DonationLeaderboard() {
           </li>
         ))}
       </ul>
-      
+
       {loading && (
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
           <Spin tip="加载中..." />
         </div>
       )}
-      
+
       {!loading && donors.length === 0 && (
         <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
           暂无打赏记录
         </div>
       )}
-      
+
       {!loading && !hasMore && donors.length > 0 && (
         <div style={{ textAlign: 'center', padding: '20px 0', color: '#999' }}>
           没有更多数据了
