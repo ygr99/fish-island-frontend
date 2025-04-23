@@ -355,12 +355,29 @@ const ChatRoom: React.FC = () => {
         }
       );
 
-      if (!res.data) {
-        throw new Error('图片上传失败');
-      }
+      if (!res.data || res.data === 'https://i.111666.bestnull') {
+        // 如果上传失败或返回的是兜底URL，使用备用上传逻辑
+        const fallbackRes = await uploadFileByMinioUsingPost(
+          { biz: 'user_file' },  // 业务标识参数
+          {},               // body 参数
+          file,            // 文件参数
+          {                // 其他选项
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          }
+        );
 
-      // 设置预览图片
-      setPendingImageUrl(res.data);
+        if (!fallbackRes.data) {
+          throw new Error('图片上传失败');
+        }
+
+        // 设置预览图片
+        setPendingImageUrl(fallbackRes.data);
+      } else {
+        // 设置预览图片
+        setPendingImageUrl(res.data);
+      }
 
     } catch (error) {
       messageApi.error(`上传失败：${error}`);
@@ -723,20 +740,20 @@ const ChatRoom: React.FC = () => {
   const handleMentionInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setInputValue(value);
-    
+
     // 检查是否输入了@
     const lastAtPos = value.lastIndexOf('@');
     if (lastAtPos !== -1) {
       const searchText = value.slice(lastAtPos + 1);
       setMentionSearchText(searchText);
-      
+
       // 过滤在线用户，添加安全检查
       const filtered = onlineUsers.filter(user => {
         if (!user || !user.name) return false;
         return user.name.toLowerCase().includes(searchText.toLowerCase());
       });
       setFilteredUsers(filtered);
-      
+
       // 获取输入框位置
       const textarea = e.target;
       const rect = textarea.getBoundingClientRect();
@@ -745,18 +762,18 @@ const ChatRoom: React.FC = () => {
       const lines = value.slice(0, cursorPos).split('\n');
       const currentLine = lines[lines.length - 1];
       const currentLinePos = currentLine.length;
-      
+
       // 根据过滤结果数量调整位置
       const itemHeight = 40; // 每个选项的高度
       const maxItems = 3; // 最多显示3条数据时紧贴显示
       const listHeight = Math.min(filtered.length, maxItems) * itemHeight;
       const topOffset = filtered.length <= maxItems ? -listHeight : -200; // 数据较少时紧贴输入框
-      
+
       setMentionListPosition({
         top: rect.top + topOffset,
         left: rect.left + (currentLinePos * 8) // 8是字符的近似宽度
       });
-      
+
       setIsMentionListVisible(true);
     } else {
       setIsMentionListVisible(false);
@@ -1345,7 +1362,7 @@ const ChatRoom: React.FC = () => {
             className={styles.chatTextArea}
           />
           {isMentionListVisible && filteredUsers.length > 0 && (
-            <div 
+            <div
               ref={mentionListRef}
               className={styles.mentionList}
               style={{
