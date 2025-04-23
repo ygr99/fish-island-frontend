@@ -8,6 +8,15 @@ const { Title, Text } = Typography
 // 模拟数据
 const initialDonors = [
   {
+    id: 1900004165649797122,
+    name: "abf",
+    amount: 66,
+    avatar: "https://codebug-1309318075.cos.ap-shanghai.myqcloud.com/fishMessage/52ae3b96-cbbb-4bcd-9d47-86f23ce821df_048727d3d6d1a726edbc77e6864ec533.gif",
+    avatarFramerUrl: "https://api.oss.cqbo.com/moyu/avatar_frame/头像框 (302)_爱给网_aigei_com.png",
+    message: "我要当第一",
+    emoji: "🚀",
+  },
+  {
     id: 1909418438377443329,
     name: "群主的小老弟在线炒粉",
     amount: 50,
@@ -26,12 +35,48 @@ const initialDonors = [
     emoji: "🚀",
   },
   {
+    id: 1911697298754211842,
+    name: "主播是我义父",
+    amount: 5,
+    avatar: "https://img1.baidu.com/it/u=648366534,1664954226&fm=253&fmt=auto&app=120&f=JPEG?w=800&h=800",
+    avatarFramerUrl: "",
+    message: "主播我支持你",
+    emoji: "🚀",
+  },
+  {
+    id: 1900454124186603521,
+    name: "小呆呆暴揍猪猪侠",
+    amount: 2.22,
+    avatar: "https://pic4.zhimg.com/v2-73a6aaa7059e2f5f9ffdc95ef6799acf_b.gif",
+    avatarFramerUrl: "https://api.oss.cqbo.com/moyu/avatar_frame/头像框 (188)_爱给网_aigei_com.png",
+    message: "支持主播 2.22元",
+    emoji: "🚀",
+  },
+  {
     id: 1910613642551857153,
     name: "突突突",
     amount: 1.1,
     avatar: "https://api.oss.cqbo.com/moyu/user_avatar/1910613642551857153/eoTGZt3s-ada08f3b61323d55c13d0eb0db0edd88.gif",
     avatarFramerUrl: "",
     message: "全给群主了",
+    emoji: "🚀",
+  },
+  {
+    id: 1905463930479808513,
+    name: "贞德食泥鸭",
+    amount: 0.01,
+    avatar: "https://api.oss.cqbo.com/moyu/user_avatar/1905463930479808513/YCbpMqjq-Snipaste_2025-04-18_15-05-20.png",
+    avatarFramerUrl: "https://api.oss.cqbo.com/moyu/avatar_frame/头像框 (188)_爱给网_aigei_com.png",
+    message: "给主播打赏了0.01元",
+    emoji: "🚀",
+  },
+  {
+    id: 1914166668201922561,
+    name: "粉色大头龟",
+    amount: 0.01,
+    avatar: "https://img.picui.cn/free/2025/04/21/68060af660d05.gif",
+    avatarFramerUrl: "",
+    message: "给主播打赏了0.01元",
     emoji: "🚀",
   }
 ]
@@ -44,7 +89,7 @@ export default function DonationLeaderboard() {
 
   useEffect(() => {
     // 计算总金额和总人数
-    const total = donors.reduce((sum, donor) => sum + donor.amount, 0)
+    const total = Number(donors.reduce((sum, donor) => sum + donor.amount, 0).toFixed(2))
     setTotalAmount(total)
     setTotalDonors(donors.length)
   }, [donors])

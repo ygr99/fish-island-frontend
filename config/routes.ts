@@ -3,7 +3,7 @@ export default [
     { path: '/user/login', component: './User/Login', requireAuth: false },
     { path: '/user/register', component: './User/Register', requireAuth: false }
   ]},
-  { path: '/index', icon: 'smile', component: './Index', name: '最新', requireAuth: false },
+  { path: '/index', icon: 'BarsOutlined', component: './Index', name: '最新', requireAuth: false },
   { path: '/home', layout: false, icon: 'smile', component: './Home', name: '浏览器页面', requireAuth: false },
   { path: '/todo', icon: 'CalendarOutlined', component: './TODO', name: '每日待办', requireAuth: true },
   { path: '/chat', icon: 'MessageOutlined', component: './Chat', name: '摸鱼室', requireAuth: true },
