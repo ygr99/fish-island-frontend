@@ -319,18 +319,18 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
                   src={emoticon.thumbSrc}
                   alt="emoticon"
                   className={styles.emoticonItem}
-                  onClick={() => onSelect(emoticon.source)}
+                  onClick={() => onSelect(emoticon.thumbSrc)}
                   onError={() => handleImageError(emoticon)}
                 />
               </Tooltip>
               <Button
                 type="text"
                 size="small"
-                icon={isFavorite(emoticon.source) ? <StarFilled /> : <StarOutlined />}
+                icon={isFavorite(emoticon.thumbSrc) ? <StarFilled style={{ color: '#fadb14' }} /> : <StarOutlined />}
                 className={styles.favoriteButton}
                 onClick={(e) => {
                   e.stopPropagation();
-                  toggleFavorite(emoticon.source);
+                  toggleFavorite(emoticon.thumbSrc);
                 }}
               />
             </div>
