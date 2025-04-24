@@ -12,6 +12,11 @@ const isMobile = () => {
   return window.innerWidth <= 768;
 };
 
+// 添加自定义断点检测
+const isSmallScreen = () => {
+  return window.innerWidth < 1590;
+};
+
 const Index: React.FC = () => {
   const [hostPostVoList, setHostPostVoList] = useState<API.HotPostVO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,11 +28,13 @@ const Index: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tempSelectedSourceIds, setTempSelectedSourceIds] = useState<number[]>([]);
   const [isMobileView, setIsMobileView] = useState(isMobile());
+  const [isSmallScreenView, setIsSmallScreenView] = useState(isSmallScreen());
 
   // 添加窗口大小变化监听
   useEffect(() => {
     const handleResize = () => {
       setIsMobileView(isMobile());
+      setIsSmallScreenView(isSmallScreen());
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -316,7 +323,7 @@ const Index: React.FC = () => {
           <Row gutter={[16, 16]}>
             {loading ? (
               Array.from({ length: 6 }).map((_, index) => (
-                <Col xs={24} sm={24} md={12} lg={8} key={index}>
+                <Col xs={24} sm={24} md={12} lg={isSmallScreenView ? 12 : 8} key={index}>
                   <Card>
                     <Skeleton active>
                       <List.Item>
@@ -331,7 +338,7 @@ const Index: React.FC = () => {
               ))
             ) : (
               filteredList.map((item, index) => (
-                <Col xs={24} sm={24} md={12} lg={8} key={index}>
+                <Col xs={24} sm={24} md={12} lg={isSmallScreenView ? 12 : 8} key={index}>
                   <Badge.Ribbon text={item.typeName}>
                     <Card
                       title={
