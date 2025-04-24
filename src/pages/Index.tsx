@@ -4,6 +4,7 @@ import {getHotPostListUsingPost} from '@/services/backend/hotPostController';
 import dayjs from "dayjs";
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { SettingOutlined } from '@ant-design/icons';
+import './Index.less';
 
 const STORAGE_KEY = 'selected_source_ids';
 
@@ -360,7 +361,10 @@ const Index: React.FC = () => {
                         style={{
                           height: 400,
                           overflow: 'auto',
+                          scrollbarWidth: 'thin',
+                          scrollbarColor: 'rgba(0, 0, 0, 0.2) transparent',
                         }}
+                        className="custom-scrollbar"
                       >
                         <List
                           dataSource={item.data}
