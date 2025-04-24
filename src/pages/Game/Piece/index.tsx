@@ -66,7 +66,7 @@ function App() {
   const [playerLastMoveTime, setPlayerLastMoveTime] = useState<number>(Date.now());
   const opponentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const playerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const TIMEOUT_DURATION = 10000; // 10秒超时
+  const TIMEOUT_DURATION = 30000; // 30秒超时
 
   // 添加聊天相关的状态
   const [showChat, setShowChat] = useState(true);
@@ -1201,7 +1201,7 @@ function App() {
         okText="退出房间"
         cancelText="继续等待"
       >
-        <p>对手已经超过10秒没有下子，是否退出房间？</p>
+        <p>对手已经超过30秒没有下子，是否退出房间？</p>
       </Modal>
       
       {/* 玩家超时提示弹窗 */}
@@ -1212,7 +1212,7 @@ function App() {
         onCancel={handlePlayerTimeout}
         okText="收到马上下"
       >
-        <p>您已经超过10秒没有下子，请尽快下子！</p>
+        <p>您已经超过30秒没有下子，请尽快下子！</p>
       </Modal>
     </div>
   );
