@@ -3,7 +3,7 @@ import React, {useState, useEffect} from 'react';
 import {getHotPostListUsingPost} from '@/services/backend/hotPostController';
 import dayjs from "dayjs";
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { SettingOutlined } from '@ant-design/icons';
+import { SettingOutlined, AppstoreOutlined, GlobalOutlined, ThunderboltOutlined, RocketOutlined, PlayCircleOutlined, CustomerServiceOutlined, TrophyOutlined } from '@ant-design/icons';
 import './Index.less';
 
 const STORAGE_KEY = 'selected_source_ids';
@@ -90,15 +90,16 @@ const Index: React.FC = () => {
 
   dayjs.extend(relativeTime);
 
-  // 根据分类返回对应的 emoji
-  const getCategoryEmoji = (category: string) => {
-    const emojiMap: Record<string, string> = {
-      '1': '🌈',
-      '2': '✨',
-      '3': '📺',
-      '4': '🎶'
+  // 根据分类返回对应的图标
+  const getCategoryIcon = (category: string) => {
+    const iconMap: Record<string, React.ReactNode> = {
+      '1': <ThunderboltOutlined style={{ color: '#ff4d4f' }} />, // 热门内容 - 红色闪电
+      '2': <RocketOutlined style={{ color: '#1890ff' }} />,      // 推荐内容 - 蓝色火箭
+      '3': <PlayCircleOutlined style={{ color: '#52c41a' }} />,  // 视频内容 - 绿色播放
+      '4': <CustomerServiceOutlined style={{ color: '#722ed1' }} />, // 音乐内容 - 紫色音频
+      '6': <TrophyOutlined style={{ color: '#fa8c16' }} /> // 体育赛事 - 橙色奖杯
     };
-    return emojiMap[category] || '🎯';
+    return iconMap[category] || <AppstoreOutlined style={{ color: '#faad14' }} />;
   };
 
   // 过滤数据源
@@ -113,19 +114,17 @@ const Index: React.FC = () => {
   const currentSource = hostPostVoList.find(item => String(item.id) === activeTab);
 
   const items = [
-    {key: 'all', label: '🌟 全部'},
+    {key: 'all', label: <><GlobalOutlined style={{ color: '#1890ff' }} /> 全部</>},
     ...categories
       .filter(category => {
-        // 如果用户没有选择任何数据源，显示所有分类
         if (selectedSourceIds.length === 0) return true;
-        // 检查该分类下是否有选中的数据源
         return hostPostVoList.some(item => 
           String(item.category) === String(category) && selectedSourceIds.includes(item.id as number)
         );
       })
       .map(category => ({
         key: category,
-        label: `${getCategoryEmoji(category)} ${hostPostVoList.find(item => String(item.category) === String(category))?.categoryName || category}`
+        label: <>{getCategoryIcon(category)} {hostPostVoList.find(item => String(item.category) === String(category))?.categoryName || category}</>
       }))
   ];
 
