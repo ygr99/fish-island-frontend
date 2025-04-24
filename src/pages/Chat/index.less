@@ -757,6 +757,10 @@
         color: #999;
         font-size: 12px;
         pointer-events: none;
+        
+        @media screen and (max-width: 768px) {
+          display: none;
+        }
       }
     }
 
@@ -1409,6 +1413,13 @@
     margin-left: 8px;
     color: #333;
     font-size: 14px;
+  }
+}
+
+// 添加发送按钮样式
+.sendButton {
+  @media screen and (max-width: 768px) {
+    display: none;
   }
 }
 

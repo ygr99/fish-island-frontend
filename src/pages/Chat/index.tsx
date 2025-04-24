@@ -631,7 +631,7 @@ const ChatRoom: React.FC = () => {
     let content = customContent || inputValue;
 
     // 检查是否包含 iframe 标签
-    const iframeRegex = /<iframe[^>]*>.*?<\/iframe>/gi;
+    const iframeRegex = new RegExp('<iframe[^>]*>.*?</iframe>', 'gi');
     if (iframeRegex.test(content)) {
       messageApi.warning('为了安全考虑，不支持 iframe 标签');
       return;
@@ -659,7 +659,7 @@ const ChatRoom: React.FC = () => {
 
     // 解析@用户
     const mentionedUsers: User[] = [];
-    const mentionRegex = /@([^@\s]+)/g;
+    const mentionRegex = new RegExp('@([^@\\s]+)', 'g');
     let match;
     while ((match = mentionRegex.exec(content)) !== null) {
       const mentionedName = match[1];
@@ -1392,6 +1392,7 @@ const ChatRoom: React.FC = () => {
             icon={<SendOutlined/>}
             onClick={() => handleSend()}
             disabled={uploading}
+            className={styles.sendButton}
           >
             发送
           </Button>

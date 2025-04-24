@@ -164,7 +164,7 @@ export default function DonationLeaderboard() {
       </div>
 
       <Modal
-        title="感谢支持"
+        title="感谢支持💗"
         open={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
         footer={null}
@@ -176,7 +176,8 @@ export default function DonationLeaderboard() {
             alt="打赏二维码"
             style={{ width: '100%', maxWidth: 300 }}
           />
-          <p style={{ marginTop: 16, color: '#666' }}>感谢您的支持！</p>
+          <p style={{ marginTop: 16, color: '#666' }}> 可以备注下用户名，方便 🐷播加入感谢名单哦~</p>
+          <p style={{color: '#666' }}>有疑问或需要帮助请联系站长微信：Lhc_iuuaiong</p>
         </div>
       </Modal>
 

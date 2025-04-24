@@ -10,7 +10,7 @@ export class StringUtils{
     if(this.isEmpty(phone)){
       return false;
     }
-    const reg = /^1[3|4|5|7|8][0-9]{9}/;
+    const reg = new RegExp('^1[3|4|5|7|8][0-9]{9}');
     if(reg.test(phone)){
       return true;//手机号码正确
     }
@@ -21,7 +21,7 @@ export class StringUtils{
     if(this.isEmpty(email)){
       return false;
     }
-    const reg = /^([a-zA-Z\d][\w-]{2,})@(\w{2,})\.([a-z]{2,})(\.[a-z]{2,})?$/;
+    const reg = new RegExp('^([a-zA-Z\\d][\\w-]{2,})@(\\w{2,})\\.([a-z]{2,})(\\.[a-z]{2,})?$');
     if(reg.test(email)){
       return true;//手机号码正确
     }
@@ -29,6 +29,6 @@ export class StringUtils{
   }
 
   public static isNotEmpty (str: string){
-    return !(str === 'undefined' || !str || !/[^\s]/.test(str));
+    return !(str === 'undefined' || !str || !new RegExp('[^\\s]').test(str));
   }
 }
