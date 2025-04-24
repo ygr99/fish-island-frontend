@@ -55,7 +55,6 @@ const ChatRoom: React.FC = () => {
   const [isEmoticonPickerVisible, setIsEmoticonPickerVisible] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
-  const [isUserListCollapsed, setIsUserListCollapsed] = useState(false);
   const {initialState} = useModel('@@initialState');
   const {currentUser} = initialState || {};
   const [messageApi, contextHolder] = message.useMessage();
@@ -1090,7 +1089,7 @@ const ChatRoom: React.FC = () => {
   };
 
   return (
-    <div className={`${styles.chatRoom} ${isUserListCollapsed ? styles.collapsed : ''}`}>
+    <div className={styles.chatRoom}>
       {contextHolder}
       {showAnnouncement && (
         <Alert
@@ -1202,12 +1201,6 @@ const ChatRoom: React.FC = () => {
       </div>
 
       <div className={styles.userList}>
-        <div
-          className={styles.collapseButton}
-          onClick={() => setIsUserListCollapsed(!isUserListCollapsed)}
-        >
-          {isUserListCollapsed ? <MenuUnfoldOutlined/> : <MenuFoldOutlined/>}
-        </div>
         <div className={styles.userListHeader}>
           在线成员 ({onlineUsers.length})
         </div>

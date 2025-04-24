@@ -195,6 +195,7 @@
     grid-template-areas:
       "messages"
       "input";
+    grid-template-rows: 1fr auto;
 
     .announcement {
       display: none;
@@ -209,26 +210,12 @@
     }
 
     .userList {
-      display: none;
+      display: none !important;
     }
 
     // 在移动端隐藏漂浮元素
     .floating-fish {
       display: none;
-    }
-  }
-
-  &.collapsed {
-    grid-template-columns: 1fr 0;
-
-    .userList {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-
-    .collapseButton {
-      transform: translate(-50%, -50%) rotate(180deg);
-      left: calc(100% - 16px);
     }
   }
 
@@ -528,33 +515,12 @@
     flex-direction: column;
     height: calc(100% - 24px);
 
-    @media screen and (min-width: 769px) {
-      display: flex;
+    @media screen and (max-width: 768px) {
+      display: none !important;
     }
 
-    .collapseButton {
-      position: absolute;
-      top: 50%;
-      left: -14px;
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      width: 24px;
-      height: 24px;
+    @media screen and (min-width: 769px) {
       display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.3s ease;
-      border: none;
-      background: white;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      cursor: pointer;
-      z-index: 10;
-      font-size: 12px;
-
-      &:hover {
-        background: var(--ant-color-primary);
-        color: white;
-      }
     }
 
     .userListHeader {
@@ -1427,7 +1393,7 @@
 // 添加发送按钮样式
 .sendButton {
   @media screen and (max-width: 768px) {
-    display: none;
+    display: flex;
   }
 }
 
