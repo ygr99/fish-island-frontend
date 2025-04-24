@@ -1211,37 +1211,39 @@ const ChatRoom: React.FC = () => {
         <div className={styles.userListHeader}>
           在线成员 ({onlineUsers.length})
         </div>
-        {[...onlineUsers]
-          .sort((a, b) => (b.points || 0) - (a.points || 0))
-          .map(user => (
-            <div
-              key={user.id}
-              className={styles.userItem}
-              onClick={() => handleSelectMention(user)}
-              style={{cursor: 'pointer'}}
-            >
-              <div className={styles.avatarWrapper}>
-                <Popover
-                  content={<UserInfoCard user={user}/>}
-                  trigger="hover"
-                  placement="right"
-                >
-                  <div className={styles.avatarWithFrame}>
-                    <Avatar src={user.avatar} size={28}/>
-                  </div>
-                </Popover>
-              </div>
-              <div className={styles.userInfo}>
-                <div className={styles.userName}>
-                  {user.name}
+        <div className={styles.userListContent}>
+          {[...onlineUsers]
+            .sort((a, b) => (b.points || 0) - (a.points || 0))
+            .map(user => (
+              <div
+                key={user.id}
+                className={styles.userItem}
+                onClick={() => handleSelectMention(user)}
+                style={{cursor: 'pointer'}}
+              >
+                <div className={styles.avatarWrapper}>
+                  <Popover
+                    content={<UserInfoCard user={user}/>}
+                    trigger="hover"
+                    placement="right"
+                  >
+                    <div className={styles.avatarWithFrame}>
+                      <Avatar src={user.avatar} size={28}/>
+                    </div>
+                  </Popover>
                 </div>
-                <div className={styles.userStatus}>{user.status}</div>
+                <div className={styles.userInfo}>
+                  <div className={styles.userName}>
+                    {user.name}
+                  </div>
+                  <div className={styles.userStatus}>{user.status}</div>
+                </div>
+                <span className={styles.levelBadge}>
+                {getLevelEmoji(user.level)}
+              </span>
               </div>
-              <span className={styles.levelBadge}>
-              {getLevelEmoji(user.level)}
-            </span>
-            </div>
-          ))}
+            ))}
+        </div>
       </div>
 
       <div className={styles.inputArea}>

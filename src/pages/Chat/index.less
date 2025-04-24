@@ -519,31 +519,17 @@
     backdrop-filter: blur(10px);
     border-left: 1px solid rgba(238, 238, 238, 0.5);
     padding: 12px;
-    overflow-y: auto;
     margin: 12px 12px 12px 0;
     border-radius: 12px;
     transition: all 0.3s ease;
     box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05);
     position: relative;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 24px);
 
     @media screen and (min-width: 769px) {
-      display: block;
-    }
-
-    &::-webkit-scrollbar {
-      width: 4px;
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background-color: rgba(0, 0, 0, 0.1);
-      border-radius: 2px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
+      display: flex;
     }
 
     .collapseButton {
@@ -581,6 +567,28 @@
       -webkit-background-clip: text;
       color: transparent;
       text-align: center;
+      flex-shrink: 0;
+    }
+
+    .userListContent {
+      overflow-y: auto;
+      flex: 1;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+
+      &::-webkit-scrollbar {
+        width: 4px;
+        background: transparent;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background-color: rgba(0, 0, 0, 0.1);
+        border-radius: 2px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: transparent;
+      }
     }
 
     .userItem {
