@@ -50,7 +50,7 @@ const Index: React.FC = () => {
         const uniqueCategories = Array.from(new Set(result.data.map((item: API.HotPostVO) => item.category || '')));
         // @ts-ignore
         setCategories(uniqueCategories.filter(Boolean));
-        
+
         // 从本地存储读取数据源设置
         const storedIds = localStorage.getItem(STORAGE_KEY);
         if (storedIds) {
@@ -71,7 +71,7 @@ const Index: React.FC = () => {
     if (hostPostVoList.length > 0 && !activeTab) {
       if (isMobileView) {
         // 移动端默认选中第一个数据源
-        const firstSource = hostPostVoList.find(item => 
+        const firstSource = hostPostVoList.find(item =>
           selectedSourceIds.length === 0 || selectedSourceIds.includes(item.id as number)
         );
         if (firstSource) {
@@ -105,8 +105,8 @@ const Index: React.FC = () => {
   // 过滤数据源
   const filteredList = activeTab === 'all'
     ? hostPostVoList.filter(item => selectedSourceIds.length === 0 || selectedSourceIds.includes(item.id as number))
-    : hostPostVoList.filter(item => 
-        (item.category as any === activeTab) && 
+    : hostPostVoList.filter(item =>
+        (item.category as any === activeTab) &&
         (selectedSourceIds.length === 0 || selectedSourceIds.includes(item.id as number))
       );
 
@@ -118,7 +118,7 @@ const Index: React.FC = () => {
     ...categories
       .filter(category => {
         if (selectedSourceIds.length === 0) return true;
-        return hostPostVoList.some(item => 
+        return hostPostVoList.some(item =>
           String(item.category) === String(category) && selectedSourceIds.includes(item.id as number)
         );
       })
@@ -189,9 +189,9 @@ const Index: React.FC = () => {
 
       {isMobileView ? (
         // 移动端布局
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
           minHeight: '100vh',
           paddingBottom: '50px', // 为底部 tab-bar 留出空间
         }}>
@@ -242,7 +242,7 @@ const Index: React.FC = () => {
               <Typography.Text type="secondary">请选择一个数据源</Typography.Text>
             </div>
           )}
-          
+
           {/* 底部 tab-bar */}
           <div style={{
             position: 'fixed',
@@ -276,9 +276,9 @@ const Index: React.FC = () => {
                 <Image
                   src={item.iconUrl}
                   preview={false}
-                  style={{ 
-                    width: 28, 
-                    height: 28, 
+                  style={{
+                    width: 28,
+                    height: 28,
                     borderRadius: '50%',
                     border: activeTab === String(item.id) ? '2px solid #1890ff' : 'none'
                   }}
@@ -311,9 +311,9 @@ const Index: React.FC = () => {
               style={{ flex: 1 }}
             />
             <Space>
-              <Button 
-                type="text" 
-                icon={<SettingOutlined />} 
+              <Button
+                type="text"
+                icon={<SettingOutlined />}
                 onClick={() => setIsSettingsOpen(true)}
               >
                 设置
@@ -391,9 +391,9 @@ const Index: React.FC = () => {
                                   }}
                                 >
                                   <span style={{flexGrow: 1, textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}}>
-                                    <span style={{ 
-                                      display: 'inline-block', 
-                                      width: '24px', 
+                                    <span style={{
+                                      display: 'inline-block',
+                                      width: '24px',
                                       textAlign: 'center',
                                       marginRight: '8px',
                                       color: '#8c8c8c'
