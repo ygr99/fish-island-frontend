@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Alert, Avatar, Button, Input, message, Popover, Spin, Popconfirm, Modal} from 'antd';
+import {Alert, Avatar, Button, Input, message, Popover, Spin, Popconfirm, Modal, Radio} from 'antd';
 import COS from 'cos-js-sdk-v5';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -106,6 +106,7 @@ const ChatRoom: React.FC = () => {
   const [redPacketAmount, setRedPacketAmount] = useState<number>(0);
   const [redPacketCount, setRedPacketCount] = useState<number>(1);
   const [redPacketMessage, setRedPacketMessage] = useState<string>('恭喜发财，大吉大利！');
+  const [redPacketType, setRedPacketType] = useState<number>(1); // 1-随机红包 2-平均红包
 
   // 添加红包记录相关状态
   const [isRedPacketRecordsVisible, setIsRedPacketRecordsVisible] = useState(false);
@@ -1111,7 +1112,7 @@ const ChatRoom: React.FC = () => {
       const response = await createRedPacketUsingPost({
         totalAmount: redPacketAmount,
         count: redPacketCount,
-        type: 1, // 1-随机红包
+        type: redPacketType, // 使用选择的红包类型
         name: redPacketMessage
       });
 
@@ -1573,14 +1574,38 @@ const ChatRoom: React.FC = () => {
       </div>
 
       <Modal
-        title="发送红包"
+        title={
+          <div className={styles.redPacketModalTitle}>
+            <GiftOutlined className={styles.redPacketTitleIcon} />
+            <span>发送红包</span>
+          </div>
+        }
         visible={isRedPacketModalVisible}
         onOk={handleSendRedPacket}
         onCancel={() => setIsRedPacketModalVisible(false)}
         okText="发送"
         cancelText="取消"
+        width={400}
+        className={styles.redPacketModal}
       >
         <div className={styles.redPacketForm}>
+          <div className={styles.formItem}>
+            <span className={styles.label}>红包类型：</span>
+            <Radio.Group 
+              value={redPacketType} 
+              onChange={(e) => setRedPacketType(e.target.value)}
+              className={styles.redPacketTypeGroup}
+            >
+              <Radio.Button value={1}>
+                <span className={styles.typeIcon}>🎲</span>
+                <span>随机红包</span>
+              </Radio.Button>
+              <Radio.Button value={2}>
+                <span className={styles.typeIcon}>📊</span>
+                <span>平均红包</span>
+              </Radio.Button>
+            </Radio.Group>
+          </div>
           <div className={styles.formItem}>
             <span className={styles.label}>红包金额：</span>
             <Input
@@ -1589,6 +1614,8 @@ const ChatRoom: React.FC = () => {
               onChange={(e) => setRedPacketAmount(Number(e.target.value))}
               min={1}
               placeholder="请输入红包金额"
+              prefix="¥"
+              className={styles.amountInput}
             />
           </div>
           <div className={styles.formItem}>
@@ -1599,14 +1626,18 @@ const ChatRoom: React.FC = () => {
               onChange={(e) => setRedPacketCount(Number(e.target.value))}
               min={1}
               placeholder="请输入红包个数"
+              className={styles.countInput}
             />
           </div>
           <div className={styles.formItem}>
             <span className={styles.label}>祝福语：</span>
-            <Input
+            <Input.TextArea
               value={redPacketMessage}
               onChange={(e) => setRedPacketMessage(e.target.value)}
-              placeholder="请输入祝福语"
+              placeholder="恭喜发财，大吉大利！"
+              maxLength={50}
+              showCount
+              className={styles.messageInput}
             />
           </div>
         </div>

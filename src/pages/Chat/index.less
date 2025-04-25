@@ -1543,3 +1543,109 @@
   }
 }
 
+.redPacketModal {
+  :global {
+    .ant-modal-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .ant-modal-body {
+      padding: 24px;
+    }
+    
+    .ant-modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid #f0f0f0;
+    }
+  }
+}
+
+.redPacketModalTitle {
+  display: flex;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 500;
+  
+  .redPacketTitleIcon {
+    margin-right: 8px;
+    font-size: 20px;
+    color: #ff4d4f;
+  }
+}
+
+.redPacketForm {
+  .formItem {
+    margin-bottom: 20px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    .label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #333;
+    }
+  }
+  
+  .redPacketTypeGroup {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    
+    :global {
+      .ant-radio-button-wrapper {
+        flex: 1;
+        text-align: center;
+        height: 40px;
+        line-height: 40px;
+        padding: 0 16px;
+        
+        &:first-child {
+          border-radius: 4px 0 0 4px;
+        }
+        
+        &:last-child {
+          border-radius: 0 4px 4px 0;
+        }
+      }
+    }
+    
+    .typeIcon {
+      margin-right: 4px;
+      font-size: 16px;
+    }
+  }
+  
+  .amountInput {
+    width: 100%;
+    height: 40px;
+    
+    :global {
+      .ant-input-prefix {
+        color: #ff4d4f;
+        margin-right: 4px;
+      }
+    }
+  }
+  
+  .countInput {
+    width: 100%;
+    height: 40px;
+  }
+  
+  .messageInput {
+    width: 100%;
+    min-height: 80px;
+    resize: none;
+    
+    :global {
+      .ant-input {
+        padding: 8px 12px;
+      }
+    }
+  }
+}
+
