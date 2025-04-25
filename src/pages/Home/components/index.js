@@ -30,14 +30,6 @@ class ComponentSystem {
         directory: 'GameCenter',
         globalVar: 'GameCenter',
       },
-      日历: {
-        directory: 'Calendar',
-        globalVar: 'Calendar',
-      },
-      天气: {
-        directory: 'Weather',
-        globalVar: 'Weather',
-      },
       必应壁纸: {
         directory: 'Wallpaper',
         globalVar: 'Wallpaper',
@@ -45,14 +37,6 @@ class ComponentSystem {
       快递查询: {
         directory: 'ExpressTracker',
         globalVar: 'ExpressTracker',
-      },
-      记事本: {
-        directory: 'Notepad',
-        globalVar: 'Notepad',
-      },
-      网站库: {
-        directory: 'WebsiteLibrary',
-        globalVar: 'WebsiteLibrary',
       },
       随机追剧: {
         directory: 'RandomTV',
@@ -86,29 +70,9 @@ class ComponentSystem {
         directory: 'ChatRoom',
         globalVar: 'ChatRoom',
       },
-      随机诡异故事: {
-        directory: 'RandomStrangeTale',
-        globalVar: 'RandomStrangeTale',
-      },
-      随机分页: {
-        directory: 'PaginatedSites',
-        globalVar: 'PaginatedSites',
-      },
       工具箱: {
         directory: 'Toolbox',
         globalVar: 'Toolbox',
-      },
-      八宫格周视图: {
-        directory: 'WeeklyPlanner',
-        globalVar: 'WeeklyPlanner',
-      },
-      倒数日: {
-        directory: 'Countdown',
-        globalVar: 'Countdown',
-      },
-      食忆日历: {
-        directory: 'FoodMemoryCalendar',
-        globalVar: 'FoodMemoryCalendar',
       },
       聚合一言: {
         directory: 'AggregateHitokoto',
@@ -117,10 +81,6 @@ class ComponentSystem {
       直播视界: {
         directory: 'LiveStream',
         globalVar: 'LiveStream',
-      },
-      音乐: {
-        directory: 'Music',
-        globalVar: 'Music',
       },
       // 可以在这里添加更多组件映射
     };

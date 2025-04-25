@@ -491,20 +491,6 @@ const Home: React.FC = () => {
         onCancel={() => setComponentLibraryVisible(false)}
         footer={
           <div className="flex justify-end">
-            <Button
-              onClick={() => {
-                // 手动强制刷新组件列表
-                if (window.componentSystem) {
-                  const loadSystemComponents = () => {
-                    setSystemComponents(getSystemComponents());
-                  };
-                  loadSystemComponents();
-                }
-              }}
-              className="mr-2"
-            >
-              刷新组件库
-            </Button>
             <Button onClick={() => setComponentLibraryVisible(false)}>关闭</Button>
           </div>
         }
