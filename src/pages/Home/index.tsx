@@ -1,4 +1,5 @@
 import CustomSites from '@/components/CustomSites';
+import Shortcut from '@/components/Shortcut';
 import WallpaperMenu from '@/components/WallpaperMenu';
 import { AppstoreOutlined, DownOutlined, SearchOutlined, SwapOutlined } from '@ant-design/icons';
 import { Button, Dropdown, Input, Modal, Tooltip } from 'antd';
@@ -6,19 +7,32 @@ import moment from 'moment';
 import 'moment/locale/zh-cn';
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './index.less';
+// 导入Sortable库
 // @ts-ignore
 import Sortable from 'sortablejs';
+// 导入组件系统
 // @ts-ignore
-import './components/index.ts';
+import './components/index.js';
+// 导入组件桥接系统
+// @ts-ignore
+import './components/bridge.js';
 
-// 导入组件系统类型
-import { ComponentSystem } from './components';
-
-// 扩展 Window 接口
+// 为window.componentSystem添加类型声明
 declare global {
   interface Window {
-    componentSystem: ComponentSystem;
+    componentSystem: {
+      componentNameMapping: Record<
+        string,
+        {
+          directory: string;
+          globalVar: string;
+        }
+      >;
+      components: any[];
+      register: (componentClass: any) => void;
+    };
     openComponent: (componentName: string) => boolean;
+    [key: string]: any; // 允许使用索引访问其他属性
   }
 }
 
@@ -32,97 +46,6 @@ interface ShortcutItem {
   component?: string;
   bgColor?: string;
 }
-
-// 辅助函数：处理图标类名，自动添加fa-solid前缀
-const processIconClass = (iconClass: string) => {
-  if (!iconClass) return 'fa-solid fa-puzzle-piece'; // 默认图标
-
-  // 如果已经包含fa-solid, fa-regular等前缀，则不做处理
-  if (
-    iconClass.includes('fa-solid') ||
-    iconClass.includes('fa-regular') ||
-    iconClass.includes('fa-light') ||
-    iconClass.includes('fa-thin') ||
-    iconClass.includes('fa-duotone') ||
-    iconClass.includes('fa-brands')
-  ) {
-    return iconClass;
-  }
-
-  // 如果只是fa-开头的图标，自动添加fa-solid前缀
-  if (iconClass.startsWith('fa-')) {
-    return `fa-solid ${iconClass}`;
-  }
-
-  return iconClass;
-};
-
-// 单个快捷方式组件
-const Shortcut: React.FC<ShortcutItem> = ({ icon, title, url, bgColor }) => {
-  // 处理图标类名
-  const processedIcon = processIconClass(icon);
-
-  // 对iconClass进行处理
-  const isFontAwesome = typeof processedIcon === 'string' && processedIcon.includes('fa-');
-
-  // Shortcut样式
-  const shortcutStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    cursor: 'pointer',
-    padding: '12px',
-    transition: 'all 0.3s ease',
-  };
-
-  const iconWrapperStyle: React.CSSProperties = {
-    width: '52px',
-    height: '52px',
-    borderRadius: '14px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '10px',
-    transition: 'all 0.3s ease',
-    background: 'rgba(255, 255, 255, 0.95)',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-  };
-
-  const titleStyle: React.CSSProperties = {
-    fontSize: '13px',
-    color: '#ffffff',
-    textAlign: 'center',
-    maxWidth: '100%',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    fontWeight: 500,
-    textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
-  };
-
-  return (
-    <div style={shortcutStyle}>
-      <div style={iconWrapperStyle}>
-        {isFontAwesome ? (
-          <div
-            className={`${
-              bgColor || 'bg-blue-500'
-            } w-full h-full rounded-full flex items-center justify-center`}
-          >
-            <i className={`${processedIcon} text-white text-xl`}></i>
-          </div>
-        ) : (
-          <img
-            src={processedIcon}
-            alt={title}
-            style={{ width: '26px', height: '26px', objectFit: 'contain' }}
-          />
-        )}
-      </div>
-      <div style={titleStyle}>{title}</div>
-    </div>
-  );
-};
 
 const searchEngines = [
   {
@@ -187,38 +110,42 @@ const defaultShortcuts: ShortcutItem[] = [
   },
 ];
 
-// 获取系统组件列表
+// 从组件系统中获取组件映射数据
 const getSystemComponents = (): ShortcutItem[] => {
-  // 默认系统组件列表
-  const defaultComponents: ShortcutItem[] = [];
-
-  // 如果 window.componentSystem 存在，尝试从中获取组件
   if (typeof window !== 'undefined' && window.componentSystem) {
-    try {
-      // 从 componentSystem 获取所有组件
-      const components = window.componentSystem.components || [];
-      if (components.length > 0) {
-        // 构建新的系统组件列表
-        return components.map((comp: any) => {
-          // 获取图标，优先使用icon属性，如果没有则使用iconClass
-          let iconClass = comp.icon || comp.iconClass || 'fa-puzzle-piece';
+    const componentMapping = window.componentSystem.componentNameMapping || {};
+    const components = window.componentSystem.components || [];
 
-          return {
-            icon: iconClass,
-            bgColor: comp.bgColor || comp.backgroundColor || 'bg-blue-500',
-            title: comp.name,
-            url: '#',
-            type: 'component' as const,
-            component: comp.name,
-          };
-        });
-      }
-    } catch (e) {
-      console.error('获取系统组件失败:', e);
-    }
+    console.log('组件系统数据:', {
+      componentMappingSize: Object.keys(componentMapping).length,
+      componentsSize: components.length,
+      components: components.map((c) => ({ name: c.name, icon: c.icon, bgColor: c.bgColor })),
+    });
+
+    return Object.entries(componentMapping).map(([name, info]: [string, any]) => {
+      // 查找对应的组件实例，获取它的icon和bgColor
+      const componentInstance = components.find((comp) => comp.name === name);
+
+      console.log(
+        `组件 [${name}] 实例:`,
+        componentInstance?.name,
+        '图标:',
+        componentInstance?.icon,
+        '背景色:',
+        componentInstance?.bgColor,
+      );
+
+      return {
+        icon: componentInstance?.icon || `fa-puzzle-piece`,
+        title: name,
+        url: '#',
+        type: 'component' as const,
+        component: info.directory,
+        bgColor: componentInstance?.bgColor || 'bg-blue-500',
+      };
+    });
   }
-
-  return defaultComponents;
+  return [];
 };
 
 // 初始化空数组，稍后会通过useEffect填充
@@ -262,43 +189,102 @@ const Home: React.FC = () => {
 
   // 从组件系统加载组件
   useEffect(() => {
-    loadWallpaper();
-    loadDesktopShortcuts();
-    loadSystemComponents();
+    // 在浏览器环境中，等待组件系统加载完成后获取组件数据
+    const loadSystemComponents = () => {
+      console.log('加载系统组件数据');
 
-    // 此处不需要添加keydown事件监听，因为有单独的useEffect处理它
-  }, []);
+      // 需要先主动加载和注册组件
+      if (typeof window !== 'undefined' && window.componentSystem) {
+        // 获取所有组件名称
+        const componentMapping = window.componentSystem.componentNameMapping || {};
+        const componentNames = Object.keys(componentMapping);
 
-  // 加载系统组件
-  const loadSystemComponents = () => {
-    // 在组件系统渲染完成后加载系统组件
-    const loadComponents = () => {
-      console.log('加载系统组件...');
-      const components = getSystemComponents();
-      setSystemComponents(components);
+        // 先检查components数组是否为空
+        if (window.componentSystem.components.length === 0) {
+          console.log('组件数组为空，尝试主动注册组件...');
+
+          // 主动加载组件脚本
+          const loadComponentScript = (name: string) => {
+            return new Promise<boolean>((resolve) => {
+              const info = componentMapping[name];
+              if (!info) {
+                console.log(`组件 ${name} 没有映射信息`);
+                resolve(false);
+                return;
+              }
+
+              // 如果全局变量已存在，直接注册
+              if (info.globalVar && typeof window[info.globalVar] === 'function') {
+                console.log(`组件 ${name} 已加载，直接注册`);
+                window.componentSystem.register(window[info.globalVar]);
+                resolve(true);
+                return;
+              }
+
+              // 否则加载脚本
+              const script = document.createElement('script');
+              script.src = `/components/${info.directory}/index.js`;
+              script.onload = () => {
+                console.log(`组件 ${name} 脚本加载成功`);
+                if (info.globalVar && typeof window[info.globalVar] === 'function') {
+                  console.log(`注册组件 ${name}`);
+                  window.componentSystem.register(window[info.globalVar]);
+                  resolve(true);
+                } else {
+                  console.log(`组件 ${name} 全局变量未找到`);
+                  resolve(false);
+                }
+              };
+              script.onerror = () => {
+                console.error(`加载组件 ${name} 脚本失败`);
+                resolve(false);
+              };
+              document.head.appendChild(script);
+            });
+          };
+
+          // 串行加载组件以确保稳定性
+          const loadAllComponents = async () => {
+            console.log('开始加载所有组件...');
+            for (const name of componentNames) {
+              await loadComponentScript(name);
+            }
+            console.log('所有组件加载完成，更新组件列表');
+            setSystemComponents(getSystemComponents());
+          };
+
+          loadAllComponents();
+          return; // 避免重复调用 setSystemComponents
+        }
+      }
+
+      // 如果组件已加载，直接获取组件数据
+      setSystemComponents(getSystemComponents());
     };
 
-    // 如果组件系统已经加载，直接获取组件
-    if (window.componentSystem && window.componentSystem.components.length > 0) {
-      loadComponents();
-    } else {
-      // 监听组件系统加载完成事件
-      const checkComponentsInterval = setInterval(() => {
-        if (window.componentSystem && window.componentSystem.components.length > 0) {
-          clearInterval(checkComponentsInterval);
-          loadComponents();
-        }
-      }, 500);
+    // 如果已经在浏览器环境中且组件系统已加载，立即获取组件
+    if (typeof window !== 'undefined' && window.componentSystem) {
+      loadSystemComponents();
 
-      // 5秒后清除定时器，防止无限检查
-      setTimeout(() => {
-        clearInterval(checkComponentsInterval);
-        if (systemComponents.length === 0) {
-          console.warn('组件系统加载超时，可能没有可用组件');
-        }
-      }, 5000);
+      // 监听组件渲染完成事件
+      const handleComponentsRendered = () => {
+        console.log('组件渲染完成，重新获取组件数据');
+        setTimeout(loadSystemComponents, 100); // 延迟100ms确保组件完全加载
+      };
+
+      document.addEventListener('componentsRendered', handleComponentsRendered);
+
+      return () => {
+        document.removeEventListener('componentsRendered', handleComponentsRendered);
+      };
+    } else {
+      // 否则等待组件系统加载完成
+      window.addEventListener('DOMContentLoaded', loadSystemComponents);
+      return () => {
+        window.removeEventListener('DOMContentLoaded', loadSystemComponents);
+      };
     }
-  };
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -446,13 +432,8 @@ const Home: React.FC = () => {
 
   // 添加系统组件到快捷方式
   const handleAddSystemComponent = (component: ShortcutItem) => {
-    // 先检查该组件是否已存在于快捷方式列表中
     if (!shortcuts.some((s) => s.title === component.title)) {
-      // 直接使用传入的 component 对象的属性，因为 getSystemComponents 已经获取了正确的 icon 和 bgColor
-      const newComponent = { ...component };
-
-      // 添加到快捷方式列表
-      setShortcuts([...shortcuts, newComponent]);
+      setShortcuts([...shortcuts, component]);
     }
     setComponentLibraryVisible(false);
   };
@@ -503,54 +484,37 @@ const Home: React.FC = () => {
 
   // 渲染组件库面板
   const renderComponentLibrary = () => {
-    // 检查是否有可用组件
-    const hasComponents =
-      systemComponents.length > 0 ||
-      (window.componentSystem &&
-        window.componentSystem.components &&
-        window.componentSystem.components.length > 0);
-
-    console.log('组件库中的组件数量:', systemComponents.length);
-    console.log('组件系统中的组件数量:', window.componentSystem?.components?.length || 0);
-
-    // 如果没有systemComponents但有componentSystem.components，则创建临时组件列表
-    let componentsToShow = systemComponents;
-    if (systemComponents.length === 0 && window.componentSystem?.components?.length > 0) {
-      console.log('使用组件系统中的组件');
-      componentsToShow = window.componentSystem.components.map((comp: any) => {
-        // 获取图标，优先使用icon属性，如果没有则使用iconClass
-        const iconClass = comp.icon || comp.iconClass || 'fa-puzzle-piece';
-
-        return {
-          icon: iconClass,
-          bgColor: comp.bgColor || comp.backgroundColor || 'bg-blue-500',
-          title: comp.name,
-          url: '#',
-          type: 'component' as const,
-          component: comp.name,
-        };
-      });
-
-      // 更新systemComponents状态
-      if (componentsToShow.length > 0) {
-        setTimeout(() => setSystemComponents(componentsToShow), 0);
-      }
-    }
-
     return (
       <Modal
         title="组件库"
         open={componentLibraryVisible}
         onCancel={() => setComponentLibraryVisible(false)}
-        footer={null}
+        footer={
+          <div className="flex justify-end">
+            <Button
+              onClick={() => {
+                // 手动强制刷新组件列表
+                if (window.componentSystem) {
+                  const loadSystemComponents = () => {
+                    setSystemComponents(getSystemComponents());
+                  };
+                  loadSystemComponents();
+                }
+              }}
+              className="mr-2"
+            >
+              刷新组件库
+            </Button>
+            <Button onClick={() => setComponentLibraryVisible(false)}>关闭</Button>
+          </div>
+        }
         width={800}
       >
-        {hasComponents ? (
-          <div className={styles.componentGrid}>
-            {componentsToShow.map((component, index) => {
-              console.log('[renderComponentLibrary] 渲染组件:', component.title);
-              const iconClass = component.icon;
-              const bgColor = component.bgColor;
+        <div className={styles.componentGrid}>
+          {systemComponents.length > 0 ? (
+            systemComponents.map((component, index) => {
+              // 判断是否为URL图标
+              const isUrlIcon = component.icon.startsWith('http') || component.icon.startsWith('/');
 
               return (
                 <div
@@ -558,34 +522,25 @@ const Home: React.FC = () => {
                   className={styles.componentItem}
                   onClick={() => handleAddSystemComponent(component)}
                 >
-                  <div className="flex items-center justify-center w-16 h-16 bg-white rounded-lg shadow-md mb-2">
+                  {isUrlIcon ? (
+                    <img src={component.icon} alt={component.title} />
+                  ) : (
                     <div
-                      className={`${component.bgColor} w-12 h-12 rounded-full flex items-center justify-center`}
+                      className={`flex items-center justify-center ${component.bgColor} rounded-md w-12 h-12`}
                     >
-                      <i className={`${processIconClass(component.icon)} text-white text-xl`}></i>
+                      <i className={`${component.icon} text-white text-xl`}></i>
                     </div>
-                  </div>
-                  <div className="text-center text-gray-700">{component.title}</div>
+                  )}
+                  <div>{component.title}</div>
                 </div>
               );
-            })}
-          </div>
-        ) : (
-          <div className="p-8 text-center">
-            <div className="text-gray-500 mb-4">
-              <i className="fa-solid fa-info-circle text-3xl"></i>
+            })
+          ) : (
+            <div className="w-full py-8 text-center text-gray-500">
+              暂无组件数据，请点击"刷新组件库"按钮重试
             </div>
-            <h3 className="text-xl font-medium mb-2">暂无可用组件</h3>
-            <p className="text-gray-500">
-              系统正在加载组件或组件库为空。请稍后再试或检查组件系统配置。
-            </p>
-            <p className="mt-4">
-              <Button type="primary" onClick={() => window.location.reload()}>
-                刷新页面尝试重新加载
-              </Button>
-            </p>
-          </div>
-        )}
+          )}
+        </div>
       </Modal>
     );
   };
@@ -593,83 +548,38 @@ const Home: React.FC = () => {
   // 快捷方式点击处理
   const handleShortcutClick = (shortcut: ShortcutItem) => {
     console.log('Clicked shortcut data:', shortcut);
-    // 添加调试信息，检查图标和背景色
-    if (shortcut.type === 'component') {
-      console.log(`Component icon: ${shortcut.icon}, bgColor: ${shortcut.bgColor}`);
-    }
 
     if (shortcut.type === 'website') {
       window.open(shortcut.url, '_blank');
     } else if (shortcut.type === 'component') {
       // 在这里调用组件桥接系统打开组件
-      if (typeof window !== 'undefined') {
-        console.log('尝试打开组件:', shortcut.component);
-
-        // 首先尝试使用组件名称直接获取组件实例
-        const componentInstance = window.componentSystem?.components.find(
-          (comp: any) => comp.name === shortcut.title || comp.name === shortcut.component,
-        );
-
-        if (componentInstance && typeof componentInstance.handleClick === 'function') {
-          // 直接调用组件的handleClick方法
-          console.log('找到组件实例，直接调用handleClick方法');
-          componentInstance.handleClick();
-          return;
-        }
-
-        // 如果未找到组件实例或没有handleClick方法，尝试使用openComponent
-        if (window.openComponent) {
-          console.log('尝试使用openComponent打开:', shortcut.component);
-          const componentName = shortcut.component || shortcut.title;
-          const success = window.openComponent(componentName);
-          if (!success) {
-            // 如果组件打开失败，显示提示
-            Modal.info({
-              title: `组件 - ${shortcut.title}`,
-              content: (
-                <div>
-                  <p>该组件暂未实现，敬请期待！</p>
-                  <p>组件名称: {componentName}</p>
-                </div>
-              ),
-              width: 400,
-            });
-          }
-        } else {
-          // 兜底方案：展示一个提示框
+      if (shortcut.component && typeof window !== 'undefined' && window.openComponent) {
+        const success = window.openComponent(shortcut.component);
+        if (!success) {
+          // 如果组件桥接系统不支持该组件，显示提示
           Modal.info({
             title: `组件 - ${shortcut.title}`,
             content: (
               <div>
-                <p>组件加载失败，请刷新页面重试。</p>
-                <p>组件名称: {shortcut.component || '未知组件'}</p>
+                <p>该组件暂未实现，敬请期待！</p>
+                <p>组件名称: {shortcut.component}</p>
               </div>
             ),
             width: 400,
           });
         }
-      }
-    }
-  };
-
-  // 加载壁纸
-  const loadWallpaper = () => {
-    const savedWallpaper = localStorage.getItem('wallpaper');
-    if (savedWallpaper) {
-      setWallpaper(savedWallpaper);
-    }
-  };
-
-  // 加载桌面快捷方式
-  const loadDesktopShortcuts = () => {
-    const savedShortcuts = localStorage.getItem('shortcuts');
-    if (savedShortcuts) {
-      try {
-        const parsedShortcuts = JSON.parse(savedShortcuts);
-        setShortcuts(parsedShortcuts);
-      } catch (error) {
-        console.error('解析桌面快捷方式失败:', error);
-        setShortcuts(defaultShortcuts);
+      } else {
+        // 兜底方案：展示一个提示框
+        Modal.info({
+          title: `组件 - ${shortcut.title}`,
+          content: (
+            <div>
+              <p>组件加载失败，请刷新页面重试。</p>
+              <p>组件名称: {shortcut.component || '未知组件'}</p>
+            </div>
+          ),
+          width: 400,
+        });
       }
     }
   };
@@ -704,7 +614,6 @@ const Home: React.FC = () => {
         </Button>
       </Tooltip>
 
-      {/* @ts-ignore 临时忽略overlay被弃用的警告 */}
       <Dropdown
         overlay={<WallpaperMenu onWallpaperChange={setWallpaper} />}
         trigger={['contextMenu']}

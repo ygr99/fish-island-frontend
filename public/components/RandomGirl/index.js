@@ -4,11 +4,11 @@
 class RandomGirl {
   constructor() {
     this.name = '随机小姐姐';
-    this.iconClass = 'fa-female';
+    this.iconClass = 'fa-solid fa-female';
     this.backgroundColor = 'bg-pink-500';
 
     // 添加新属性，用于组件库显示
-    this.icon = 'fa-female';
+    this.icon = 'fa-solid fa-female';
     this.bgColor = 'bg-pink-500';
     this.description = '随机播放小姐姐视频';
   }
@@ -311,6 +311,7 @@ class RandomGirl {
       toast.className =
         'fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
     }
+
     // 显示提示框
     toast.classList.remove('hidden');
 
@@ -321,16 +322,5 @@ class RandomGirl {
   }
 }
 
-// 确保类导出到全局作用域
+// 导出组件
 window.RandomGirl = RandomGirl;
-
-// 如果组件系统已经初始化，直接注册组件
-if (window.componentSystem) {
-  try {
-    window.componentSystem.register(RandomGirl);
-    console.log('随机小姐姐组件已自动注册');
-  } catch (err) {
-    console.error('注册随机小姐姐组件时出错:', err);
-  }
-}
-
