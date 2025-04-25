@@ -16,6 +16,7 @@ interface IComponent {
   description?: string;
   render: () => string; // 假设 render 返回 HTML 字符串
   init?: () => void;
+  handleClick?: () => void;
   // 添加其他可能需要的属性
   [key: string]: any;
 }
@@ -23,211 +24,80 @@ interface IComponent {
 // 定义组件构造函数类型
 type ComponentClass = new () => IComponent;
 
-// 定义组件名称映射的类型
-interface ComponentNameMapping {
-  [key: string]: { directory: string; globalVar: string };
-}
-
-// 定义 ComponentSystem 类的属性类型
+// 组件系统类
 class ComponentSystem {
   components: IComponent[];
   containerSelector: string;
   componentOrder: string[];
-  componentNameMapping: ComponentNameMapping;
   allComponentNames: string[];
   desktopComponents: string[];
   libraryComponents: string[];
   allRequiredComponents: string[];
   useCustomOrder?: boolean;
   componentOrders?: Record<string, number>;
+  loadedComponents: Set<string>;
 
   constructor() {
     this.components = [];
+    this.loadedComponents = new Set<string>();
     this.containerSelector = '.shortcutsSection';
     this.componentOrder = this.loadComponentOrder() || [];
-
-    // 组件映射关系
-    this.componentNameMapping = {
-      随机哔哩哔哩: {
-        directory: 'BilibiliRandomVideo',
-        globalVar: 'BilibiliRandomVideo',
-      },
-      随机小姐姐: {
-        directory: 'RandomGirl',
-        globalVar: 'RandomGirl',
-      },
-      随机黑丝: {
-        directory: 'RandomHeisi',
-        globalVar: 'RandomHeisi',
-      },
-      随机唱鸭: {
-        directory: 'RandomSingDuck',
-        globalVar: 'RandomSingDuck',
-      },
-      游戏中心: {
-        directory: 'GameCenter',
-        globalVar: 'GameCenter',
-      },
-      日历: {
-        directory: 'Calendar',
-        globalVar: 'Calendar',
-      },
-      天气: {
-        directory: 'Weather',
-        globalVar: 'Weather',
-      },
-      必应壁纸: {
-        directory: 'Wallpaper',
-        globalVar: 'Wallpaper',
-      },
-      快递查询: {
-        directory: 'ExpressTracker',
-        globalVar: 'ExpressTracker',
-      },
-      记事本: {
-        directory: 'Notepad',
-        globalVar: 'Notepad',
-      },
-      网站库: {
-        directory: 'WebsiteLibrary',
-        globalVar: 'WebsiteLibrary',
-      },
-      随机追剧: {
-        directory: 'RandomTV',
-        globalVar: 'RandomTV',
-      },
-      随机网易云: {
-        directory: 'RandomNeteaseMusic',
-        globalVar: 'RandomNeteaseMusic',
-      },
-      热榜: {
-        directory: 'HotList',
-        globalVar: 'HotList',
-      },
-      RSS阅读器: {
-        directory: 'RSSReader',
-        globalVar: 'RSSReader',
-      },
-      随机一本书: {
-        directory: 'RandomBook',
-        globalVar: 'RandomBook',
-      },
-      随机博客: {
-        directory: 'RandomBlog',
-        globalVar: 'RandomBlog',
-      },
-      随机炫猿导航: {
-        directory: 'RandomXydh',
-        globalVar: 'RandomXydh',
-      },
-      聊天室: {
-        directory: 'ChatRoom',
-        globalVar: 'ChatRoom',
-      },
-      随机诡异故事: {
-        directory: 'RandomStrangeTale',
-        globalVar: 'RandomStrangeTale',
-      },
-      随机分页: {
-        directory: 'PaginatedSites',
-        globalVar: 'PaginatedSites',
-      },
-      工具箱: {
-        directory: 'Toolbox',
-        globalVar: 'Toolbox',
-      },
-      八宫格周视图: {
-        directory: 'WeeklyPlanner',
-        globalVar: 'WeeklyPlanner',
-      },
-      倒数日: {
-        directory: 'Countdown',
-        globalVar: 'Countdown',
-      },
-      食忆日历: {
-        directory: 'FoodMemoryCalendar',
-        globalVar: 'FoodMemoryCalendar',
-      },
-      聚合一言: {
-        directory: 'AggregateHitokoto',
-        globalVar: 'AggregateHitokoto',
-      },
-      直播视界: {
-        directory: 'LiveStream',
-        globalVar: 'LiveStream',
-      },
-      音乐: {
-        directory: 'Music',
-        globalVar: 'Music',
-      },
-    };
-
-    // 获取所有支持的组件标识符（中文名称）
-    this.allComponentNames = Object.keys(this.componentNameMapping);
+    this.allComponentNames = []; // 初始化为空数组，将在discoverComponents中被填充
 
     // 桌面上显示的组件列表
     this.desktopComponents = this.loadDesktopComponents() || [
-      '随机哔哩哔哩',
       '随机小姐姐',
-      '随机黑丝',
-      '随机唱鸭',
-      '游戏中心',
-      '日历',
-      '天气',
-      '必应壁纸',
-      '快递查询',
-      '记事本',
-      '网站库',
-      '随机追剧',
-      '随机网易云',
-      '热榜',
-      'RSS阅读器',
-      '随机一本书',
-      '随机博客',
-      '随机炫猿导航',
-      '聊天室',
-      '随机诡异故事',
-      '随机分页',
-      '工具箱',
-      '八宫格周视图',
-      '倒数日',
-      '食忆日历',
-      '聚合一言',
-      '直播视界',
-      '音乐',
+      // 其他默认组件...
     ];
 
     // 组件库中显示的组件列表
     this.libraryComponents = this.loadLibraryComponents() || [
-      '随机小姐姐',
-      '随机哔哩哔哩',
-      '随机黑丝',
-      '随机唱鸭',
-      '游戏中心'
+      '随机小姐姐'
     ];
 
     // 所有需要加载的组件（并集）
     this.allRequiredComponents = [
       ...new Set([...this.desktopComponents, ...this.libraryComponents]),
     ];
+    
+    // 自动发现所有可用组件名称
+    this.discoverComponents();
+    
+    // 注册系统组件打开方法
+    window.openComponent = this.openComponent.bind(this);
+    
+    console.log('组件系统构造函数执行完毕');
   }
-
+  
   /**
-   * 根据组件中文名获取目录名
-   * @param {String} componentName - 组件的中文名称
-   * @returns {String} 对应的目录名
+   * 自动发现组件目录下的所有组件
    */
-  getDirectoryName(componentName: string): string {
-    return this.componentNameMapping[componentName]?.directory || componentName;
-  }
-
-  /**
-   * 根据组件中文名获取全局变量名
-   * @param {String} componentName - 组件的中文名称
-   * @returns {String} 对应的全局变量名
-   */
-  getGlobalVarName(componentName: string): string | undefined {
-    return this.componentNameMapping[componentName]?.globalVar;
+  async discoverComponents() {
+    try {
+      console.log('开始发现组件...');
+      
+      // 先尝试加载已知组件
+      this.allComponentNames = [...this.allRequiredComponents];
+      
+      // 开始加载组件
+      console.log(`将加载这些组件: ${this.allComponentNames.join(', ')}`);
+      await this.loadComponents(this.allComponentNames);
+      
+      // 如果没有组件被加载成功，尝试直接加载默认组件
+      if (this.components.length === 0) {
+        console.log('没有组件被加载，尝试直接加载随机小姐姐组件');
+        // 手动加载并注册随机小姐姐组件
+        try {
+          await this.loadComponent('RandomGirl');
+        } catch (error) {
+          console.error('加载随机小姐姐组件失败:', error);
+        }
+      }
+      
+      console.log(`组件发现完成，已加载组件数量: ${this.components.length}`);
+    } catch (error) {
+      console.error('组件发现过程出错:', error);
+    }
   }
 
   /**
@@ -239,12 +109,18 @@ class ComponentSystem {
       const component = new ComponentClass();
 
       // 确保组件有必要的属性
-      if (!component.icon) {
+      if (!component.icon && !component.iconClass) {
         component.icon = 'fa-puzzle-piece'; // 默认图标
+      } else if (!component.icon && component.iconClass) {
+        // 如果只有iconClass，则将其复制到icon
+        component.icon = component.iconClass;
       }
 
-      if (!component.bgColor) {
+      if (!component.bgColor && !component.backgroundColor) {
         component.bgColor = 'bg-blue-500'; // 默认背景色
+      } else if (!component.bgColor && component.backgroundColor) {
+        // 如果只有backgroundColor，则将其复制到bgColor
+        component.bgColor = component.backgroundColor;
       }
 
       if (!component.description) {
@@ -252,15 +128,9 @@ class ComponentSystem {
       }
 
       this.components.push(component);
-      console.log(`组件 [${component.name}] 已注册`);
-
-      // 如果是新组件，添加到排序列表末尾
-      if (!this.componentOrder.includes(component.name)) {
-        this.componentOrder.push(component.name);
-        this.saveComponentOrder();
-      }
+      console.log(`[CS] 成功注册组件: ${component.name}`);
     } catch (error) {
-      console.error('注册组件失败:', error);
+      console.error(`[CS] 注册组件失败:`, error);
     }
   }
 
@@ -293,8 +163,7 @@ class ComponentSystem {
 
       console.log('使用自定义组件排序', this.componentOrders);
     } else {
-      // 使用默认排序（组件放在最前面）
-      // 按保存的顺序排序组件
+      // 使用默认排序（按保存的顺序排序组件）
       this.componentOrder.forEach((name: string) => {
         const component = componentsToRender.find((c: IComponent) => c.name === name);
         if (component) {
@@ -310,84 +179,42 @@ class ComponentSystem {
       });
     }
 
-    // 渲染自定义组件
+    // 将每个组件渲染到容器中
+    const componentContainers: HTMLElement[] = [];
+    if (orderedComponents.length > 0) {
+      container.innerHTML = ''; // 清空容器
     orderedComponents.forEach((component: IComponent) => {
-      // 检查是否已经存在同名组件元素
-      const existingElement = container.querySelector<HTMLElement>(`[data-component-name="${component.name}"]`);
-
-      // 如果已存在，则跳过
-      if (existingElement) {
-        return;
-      }
-
-      const html = component.render();
-
-      // 使用文档片段提高性能
-      const temp = document.createElement('template');
-      temp.innerHTML = html.trim();
-
-      // 确保组件元素有标识
-      const componentElement = temp.content.firstChild as HTMLElement | null;
+        try {
+          const componentHtml = component.render();
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = componentHtml.trim();
+          const componentElement = tempDiv.firstChild as HTMLElement;
+          
       if (componentElement) {
-        componentElement.setAttribute('data-custom-component', 'true');
-        componentElement.setAttribute('data-component-name', component.name);
-
-        // 根据排序策略决定插入位置
-        if (this.useCustomOrder && this.componentOrders) {
-          // 自定义排序时，根据order属性确定位置
-          const order = this.componentOrders[component.name] || 0;
-
-          // 找到应该插入的位置（找到第一个order值大于当前组件的元素）
-          let insertBeforeElement: Element | null = null;
-
-          // 遍历所有元素，包括自定义组件和网站
-          Array.from(container.children).forEach((element: Element) => {
-            const elementOrderAttr = element.getAttribute('data-order');
-            const elementOrder = elementOrderAttr ? parseInt(elementOrderAttr) : 9999;
-            if (elementOrder > order && !insertBeforeElement) {
-              insertBeforeElement = element;
-            }
-          });
-
-          if (insertBeforeElement) {
-            container.insertBefore(componentElement, insertBeforeElement);
-          } else {
+            componentContainers.push(componentElement);
             container.appendChild(componentElement);
           }
-
-          // 添加order属性
-          componentElement.setAttribute('data-order', order.toString());
-        } else {
-          // 默认排序时，组件放在最前面
-          const firstDefaultApp = container.querySelector<HTMLElement>('.app-container');
-          if (firstDefaultApp) {
-            container.insertBefore(componentElement, firstDefaultApp);
-          } else {
-            container.appendChild(componentElement);
-          }
-        }
+        } catch (error) {
+          console.error(`渲染组件 ${component.name} 失败:`, error);
       }
     });
 
     // 初始化组件事件
     orderedComponents.forEach((component: IComponent) => {
       if (typeof component.init === 'function') {
+          try {
         component.init();
+          } catch (error) {
+            console.error(`初始化组件 ${component.name} 失败:`, error);
+          }
       }
     });
 
-    // 重新初始化 Sortable
+      // 初始化排序功能
     this.initSortable(container);
-
-    // 触发组件渲染完成事件，让其他系统可以进行后续处理
-    const event = new CustomEvent('componentsRendered', {
-      detail: {
-        container: container,
-        components: orderedComponents,
-      },
-    });
-    document.dispatchEvent(event);
-    console.log('触发组件渲染完成事件');
+    } else {
+      console.log('没有组件需要渲染');
+    }
   }
 
   /**
@@ -469,296 +296,358 @@ class ComponentSystem {
   }
 
   /**
-   * 保存组件库组件列表到本地存储
+   * 保存组件库列表到本地存储
    */
   saveLibraryComponents(): void {
     try {
       localStorage.setItem('library-components', JSON.stringify(this.libraryComponents));
     } catch (e) {
-      console.error('保存组件库组件列表失败:', e);
+      console.error('保存组件库列表失败:', e);
     }
   }
 
   /**
-   * 从本地存储加载组件库组件列表
+   * 从本地存储加载组件库列表
    */
-  loadLibraryComponents(): string[] {
+  loadLibraryComponents(): string[] | null {
     try {
       const saved = localStorage.getItem('library-components');
-      // 返回解析的数据，如果没有数据则返回空数组（而不是null）
-      return saved ? JSON.parse(saved) : [];
+      return saved ? JSON.parse(saved) : null;
     } catch (e) {
-      console.error('加载组件库组件列表失败:', e);
-      // 出错时返回空数组
-      return [];
-    }
-  }
-
-  /**
-   * 渲染所有组件到页面
-   */
-  renderAll(): void {
-    const container = document.querySelector<HTMLElement>(this.containerSelector);
-    if (!container) {
-      console.error(`找不到容器: ${this.containerSelector}`);
-      return;
-    }
-
-    // 获取第一个默认应用图标元素
-    const firstDefaultApp = container.querySelector<HTMLElement>('.app-container');
-
-    // 按保存的顺序排序组件
-    let orderedComponents: IComponent[] = [];
-    this.componentOrder.forEach((name: string) => {
-      const component = this.components.find((c: IComponent) => c.name === name);
-      if (component) {
-        orderedComponents.push(component);
-      }
-    });
-
-    // 将未在排序列表中的组件添加到末尾
-    this.components.forEach((component: IComponent) => {
-      if (!orderedComponents.includes(component)) {
-        orderedComponents.push(component);
-      }
-    });
-
-    // 渲染所有组件
-    orderedComponents.forEach((component: IComponent) => {
-      const html = component.render();
-
-      // 使用文档片段提高性能
-      const temp = document.createElement('template');
-      temp.innerHTML = html.trim();
-
-      // 确保组件元素有标识
-      const componentElement = temp.content.firstChild as HTMLElement | null;
-      if (componentElement) {
-        componentElement.setAttribute('data-custom-component', 'true');
-        componentElement.setAttribute('data-component-name', component.name);
-
-        // 将自定义组件插入到第一个应用之前
-        if (firstDefaultApp) {
-          container.insertBefore(componentElement, firstDefaultApp);
-        } else {
-          // 如果没有默认应用，则添加到容器末尾
-          container.appendChild(componentElement);
-        }
-      }
-    });
-
-    // 初始化组件事件
-    this.components.forEach((component: IComponent) => {
-      if (typeof component.init === 'function') {
-        component.init();
-      }
-    });
-
-    // 重新初始化 Sortable
-    this.initSortable(container);
-  }
-
-  /**
-   * 初始化拖拽排序功能
-   * @param {HTMLElement} container - 容器元素
-   */
-  initSortable(container: HTMLElement): Sortable | null {
-    // 尝试使用 window.Sortable，如果不存在则使用导入的 Sortable
-    const SortableInstance = window.Sortable || Sortable;
-
-    if (!SortableInstance) {
-      console.warn('Sortable库未加载，拖拽功能不可用');
+      console.error('加载组件库列表失败:', e);
       return null;
     }
+  }
 
-    // 检测是否为移动设备
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent,
-    );
+  /**
+   * 渲染所有组件并初始化
+   */
+  renderAll(): void {
+    // 等待组件加载完成后再渲染
+    if (this.components.length > 0) {
+      this.renderDesktopComponents();
+    } else {
+      console.log('暂无组件，等待组件加载...');
 
-    // 如果是移动设备，禁用拖拽功能
-    if (isMobile) {
-      console.log('检测到移动设备，拖拽功能已禁用');
+      // 等待组件加载完成后再次尝试渲染
+      setTimeout(() => {
+        console.log(`再次尝试渲染，当前已加载组件数: ${this.components.length}`);
+        this.renderDesktopComponents();
+      }, 500);
+    }
+  }
+
+  /**
+   * 初始化排序功能
+   * @param {HTMLElement} container - 组件容器元素
+   */
+  initSortable(container: HTMLElement): Sortable | null {
+    // 检查 Sortable 是否可用
+    if (typeof Sortable === 'undefined') {
+      console.error('Sortable库未加载，无法初始化拖拽排序');
       return null;
     }
 
     try {
-      const sortable = SortableInstance.create(container, {
+      // 如果容器中没有子元素，不初始化 Sortable
+      if (container.children.length === 0) {
+        console.warn('容器中没有元素，跳过Sortable初始化');
+        return null;
+      }
+
+      // 创建并初始化Sortable实例
+      const sortable = new Sortable(container, {
         animation: 150,
         ghostClass: 'sortable-ghost',
-        chosenClass: 'sortable-chosen',
-        dragClass: 'sortable-drag',
-        handle: '.app-icon', // 只能通过图标拖动
-        onEnd: (evt: Sortable.SortableEvent) => {
-          // 更新组件排序
-          this.useCustomOrder = true;
-          this.componentOrders = this.componentOrders || {};
-
-          // 保存新的顺序
-          Array.from(container.children).forEach((item: Element, index: number) => {
-            // 更新顺序属性
-            item.setAttribute('data-order', index.toString());
-
-            if (item.hasAttribute('data-custom-component')) {
-              // 是自定义组件
-              const componentName = item.getAttribute('data-component-name');
-              if (componentName) {
-                this.componentOrders![componentName] = index;
-              }
-            }
-          });
-
-          // 保存排序信息
-          this.saveComponentOrders();
-
-          // 通知存储系统保存所有桌面数据
-          // 使用类型断言来访问可能的 window.storage
-          const storage = window.storage as { saveDesktopData?: () => void } | undefined;
-          if (storage && typeof storage.saveDesktopData === 'function') {
-            storage.saveDesktopData();
-          }
+        chosenClass: 'sortableChosen',
+        dragClass: 'sortableDrag',
+        forceFallback: false, // 在移动设备上使用原生拖拽
+        onEnd: (evt) => {
+          this.updateComponentOrder();
         },
       });
 
+      console.log('Sortable初始化成功');
       return sortable;
     } catch (error) {
-      console.error('初始化拖拽排序失败:', error);
+      console.error('初始化Sortable失败:', error);
       return null;
     }
   }
 
-  // 添加 saveComponentOrders 的声明，即使它不存在也要声明，或者实现它
+  /**
+   * 保存组件顺序到localStorage
+   */
   saveComponentOrders(): void {
     try {
       localStorage.setItem('component-orders', JSON.stringify(this.componentOrders));
-    } catch (e) {
-      console.error('保存组件自定义顺序失败:', e);
-    }
-  }
-
-  /**
-   * 更新组件的排序顺序
-   */
-  updateComponentOrder(): void {
-    const container = document.querySelector<HTMLElement>(this.containerSelector);
-    if (!container) return;
-
-    const customComponentElements = container.querySelectorAll<HTMLElement>('[data-custom-component="true"]');
-    const newOrder: string[] = [];
-
-    customComponentElements.forEach((element: HTMLElement) => {
-      // 尝试更可靠地获取组件名称，例如从 data-* 属性
-      const componentName = element.getAttribute('data-component-name');
-      if (componentName) {
-        newOrder.push(componentName);
-      } else {
-        // 作为后备，尝试从 span 获取
-        const nameElement = element.querySelector('span');
-        if (nameElement && nameElement.textContent) {
-          newOrder.push(nameElement.textContent);
-        }
-      }
-    });
-
-    if (newOrder.length > 0) {
-      this.componentOrder = newOrder;
-      this.saveComponentOrder();
-    }
-  }
-
-  /**
-   * 保存组件顺序到本地存储
-   */
-  saveComponentOrder(): void {
-    try {
-      localStorage.setItem('custom-components-order', JSON.stringify(this.componentOrder));
+      console.log('保存组件顺序成功');
     } catch (e) {
       console.error('保存组件顺序失败:', e);
     }
   }
 
   /**
-   * 从本地存储加载组件顺序
+   * 更新组件顺序
    */
-  loadComponentOrder(): string[] {
-    try {
-      const savedOrder = localStorage.getItem('custom-components-order');
-      return savedOrder ? JSON.parse(savedOrder) : [];
-    } catch (e) {
-      console.error('加载组件顺序失败:', e);
-      return [];
+  updateComponentOrder(): void {
+    const container = document.querySelector<HTMLElement>(this.containerSelector);
+    if (!container) return;
+
+    // 获取新的组件顺序
+    const newOrder: string[] = [];
+    const newComponentOrders: Record<string, number> = {};
+
+    // 遍历容器中的每个组件元素
+    Array.from(container.children).forEach((child, index) => {
+      // 尝试获取组件名称
+      const nameElement = child.querySelector('.text-sm');
+      if (nameElement && nameElement.textContent) {
+        const componentName = nameElement.textContent.trim();
+        newOrder.push(componentName);
+        newComponentOrders[componentName] = index;
+      }
+    });
+
+    if (newOrder.length > 0) {
+      // 更新组件顺序
+      this.componentOrder = newOrder;
+      this.componentOrders = newComponentOrders;
+      this.useCustomOrder = true;
+
+      // 保存新顺序
+      this.saveComponentOrder();
+      this.saveComponentOrders();
+
+      console.log('更新组件顺序成功:', newOrder);
     }
   }
 
   /**
-   * 加载所有组件脚本
-   * @param {Array} componentNames - 要加载的组件名称数组
-   * @returns {Promise} - 所有组件加载完成的Promise
+   * 保存组件顺序到localStorage
    */
-  loadComponents(componentNames: string[]): Promise<void[]> {
-    console.log('[CS] 开始加载组件:', componentNames);
-    
-    // 先检查RandomGirl组件文件是否真的存在
-    const checkRandomGirl = new Promise<void>((resolve) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('HEAD', '/components/RandomGirl/index.js', true);
-      xhr.onload = function() {
-        if (xhr.status >= 200 && xhr.status < 400) {
-          console.log('[CS] RandomGirl组件文件存在且可访问');
-        } else {
-          console.error('[CS] RandomGirl组件文件不存在或无法访问:', xhr.status);
-        }
-        resolve();
-      };
-      xhr.onerror = function() {
-        console.error('[CS] 检查RandomGirl组件文件时发生错误');
-        resolve();
-      };
-      xhr.send();
-    });
+  saveComponentOrder(): void {
+    try {
+      localStorage.setItem('component-order', JSON.stringify(this.componentOrder));
+      console.log('保存组件顺序列表成功');
+    } catch (e) {
+      console.error('保存组件顺序列表失败:', e);
+    }
+  }
 
-    return checkRandomGirl.then(() => {
-      const promises = componentNames.map((componentName: string) => {
-        return new Promise<void>((resolve, reject) => { // Promise<void> 因为我们只关心加载完成
-          const script = document.createElement('script');
-          // 使用映射获取目录名
-          const directoryName = this.getDirectoryName(componentName);
-          // 假设组件脚本最终位于 /components/目录下
-          const scriptPath = `/components/${directoryName}/index.js`;
-          console.log(`[CS] 尝试加载组件脚本: ${scriptPath} (${componentName})`);
+  /**
+   * 加载组件顺序从localStorage
+   */
+  loadComponentOrder(): string[] | null {
+    try {
+      const saved = localStorage.getItem('component-order');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      console.error('加载组件顺序失败:', e);
+      return null;
+    }
+  }
+
+  /**
+   * 加载组件
+   * @param {Array} componentNames - 要加载的组件名称数组
+   */
+  async loadComponents(componentNames: string[]): Promise<void[]> {
+    // 过滤出尚未加载的组件
+    const componentsToLoad = componentNames.filter(name => !this.loadedComponents.has(name));
+    
+    if (componentsToLoad.length === 0) {
+      console.log('所有组件已加载');
+      return Promise.resolve([]);
+    }
+
+    console.log(`开始加载组件: ${componentsToLoad.join(', ')}`);
+    
+    // 创建加载每个组件的Promise数组
+    const loadPromises = componentsToLoad.map(componentName => this.loadComponent(componentName));
+    
+    return Promise.all(loadPromises);
+  }
+  
+  /**
+   * 加载单个组件
+   * @param {String} componentName - 组件名称
+   */
+  loadComponent(componentName: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // 如果组件已经加载，直接返回
+      if (this.loadedComponents.has(componentName)) {
+        resolve();
+        return;
+      }
+      
+      // 构建脚本路径
+      const scriptUrl = `/components/${componentName}/index.js`;
+      
+      // 检查该文件是否可访问
+      fetch(scriptUrl, { 
+        method: 'GET',
+        headers: { 'Accept': 'application/javascript' }
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`组件文件不可访问: ${response.status}`);
+          }
           
-          script.src = scriptPath;
-          script.onload = () => {
-            console.log(`[CS] 组件脚本加载成功: ${componentName}`);
-            
-            // 检查全局变量是否定义
-            const globalVarName = this.getGlobalVarName(componentName);
-            const ComponentClass = (window as any)[globalVarName || ''];
-            if (ComponentClass) {
-              console.log(`[CS] 检测到组件类已定义: ${globalVarName}`);
-            } else {
-              console.warn(`[CS] 组件类未定义: ${globalVarName}`);
+          return response.text().then(content => {
+            // 检查是否是合法的JavaScript
+            if (content.trim().startsWith('<!DOCTYPE html>') || content.trim().startsWith('<html')) {
+              console.error(`组件 ${componentName} 文件内容是HTML而非JavaScript`);
+              throw new Error('组件文件格式错误: 收到HTML而非JavaScript');
             }
             
+            // 文件内容正确，创建脚本元素
+            const script = document.createElement('script');
+            script.type = 'application/javascript';
+            script.text = content;
+            
+            // 设置加载回调
+            script.onload = () => {
+              console.log(`组件 ${componentName} 脚本执行成功`);
+              this.loadedComponents.add(componentName);
+
+              // 尝试自动注册组件
+              setTimeout(() => {
+                const ComponentClass = (window as any)[componentName];
+            if (ComponentClass) {
+                  try {
+                    this.register(ComponentClass);
+                    console.log(`组件 ${componentName} 加载后自动注册成功`);
+                  } catch (error) {
+                    console.error(`组件 ${componentName} 自动注册失败:`, error);
+                  }
+            } else {
+                  console.warn(`组件 ${componentName} 加载成功但未找到全局类`);
+                }
+              }, 100);
+              
+              resolve();
+            };
+            
+            script.onerror = (error) => {
+              console.error(`组件 ${componentName} 脚本执行失败:`, error);
+              reject(new Error(`脚本执行失败: ${componentName}`));
+            };
+            
+            // 添加脚本到文档
+            document.head.appendChild(script);
+          });
+        })
+        .catch(error => {
+          console.error(`请求组件 ${componentName} 失败:`, error);
+          
+          // 尝试备用加载方式
+          console.log(`尝试使用备用方式加载组件 ${componentName}`);
+          const backupScript = document.createElement('script');
+          backupScript.src = scriptUrl;
+          backupScript.async = true;
+          
+          backupScript.onload = () => {
+            console.log(`备用方式: 组件 ${componentName} 脚本加载成功`);
+            this.loadedComponents.add(componentName);
             resolve();
           }; 
           
-          script.onerror = (e) => {
-            console.error(`[CS] 加载组件失败: ${componentName} (${directoryName})`, e);
-            resolve(); // 即使失败也resolve，以免阻止其他组件加载
+          backupScript.onerror = (backupError) => {
+            console.error(`备用方式: 组件 ${componentName} 加载失败:`, backupError);
+            reject(new Error(`无法加载组件: ${componentName}`));
           };
           
-          document.head.appendChild(script);
+          document.head.appendChild(backupScript);
         });
-      });
-
-      return Promise.all(promises);
     });
+  }
+  
+  /**
+   * 打开组件
+   * @param {String} componentName - 组件名称
+   * @returns {Boolean} 是否成功打开组件
+   */
+  openComponent(componentName: string): boolean {
+    console.log(`[组件系统] 请求打开组件: ${componentName}`);
+    
+    // 如果组件已经注册到组件系统
+    const registeredComponent = this.components.find(comp => comp.name === componentName);
+    if (registeredComponent) {
+      try {
+        console.log(`[组件系统] 从已注册组件中找到组件 ${componentName}`);
+        if (typeof registeredComponent.handleClick === 'function') {
+          registeredComponent.handleClick();
+          return true;
+        } else {
+          console.error(`[组件系统] 已注册组件 ${componentName} 没有 handleClick 方法`);
+          return false;
+        }
+      } catch (error) {
+        console.error(`[组件系统] 执行已注册组件 ${componentName} 失败:`, error);
+        return false;
+      }
+    }
+    
+    // 查找已加载的组件类
+    const ComponentClass = (window as any)[componentName] as ComponentClass | undefined;
+    
+    if (ComponentClass) {
+      try {
+        console.log(`[组件系统] 组件 ${componentName} 已存在，直接实例化并执行`);
+        const component = new ComponentClass();
+        
+        // 注册组件以便下次使用
+        this.register(ComponentClass);
+        
+        if (typeof component.handleClick === 'function') {
+          component.handleClick();
+          return true;
+        } else {
+          console.error(`[组件系统] 组件 ${componentName} 没有 handleClick 方法`);
+          return false;
+        }
+      } catch (error) {
+        console.error(`[组件系统] 实例化或执行组件 ${componentName} 失败:`, error);
+        return false;
+      }
+    }
+    
+    // 如果组件未加载，尝试加载
+    console.log(`[组件系统] 组件 ${componentName} 未加载，尝试加载`);
+    this.loadComponent(componentName)
+      .then(() => {
+        // 加载成功后再次尝试打开
+        const LoadedComponentClass = (window as any)[componentName] as ComponentClass | undefined;
+        
+        if (LoadedComponentClass) {
+          try {
+            // 尝试注册组件
+            this.register(LoadedComponentClass);
+            
+            const component = new LoadedComponentClass();
+            if (typeof component.handleClick === 'function') {
+              component.handleClick();
+            } else {
+              console.error(`[组件系统] 加载后组件 ${componentName} 没有 handleClick 方法`);
+            }
+          } catch (error) {
+            console.error(`[组件系统] 加载后实例化或执行组件 ${componentName} 失败:`, error);
+          }
+        } else {
+          console.error(`[组件系统] 加载后找不到组件类: ${componentName}`);
+        }
+      })
+      .catch(error => {
+        console.error(`[组件系统] 加载组件 ${componentName} 失败:`, error);
+      });
+    
+    // 返回true表示已开始尝试加载组件
+    return true;
   }
 }
 
-// --- ComponentLibrary IIFE 类型修复 ---
-
+// 创建组件库API
 interface ComponentLibraryAPI {
   getComponents: () => IComponent[];
   getComponentByName: (name: string) => IComponent | null;
@@ -768,141 +657,69 @@ interface ComponentLibraryAPI {
   };
 }
 
-// 创建全局组件系统实例
+// 在window上初始化组件系统实例
+if (typeof window !== 'undefined') {
+  // DOM加载完成后初始化组件系统
+  const initComponentSystem = () => {
+    if (!window.componentSystem) {
 window.componentSystem = new ComponentSystem();
-
-// 清理ComponentLibrary模块，移除示例组件数据
-const ComponentLibrary = (function (): ComponentLibraryAPI {
-  // 公开API
-  const api: ComponentLibraryAPI = {
-    // 获取系统中注册的所有组件
-    getComponents: function (): IComponent[] {
-      return window.componentSystem ? window.componentSystem.components : [];
-    },
-
-    // 根据名称获取组件
-    getComponentByName: function (name: string): IComponent | null {
-      if (!window.componentSystem) return null;
-      return window.componentSystem.components.find((item: IComponent) => item.name === name) || null;
-    },
-
-    // 初始化组件点击事件
-    initComponentEvents: function (formElements: Record<string, HTMLElement>) {
-      // const { siteUrl, siteName, iconPreview } = formElements; // 这些变量未使用，可以注释掉
-
-      // 查找所有组件元素
-      const componentItems = document.querySelectorAll<HTMLElement>('.component-item');
+      console.log('组件系统已初始化');
+    } else {
+      console.log('组件系统已存在，跳过初始化');
+    }
+    
+    // 创建并导出组件库API
+    window.ComponentLibrary = {
+      getComponents: () => window.componentSystem.getLibraryComponents(),
+      getComponentByName: (name: string) => {
+        const comp = window.componentSystem.components.find(c => c.name === name);
+        return comp || null;
+      },
+      initComponentEvents: (formElements: Record<string, HTMLElement>) => {
       let selectedComponent: string | null = null;
 
-      // 添加点击事件
-      componentItems.forEach((item: HTMLElement) => {
-        item.addEventListener('click', function () { // 使用 function 保留 this 指向 item
-          // 移除之前选中的组件的选中状态
-          componentItems.forEach((comp: HTMLElement) =>
-            comp.classList.remove(
-              'bg-blue-100',
-              'border',
-              'border-blue-300',
-              'border-primary',
-              'bg-blue-50',
-            ),
-          );
-
-          // 为当前点击的组件添加选中状态
-          this.classList.add('border-primary', 'bg-blue-50');
-
-          // 记录选中的组件名称
-          const compName = this.getAttribute('data-component-name');
-          selectedComponent = compName;
-        });
-      });
-
-      // 返回获取当前选中的组件的方法
-      return {
-        getSelectedComponent: function (): string | null {
-          return selectedComponent;
-        },
-        resetSelection: function (): void {
-          selectedComponent = null;
-          componentItems.forEach((comp: HTMLElement) =>
-            comp.classList.remove(
-              'bg-blue-100',
-              'border',
-              'border-blue-300',
-              'border-primary',
-              'bg-blue-50',
-            ),
-          );
-        },
-      };
-    },
+        const getSelectedComponent = () => selectedComponent;
+        const resetSelection = () => { selectedComponent = null; };
+        
+        return {
+          getSelectedComponent,
+          resetSelection
+        };
+      }
+    } as ComponentLibraryAPI;
+    
+    // 添加存储相关方法
+    window.storage = {
+      ...window.storage,
+      saveDesktopData: () => {
+        window.componentSystem.saveDesktopComponents();
+        window.componentSystem.saveComponentOrder();
+      }
+    };
   };
-
-  return api;
-})();
-
-// 如果在浏览器环境，将模块导出到全局
-if (typeof window !== 'undefined') {
-  window.ComponentLibrary = ComponentLibrary;
+  
+  // 如果DOM已加载完成，直接初始化
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    console.log('DOM已加载，直接初始化组件系统');
+    initComponentSystem();
+  } else {
+    // 否则等待DOM加载完成
+    console.log('等待DOM加载完成后初始化组件系统');
+    document.addEventListener('DOMContentLoaded', initComponentSystem);
+  }
 }
 
-// 如果支持模块导出，也提供模块导出
-// 注意：在浏览器环境中，这种导出方式可能不适用或不需要
-// if (typeof module !== 'undefined' && module.exports) {
-//   module.exports = ComponentLibrary;
-// }
-
-// 文档加载完成后初始化组件 (移到最后)
-document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[CS DOM Listener] DOMContentLoaded event listener started.');
-  try {
-    // 类型断言：明确 componentSystem 是完整的 ComponentSystem 实例
-    const componentSystem = window.componentSystem as ComponentSystem;
-
-    console.log('[CS] Required components:', componentSystem.allRequiredComponents);
-
-    // 只加载需要的组件（桌面或组件库中的）
-    console.log('[CS] Starting component load...');
-    await componentSystem.loadComponents(componentSystem.allRequiredComponents);
-    console.log('[CS] Component load finished.');
-
-    // 注册所有已加载的组件
-    console.log('[CS] Starting component registration...');
-    componentSystem.allRequiredComponents.forEach((componentName: string) => {
-      const globalVarName = componentSystem.getGlobalVarName(componentName);
-      console.log(`[CS] 尝试注册组件: ${componentName}, 全局变量名: ${globalVarName}`);
-      
-      // 使用 (window as any) 获取组件类
-      const ComponentClass = (window as any)[globalVarName || ''] as ComponentClass | undefined;
-      console.log(`[CS] 组件类是否存在: ${!!ComponentClass}`, ComponentClass);
-
-      if (globalVarName && ComponentClass) {
-        try {
-          componentSystem.register(ComponentClass);
-          console.log(`[CS] 成功注册组件: ${componentName}`);
-        } catch (e) {
-          console.error(`[CS] 注册组件 ${componentName} (${globalVarName}) 时出错:`, e);
-        }
-      } else {
-        console.error(`[CS] Cannot find component class: ${globalVarName} for ${componentName}`);
-        // 检查window对象中的所有属性，以便调试
-        console.log('[CS] 可用的全局变量:', Object.keys(window).filter(key => typeof (window as any)[key] === 'function').join(', '));
-      }
-    });
-    console.log('[CS] Component registration finished.');
-    // 打印最终注册的组件实例列表
-    console.log(
-      '[CS] 最终注册的组件实例 (componentSystem.components):',
-      componentSystem.components.map((c: IComponent) => c.name),
-    );
-    console.log('[CS] 最终的 libraryComponents:', componentSystem.libraryComponents);
-
-    // 渲染桌面组件
-    console.log('[CS] Calling renderDesktopComponents...');
-    componentSystem.renderDesktopComponents();
-    console.log('[CS] renderDesktopComponents finished.');
-  } catch (error) {
-    console.error('[CS DOM Listener] Error during component initialization:', error);
+// 扩展 Window 接口
+declare global {
+  interface Window {
+    componentSystem: ComponentSystem;
+    ComponentLibrary: ComponentLibraryAPI;
+    openComponent: (componentName: string) => boolean;
+    Sortable?: any;
+    storage?: { saveDesktopData?: () => void; [key: string]: any };
+    [key: string]: any;
   }
-  console.log('[CS DOM Listener] DOMContentLoaded event listener finished.');
-});
+}
+
+// 初始化系统并导出
+export { ComponentSystem };

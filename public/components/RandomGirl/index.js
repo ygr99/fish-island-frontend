@@ -4,7 +4,7 @@
 class RandomGirl {
   constructor() {
     this.name = '随机小姐姐';
-    this.iconClass = 'fa-solid fa-female';
+    this.iconClass = 'fa-female';
     this.backgroundColor = 'bg-pink-500';
 
     // 添加新属性，用于组件库显示
@@ -321,6 +321,16 @@ class RandomGirl {
   }
 }
 
-// 导出组件
+// 确保类导出到全局作用域
 window.RandomGirl = RandomGirl;
+
+// 如果组件系统已经初始化，直接注册组件
+if (window.componentSystem) {
+  try {
+    window.componentSystem.register(RandomGirl);
+    console.log('随机小姐姐组件已自动注册');
+  } catch (err) {
+    console.error('注册随机小姐姐组件时出错:', err);
+  }
+}
 
