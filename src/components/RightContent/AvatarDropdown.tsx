@@ -54,7 +54,7 @@ type MoYuTimeType = {
   endTime?: Moment;
   lunchTime?: Moment;
   monthlySalary?: number;
-  workdayType?: 'single' | 'double'; 
+  workdayType?: 'single' | 'double';
 };
 
 // 修改检查文件大小函数
@@ -74,7 +74,7 @@ const compressImage = (file: File): Promise<File> => {
         const canvas = document.createElement('canvas');
         let width = img.width;
         let height = img.height;
-        
+
         // 如果图片尺寸大于 800px，等比例缩小
         const maxSize = 800;
         if (width > maxSize || height > maxSize) {
@@ -91,11 +91,11 @@ const compressImage = (file: File): Promise<File> => {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        
+
         // 根据原始文件大小动态调整压缩质量
         const fileSize = file.size / 1024 / 1024; // 转换为MB
         let quality = 0.8; // 默认质量
-        
+
         if (fileSize > 2) {
           quality = 0.5;
         } else if (fileSize > 1) {
@@ -103,7 +103,7 @@ const compressImage = (file: File): Promise<File> => {
         } else if (fileSize > 0.5) {
           quality = 0.7;
         }
-        
+
         // 转换为 Blob
         canvas.toBlob(
           (blob) => {
@@ -287,10 +287,10 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     try {
       const response = await fetch('/data/2025-holiday.json');
       const data = await response.json();
-      
+
       // 获取当前日期
       const now = moment();
-      
+
       // 找到下一个假期
       const nextHoliday = data.days.find((day: any) => {
         const holidayDate = moment(day.date);
@@ -320,7 +320,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         const now = moment();
         const lunchTime = moment(moYuData.lunchTime);
         const endTime = moment(moYuData.endTime);
-        
+
         const workdaysInMonth = moYuData.workdayType === 'single' ? 26 : 22; // 单休26天，双休22天
         const workHoursPerDay = moment(moYuData.endTime).diff(moment(moYuData.startTime), 'hours');
         const hourlyRate = moYuData.monthlySalary ? (moYuData.monthlySalary / (workdaysInMonth * workHoursPerDay)) : 0;
@@ -502,11 +502,11 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const handleUpload = async (file: RcFile) => {
     try {
       setUploading(true);
-      
+
       // 检查文件大小，如果超过1MB则进行压缩
       const needCompress = !checkFileSize(file);
       const fileToUpload = needCompress ? await compressImage(file) : file;
-      
+
       const res = await uploadFileByMinioUsingPost(
         { biz: 'user_avatar' },
         {},
@@ -1368,6 +1368,12 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               <Form.Item label="月薪" name="monthlySalary">
                 <Input placeholder="选填，不填则不显示收入" type="number"/>
               </Form.Item>
+              <Form.Item label="工作制" name="workdayType">
+                <Select>
+                  <Select.Option value="single">单休</Select.Option>
+                  <Select.Option value="double">双休</Select.Option>
+                </Select>
+              </Form.Item>
 
               <Form.Item label="显示状态">
                 <Switch
@@ -1522,24 +1528,24 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           onFinish={(values) => {
             setSiteConfig(values);
             localStorage.setItem('siteConfig', JSON.stringify(values));
-            
+
             // 更新通知设置
             setNotificationEnabled(values.notificationEnabled);
-            
+
             // 更新所有图标相关的标签
             const iconTypes = ['icon', 'shortcut icon', 'apple-touch-icon'];
             iconTypes.forEach(type => {
               // 移除所有现有的图标标签
               const existingLinks = document.querySelectorAll(`link[rel="${type}"]`);
               existingLinks.forEach(link => link.remove());
-              
+
               // 创建新的图标标签
               const newLink = document.createElement('link');
               newLink.rel = type;
               newLink.href = values.siteIcon;
               document.head.appendChild(newLink);
             });
-            
+
             // 更新网站标题
             document.title = values.siteName;
             message.success('网站设置已保存');
@@ -1647,7 +1653,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                   siteConfigForm.setFieldsValue(defaultSiteConfig);
                   setSiteConfig(defaultSiteConfig);
                   localStorage.setItem('siteConfig', JSON.stringify(defaultSiteConfig));
-                  
+
                   // 更新通知设置
                   setNotificationEnabled(defaultSiteConfig.notificationEnabled);
 
@@ -1657,7 +1663,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                     // 移除所有现有的图标标签
                     const existingLinks = document.querySelectorAll(`link[rel="${type}"]`);
                     existingLinks.forEach(link => link.remove());
-                    
+
                     // 创建新的图标标签
                     const newLink = document.createElement('link');
                     newLink.rel = type;
