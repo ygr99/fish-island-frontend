@@ -15,7 +15,7 @@ const isMobile = () => {
 
 // 添加自定义断点检测
 const isSmallScreen = () => {
-  return window.innerWidth < 1590;
+  return window.innerWidth < 1200;
 };
 
 const Index: React.FC = () => {
@@ -346,14 +346,15 @@ const Index: React.FC = () => {
                           <Image
                             src={item.iconUrl}
                             preview={false}
-                            style={{width: 24, height: 24, marginRight: 8}}
+                            style={{width: 20, height: 20, marginRight: 8}}
                           />
-                          <Typography.Text>{item.name}</Typography.Text>
+                          <Typography.Text style={{ fontSize: '14px', color: '#495060', fontWeight: 400 }}>{item.name}</Typography.Text>
                           <Typography.Text style={{marginLeft: "10px", color: 'gray', fontSize: '12px'}}>
                             (更新时间：{dayjs(item.updateTime).fromNow()})
                           </Typography.Text>
                         </div>
                       }
+                      bodyStyle={{ padding: '12px' }}
                     >
                       <div
                         id="scrollableDiv"
@@ -368,7 +369,7 @@ const Index: React.FC = () => {
                         <List
                           dataSource={item.data}
                           renderItem={(data, index) => (
-                            <List.Item>
+                            <List.Item style={{ padding: '8px 0' }}>
                               <Tooltip title={data.title} mouseEnterDelay={0.2}>
                                 <Typography.Link
                                   target="_blank"
@@ -383,12 +384,23 @@ const Index: React.FC = () => {
                                   style={{
                                     display: 'flex',
                                     width: '100%',
-                                    color: 'black',
+                                    color: '#495060',
                                     justifyContent: 'space-between',
+                                    fontSize: '14px',
+                                    fontWeight: 400,
                                   }}
                                 >
                                   <span style={{flexGrow: 1, textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}}>
-                                    {index + 1}.{data?.title?.length && data?.title?.length > 25 ? data.title.slice(0, 25) + '...' : data.title}
+                                    <span style={{ 
+                                      display: 'inline-block', 
+                                      width: '24px', 
+                                      textAlign: 'center',
+                                      marginRight: '8px',
+                                      color: '#8c8c8c'
+                                    }}>
+                                      {index + 1}.
+                                    </span>
+                                    {data?.title?.length && data?.title?.length > 25 ? data.title.slice(0, 25) + '...' : data.title}
                                   </span>
                                   <span style={{flexShrink: 0, marginRight: '10px', fontSize: '12px'}}>
                                     🔥 {data.followerCount && data.followerCount >= 10000 ? (data.followerCount / 10000).toFixed(1) + "万" : data.followerCount === 0 ? "置顶🔝" : data.followerCount}
