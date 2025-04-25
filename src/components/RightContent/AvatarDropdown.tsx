@@ -54,6 +54,7 @@ type MoYuTimeType = {
   endTime?: Moment;
   lunchTime?: Moment;
   monthlySalary?: number;
+  workdayType?: 'single' | 'double'; 
 };
 
 // 修改检查文件大小函数
@@ -135,6 +136,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     startTime: moment('08:30', 'HH:mm'),
     endTime: moment('17:30', 'HH:mm'),
     lunchTime: moment('12:00', 'HH:mm'),
+    workdayType: 'double', // 默认双休
   });
 
   // 从 localStorage 读取数据
@@ -147,6 +149,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         endTime: moment(parsedData.endTime, 'HH:mm'),
         lunchTime: moment(parsedData.lunchTime, 'HH:mm'),
         monthlySalary: parsedData.monthlySalary,
+        workdayType: parsedData.workdayType || 'double', // 添加单双休设置
       });
     }
   }, []);
@@ -167,6 +170,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       endTime: values.endTime?.format('HH:mm'),
       lunchTime: values.lunchTime?.format('HH:mm'),
       monthlySalary: values.monthlySalary,
+      workdayType: values.workdayType,
     };
     localStorage.setItem('moYuData', JSON.stringify(dataToSave));
     // 转换回 Moment 对象后设置
@@ -175,6 +179,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       endTime: moment(values.endTime?.format('HH:mm'), 'HH:mm'),
       lunchTime: moment(values.lunchTime?.format('HH:mm'), 'HH:mm'),
       monthlySalary: values.monthlySalary,
+      workdayType: values.workdayType,
     });
   };
 
@@ -315,11 +320,14 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         const now = moment();
         const lunchTime = moment(moYuData.lunchTime);
         const endTime = moment(moYuData.endTime);
-
-        // 计算工作日每小时收入
-        const workdaysInMonth = 22; // 假设每月22个工作日
+        
+        const workdaysInMonth = moYuData.workdayType === 'single' ? 26 : 22; // 单休26天，双休22天
         const workHoursPerDay = moment(moYuData.endTime).diff(moment(moYuData.startTime), 'hours');
         const hourlyRate = moYuData.monthlySalary ? (moYuData.monthlySalary / (workdaysInMonth * workHoursPerDay)) : 0;
+        // 计算工作日每小时收入
+        // const workdaysInMonth = 22; // 假设每月22个工作日
+        // const workHoursPerDay = moment(moYuData.endTime).diff(moment(moYuData.startTime), 'hours');
+        // const hourlyRate = moYuData.monthlySalary ? (moYuData.monthlySalary / (workdaysInMonth * workHoursPerDay)) : 0;
 
         // 计算已工作时长和收入
         const startTime = moment(moYuData.startTime);
@@ -932,6 +940,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                   endTime: moYuData.endTime,
                   lunchTime: moYuData.lunchTime,
                   monthlySalary: moYuData.monthlySalary,
+                  workdayType: moYuData.workdayType,
                 }}
                 onFinish={onFinishMoYu}
                 onFinishFailed={onFinishFailedMoYu}
@@ -951,6 +960,13 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
 
                 <Form.Item label="月薪" name="monthlySalary">
                   <Input placeholder="选填，不填则不显示收入" type="number"/>
+                </Form.Item>
+
+                <Form.Item label="工作制" name="workdayType">
+                  <Select>
+                    <Select.Option value="single">单休</Select.Option>
+                    <Select.Option value="double">双休</Select.Option>
+                  </Select>
                 </Form.Item>
 
                 <Form.Item label="显示状态">
