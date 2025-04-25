@@ -1,4 +1,4 @@
-import {Col, Row, Card, Badge, Image, List, Typography, Tooltip, Tabs, Modal, Skeleton, Select, Button, Space} from 'antd';
+import {Col, Row, Card, Badge, Image, List, Typography, Tooltip, Tabs, Modal, Skeleton, Select, Button, Space, Switch} from 'antd';
 import React, {useState, useEffect} from 'react';
 import {getHotPostListUsingPost} from '@/services/backend/hotPostController';
 import dayjs from "dayjs";
@@ -7,6 +7,7 @@ import { SettingOutlined, AppstoreOutlined, GlobalOutlined, ThunderboltOutlined,
 import './Index.less';
 
 const STORAGE_KEY = 'selected_source_ids';
+const TAB_VISIBLE_KEY = 'tab_visible';
 
 // 添加移动端检测
 const isMobile = () => {
@@ -30,6 +31,11 @@ const Index: React.FC = () => {
   const [tempSelectedSourceIds, setTempSelectedSourceIds] = useState<number[]>([]);
   const [isMobileView, setIsMobileView] = useState(isMobile());
   const [isSmallScreenView, setIsSmallScreenView] = useState(isSmallScreen());
+  const [isTabVisible, setIsTabVisible] = useState(() => {
+    const stored = localStorage.getItem(TAB_VISIBLE_KEY);
+    return stored ? JSON.parse(stored) : false;
+  });
+  const [tempTabVisible, setTempTabVisible] = useState(isTabVisible);
 
   // 添加窗口大小变化监听
   useEffect(() => {
@@ -130,7 +136,9 @@ const Index: React.FC = () => {
 
   const handleSettingsSave = () => {
     setSelectedSourceIds(tempSelectedSourceIds);
+    setIsTabVisible(tempTabVisible);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tempSelectedSourceIds));
+    localStorage.setItem(TAB_VISIBLE_KEY, JSON.stringify(tempTabVisible));
     setIsSettingsOpen(false);
   };
 
@@ -166,6 +174,7 @@ const Index: React.FC = () => {
         onCancel={() => {
           setIsSettingsOpen(false);
           setTempSelectedSourceIds(selectedSourceIds);
+          setTempTabVisible(isTabVisible);
         }}
         width={600}
       >
@@ -177,7 +186,7 @@ const Index: React.FC = () => {
         <Select
           mode="multiple"
           placeholder="选择数据源"
-          style={{ width: '100%' }}
+          style={{ width: '100%', marginBottom: 16 }}
           value={tempSelectedSourceIds}
           onChange={setTempSelectedSourceIds}
           options={hostPostVoList.map(item => ({
@@ -185,6 +194,18 @@ const Index: React.FC = () => {
             value: item.id
           }))}
         />
+        <div style={{ marginTop: 16 }}>
+          <Typography.Text type="secondary">
+            显示设置
+          </Typography.Text>
+          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Typography.Text>显示分类标签</Typography.Text>
+            <Switch
+              checked={tempTabVisible}
+              onChange={setTempTabVisible}
+            />
+          </div>
+        </div>
       </Modal>
 
       {isMobileView ? (
@@ -301,24 +322,23 @@ const Index: React.FC = () => {
           </div>
         </div>
       ) : (
-        // 桌面端布局（保持原有代码）
         <>
-          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Tabs
-              activeKey={activeTab}
-              onChange={setActiveTab}
-              items={items}
-              style={{ flex: 1 }}
-            />
-            <Space>
-              <Button
-                type="text"
-                icon={<SettingOutlined />}
-                onClick={() => setIsSettingsOpen(true)}
-              >
-                设置
-              </Button>
-            </Space>
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+            {isTabVisible && (
+              <Tabs
+                activeKey={activeTab}
+                onChange={setActiveTab}
+                items={items}
+                style={{ flex: 1, marginRight: 16 }}
+              />
+            )}
+            <Button
+              type="text"
+              icon={<SettingOutlined />}
+              onClick={() => setIsSettingsOpen(true)}
+            >
+              设置
+            </Button>
           </div>
           <Row gutter={[16, 16]}>
             {loading ? (
