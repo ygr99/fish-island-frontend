@@ -17,16 +17,17 @@ export async function createRedPacketUsingPost(
   });
 }
 
-/** 获取红包详情 GET /api/redpacket/detail/${param0} */
+/** 获取红包详情 GET /api/redpacket/detail */
 export async function getRedPacketDetailUsingGet(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getRedPacketDetailUsingGETParams,
   options?: { [key: string]: any },
 ) {
-  const { redPacketId: param0, ...queryParams } = params;
-  return request<API.BaseResponseRedPacket_>(`/api/redpacket/detail/${param0}`, {
+  return request<API.BaseResponseRedPacket_>('/api/redpacket/detail', {
     method: 'GET',
-    params: { ...queryParams },
+    params: {
+      ...params,
+    },
     ...(options || {}),
   });
 }

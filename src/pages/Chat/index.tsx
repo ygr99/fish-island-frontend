@@ -25,7 +25,7 @@ import {uploadFileByMinioUsingPost} from "@/services/backend/fileController";
 import { wsService } from '@/services/websocket';
 import { history } from '@umijs/max';
 import { createRedPacketUsingPost, grabRedPacketUsingPost } from '@/services/backend/redPacketController';
-import { getRedPacketRecordsUsingGet } from '@/services/backend/redPacketController';
+import { getRedPacketRecordsUsingGet, getRedPacketDetailUsingGet } from '@/services/backend/redPacketController';
 
 interface Message {
   id: string;
@@ -112,6 +112,8 @@ const ChatRoom: React.FC = () => {
   const [isRedPacketRecordsVisible, setIsRedPacketRecordsVisible] = useState(false);
   const [redPacketRecords, setRedPacketRecords] = useState<API.VO[]>([]);
   const [currentRedPacketId, setCurrentRedPacketId] = useState<string>('');
+  const [redPacketDetail, setRedPacketDetail] = useState<API.RedPacket | null>(null);
+  const [redPacketDetailsMap, setRedPacketDetailsMap] = useState<Map<string, API.RedPacket | null>>(new Map());
 
   // 添加发送频率限制相关的状态
   const [lastSendTime, setLastSendTime] = useState<number>(0);
@@ -1161,47 +1163,89 @@ const ChatRoom: React.FC = () => {
     }
   };
 
+  // 修改获取红包详情的函数
+  const fetchRedPacketDetail = async (redPacketId: string) => {
+    // 如果已经有缓存，直接返回
+    const cachedDetail = redPacketDetailsMap.get(redPacketId);
+    if (cachedDetail !== undefined) {
+      return cachedDetail;
+    }
+
+    try {
+      const response = await getRedPacketDetailUsingGet({ redPacketId });
+      if (response.data) {
+        // 更新缓存
+        const detail = response.data as API.RedPacket;
+        setRedPacketDetailsMap(prev => new Map(prev).set(redPacketId, detail));
+        return detail;
+      }
+    } catch (error) {
+      console.error('获取红包详情失败:', error);
+    }
+    return null;
+  };
+
   // 修改 renderMessageContent 函数，添加红包消息的渲染
   const renderMessageContent = (content: string) => {
     // 检查是否是红包消息
     const redPacketMatch = content.match(/\[redpacket\](.*?)\[\/redpacket\]/);
     if (redPacketMatch) {
       const redPacketId = redPacketMatch[1];
+      const detail = redPacketDetailsMap.get(redPacketId);
+      
+      // 如果没有缓存，则获取详情
+      if (!detail) {
+        fetchRedPacketDetail(redPacketId);
+      }
+      
       return (
         <div className={styles.redPacketMessage}>
           <div className={styles.redPacketContent}>
             <GiftOutlined className={styles.redPacketIcon} />
-            <span className={styles.redPacketText}>红包</span>
-            <div className={styles.redPacketActions}>
-              <Button
-                type="primary"
-                size="small"
-                onClick={async () => {
-                  try {
-                    const response = await grabRedPacketUsingPost({
-                      redPacketId: redPacketId
-                    });
-                    if (response.data) {
-                      messageApi.success(`恭喜你抢到 ${response.data} 积分！`);
-                      // 刷新红包记录
-                      await fetchRedPacketRecords(redPacketId);
+            <div className={styles.redPacketInfo}>
+              <span className={styles.redPacketText}>
+                {detail?.name || '红包'}
+              </span>
+              <div className={styles.redPacketActions}>
+                <Button
+                  type="primary"
+                  size="small"
+                  onClick={async () => {
+                    try {
+                      const response = await grabRedPacketUsingPost({
+                        redPacketId: redPacketId
+                      });
+                      if (response.data) {
+                        messageApi.success(`恭喜你抢到 ${response.data} 积分！`);
+                        // 刷新红包记录和详情
+                        await Promise.all([
+                          fetchRedPacketRecords(redPacketId),
+                          fetchRedPacketDetail(redPacketId)
+                        ]);
+                      }
+                    } catch (error) {
+                      messageApi.error('红包已被抢完或已过期！');
                     }
-                  } catch (error) {
-                    messageApi.error('红包已被抢完或已过期！');
-                  }
-                }}
-                className={styles.grabRedPacketButton}
-              >
-                抢红包
-              </Button>
-              <Button
-                type="link"
-                size="small"
-                onClick={() => handleViewRedPacketRecords(redPacketId)}
-                className={styles.viewRecordsButton}
-              >
-                查看记录
-              </Button>
+                  }}
+                  className={styles.grabRedPacketButton}
+                  disabled={detail?.remainingCount === 0 || detail?.status === 2}
+                >
+                  抢红包
+                </Button>
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => handleViewRedPacketRecords(redPacketId)}
+                  className={styles.viewRecordsButton}
+                >
+                  查看记录
+                </Button>
+              </div>
+              <span className={styles.redPacketStatus}>
+                {detail?.remainingCount === 0 ? '已抢完' : 
+                 detail?.status === 2 ? '已过期' : 
+                 `剩余${detail?.remainingCount || 0}个`}
+              </span>
             </div>
           </div>
         </div>
