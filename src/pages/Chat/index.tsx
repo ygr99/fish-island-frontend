@@ -1203,9 +1203,16 @@ const ChatRoom: React.FC = () => {
           <div className={styles.redPacketContent}>
             <GiftOutlined className={styles.redPacketIcon} />
             <div className={styles.redPacketInfo}>
-              <span className={styles.redPacketText}>
-                {detail?.name || '红包'}
-              </span>
+              <div className={styles.redPacketTitle}>
+                <span className={styles.redPacketText}>
+                  {detail?.name || '红包'}
+                </span>
+                <span className={styles.redPacketStatus}>
+                  {detail?.remainingCount === 0 ? '（已抢完）' : 
+                   detail?.status === 2 ? '（已过期）' : 
+                   `（剩余${detail?.remainingCount || 0}个）`}
+                </span>
+              </div>
               <div className={styles.redPacketActions}>
                 <Button
                   type="primary"
@@ -1241,11 +1248,6 @@ const ChatRoom: React.FC = () => {
                   查看记录
                 </Button>
               </div>
-              <span className={styles.redPacketStatus}>
-                {detail?.remainingCount === 0 ? '已抢完' : 
-                 detail?.status === 2 ? '已过期' : 
-                 `剩余${detail?.remainingCount || 0}个`}
-              </span>
             </div>
           </div>
         </div>
