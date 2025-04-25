@@ -1,6 +1,6 @@
 import Footer from '@/components/Footer';
 import type {RunTimeLayoutConfig} from '@umijs/max';
-import {history} from '@umijs/max';
+import {history, useModel} from '@umijs/max';
 import defaultSettings from '../config/defaultSettings';
 import {AvatarDropdown} from './components/RightContent/AvatarDropdown';
 import {requestConfig} from './requestConfig';
@@ -9,6 +9,7 @@ import {useEffect, useState} from "react";
 import AnnouncementModal from '@/components/AnnouncementModal';
 import BossKeySettings from '@/components/BossKeySettings';
 import SideAnnouncement from '@/components/SideAnnouncement';
+import GlobalReader from '@/components/GlobalFloatingReader';
 import routes from '../config/routes';
 import GlobalTitle from '@/components/GlobalTitle';
 import {Board, Player, Position, Move, WinningLine} from '@/game';
@@ -195,6 +196,9 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
   const {isBossMode, showSettings, setShowSettings, config, setConfig} = useBossKey();
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const [showAnnouncement, setShowAnnouncement] = useState(true);
+  // 使用全局状态
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { isReaderVisible, hideReader } = useModel('globalReader');
 
   // 注册 Service Worker
   const registerServiceWorker = () => {
@@ -330,6 +334,10 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
           {/*  onClose={() => setShowAnnouncement(false)}*/}
           {/*  title="系统公告"*/}
           {/*/>*/}
+          <GlobalReader
+            visible={isReaderVisible}
+            onClose={hideReader}
+          />
         </>
       );
     },
