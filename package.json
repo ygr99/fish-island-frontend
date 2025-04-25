@@ -81,6 +81,7 @@
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "serve": "^14.2.1",
+    "sortablejs": "^1.15.6",
     "yaml": "^2.7.0"
   },
   "devDependencies": {

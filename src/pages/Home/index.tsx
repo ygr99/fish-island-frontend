@@ -1,14 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { Input, Dropdown, Button } from 'antd';
-import { SearchOutlined, DownOutlined, SwapOutlined, SettingOutlined } from '@ant-design/icons';
-import styles from './index.less';
-import moment from 'moment';
-import 'moment/locale/zh-cn';
+import CustomSites from '@/components/CustomSites';
 import Shortcut from '@/components/Shortcut';
 import WallpaperMenu from '@/components/WallpaperMenu';
-import CustomSites from '@/components/CustomSites';
+import { AppstoreOutlined, DownOutlined, SearchOutlined, SwapOutlined } from '@ant-design/icons';
+import { Button, Dropdown, Input, Modal, Tooltip } from 'antd';
+import moment from 'moment';
+import 'moment/locale/zh-cn';
+import React, { useEffect, useRef, useState } from 'react';
+import styles from './index.less';
+// 导入Sortable库
+// @ts-ignore
+import Sortable from 'sortablejs';
 
 moment.locale('zh-cn');
+
+interface ShortcutItem {
+  icon: string;
+  title: string;
+  url: string;
+  type: 'website' | 'component';
+  component?: string;
+}
 
 const searchEngines = [
   {
@@ -28,36 +39,53 @@ const searchEngines = [
   },
 ];
 
-const defaultShortcuts = [
+const defaultShortcuts: ShortcutItem[] = [
   {
     icon: 'https://www.baidu.com/favicon.ico',
     title: '百度',
     url: 'https://www.baidu.com',
+    type: 'website',
   },
   {
     icon: 'https://www.bilibili.com/favicon.ico',
     title: 'bilibili',
     url: 'https://www.bilibili.com',
+    type: 'website',
   },
   {
     icon: 'https://www.zhihu.com/favicon.ico',
     title: '知乎',
     url: 'https://www.zhihu.com',
+    type: 'website',
   },
   {
     icon: 'https://images.seeklogo.com/logo-png/30/2/github-logo-png_seeklogo-304612.png',
     title: 'GitHub',
     url: 'https://github.com',
+    type: 'website',
   },
   {
     icon: 'https://www.taobao.com/favicon.ico',
     title: '淘宝',
     url: 'https://www.taobao.com',
+    type: 'website',
   },
   {
     icon: 'https://www.jd.com/favicon.ico',
     title: '京东',
     url: 'https://www.jd.com',
+    type: 'website',
+  },
+];
+
+// 系统提供的组件
+const systemComponents: ShortcutItem[] = [
+  {
+    icon: 'https://cdn.jsdelivr.net/gh/kxzbw/cdn/img/components/RandomGirl.png',
+    title: '随机小姐姐',
+    url: '#',
+    type: 'component',
+    component: 'RandomGirl',
   },
 ];
 
@@ -68,14 +96,21 @@ const Home: React.FC = () => {
     condition: '',
     city: '',
   });
-  const [customSites, setCustomSites] = useState<Array<{ title: string; url: string; icon: string }>>(() => {
+  const [customSites, setCustomSites] = useState<
+    Array<{ title: string; url: string; icon: string }>
+  >(() => {
     const savedSites = localStorage.getItem('customSites');
     return savedSites ? JSON.parse(savedSites) : [];
   });
-  const [shortcuts, setShortcuts] = useState(() => {
-    const savedSites = localStorage.getItem('customSites');
-    const customSites = savedSites ? JSON.parse(savedSites) : [];
-    return [...defaultShortcuts, ...customSites];
+  const [shortcuts, setShortcuts] = useState<ShortcutItem[]>(() => {
+    const savedShortcuts = localStorage.getItem('shortcuts');
+    const userShortcuts = savedShortcuts ? JSON.parse(savedShortcuts) : [];
+
+    // 如果本地没有保存的快捷方式，使用默认的
+    if (userShortcuts.length === 0) {
+      return [...defaultShortcuts];
+    }
+    return userShortcuts;
   });
   const [currentEngine, setCurrentEngine] = useState(searchEngines[0]);
   const [wallpaper, setWallpaper] = useState(() => {
@@ -83,6 +118,11 @@ const Home: React.FC = () => {
     return savedWallpaper || '/img/defaultWallpaper.webp';
   });
   const [customSitesVisible, setCustomSitesVisible] = useState(false);
+  const [componentLibraryVisible, setComponentLibraryVisible] = useState(false);
+  const shortcutsRef = useRef<HTMLDivElement>(null);
+  const [contextMenuVisible, setContextMenuVisible] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+  const [selectedShortcut, setSelectedShortcut] = useState<ShortcutItem | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -141,6 +181,36 @@ const Home: React.FC = () => {
     };
   }, []);
 
+  // 初始化拖拽排序
+  useEffect(() => {
+    if (shortcutsRef.current) {
+      const sortable = Sortable.create(shortcutsRef.current, {
+        animation: 150,
+        ghostClass: styles.sortableGhost,
+        chosenClass: styles.sortableChosen,
+        dragClass: styles.sortableDrag,
+        onEnd: (evt: any) => {
+          // 更新快捷方式顺序
+          const items = [...shortcuts];
+          const movedItem = items.splice(evt.oldIndex, 1)[0];
+          items.splice(evt.newIndex, 0, movedItem);
+          setShortcuts(items);
+          // 保存到本地存储
+          localStorage.setItem('shortcuts', JSON.stringify(items));
+        },
+      });
+
+      return () => {
+        sortable.destroy();
+      };
+    }
+  }, [shortcuts]);
+
+  // 每当快捷方式变化时，保存到本地存储
+  useEffect(() => {
+    localStorage.setItem('shortcuts', JSON.stringify(shortcuts));
+  }, [shortcuts]);
+
   const handleSearch = (value: string) => {
     if (!value.trim()) return;
     window.open(`${currentEngine.url}${encodeURIComponent(value)}`, '_blank');
@@ -159,8 +229,34 @@ const Home: React.FC = () => {
     })),
   };
 
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
+  // 处理右键菜单
+  const handleContextMenu = (e: React.MouseEvent, shortcut: ShortcutItem | null = null) => {
+    if (shortcut) {
+      e.preventDefault();
+      setContextMenuPosition({ x: e.clientX, y: e.clientY });
+      setContextMenuVisible(true);
+      setSelectedShortcut(shortcut);
+    }
+  };
+
+  // 关闭右键菜单
+  const closeContextMenu = () => {
+    setContextMenuVisible(false);
+  };
+
+  // 删除快捷方式
+  const handleDeleteShortcut = () => {
+    if (selectedShortcut) {
+      const newShortcuts = shortcuts.filter((item) => item !== selectedShortcut);
+      setShortcuts(newShortcuts);
+      closeContextMenu();
+    }
+  };
+
+  // 编辑快捷方式
+  const handleEditShortcut = () => {
+    // 这里可以添加编辑逻辑
+    closeContextMenu();
   };
 
   const handleSwitchToFishMode = () => {
@@ -168,18 +264,83 @@ const Home: React.FC = () => {
   };
 
   const handleAddCustomSite = (site: { title: string; url: string; icon: string }) => {
-    const newCustomSites = [...customSites, site];
-    setCustomSites(newCustomSites);
-    setShortcuts([...defaultShortcuts, ...newCustomSites]);
-    localStorage.setItem('customSites', JSON.stringify(newCustomSites));
+    const newSite = { ...site, type: 'website' as const };
+    setShortcuts([...shortcuts, newSite]);
+  };
+
+  // 添加系统组件到快捷方式
+  const handleAddSystemComponent = (component: ShortcutItem) => {
+    if (!shortcuts.some((s) => s.title === component.title)) {
+      setShortcuts([...shortcuts, component]);
+    }
+    setComponentLibraryVisible(false);
+  };
+
+  // 渲染右键菜单
+  const renderContextMenu = () => {
+    if (!contextMenuVisible) return null;
+
+    return (
+      <div
+        className={styles.contextMenu}
+        style={{
+          top: contextMenuPosition.y,
+          left: contextMenuPosition.x,
+        }}
+      >
+        <div className={styles.menuItem} onClick={handleEditShortcut}>
+          编辑
+        </div>
+        <div className={styles.menuItem} onClick={handleDeleteShortcut}>
+          删除
+        </div>
+      </div>
+    );
+  };
+
+  // 渲染组件库面板
+  const renderComponentLibrary = () => {
+    return (
+      <Modal
+        title="组件库"
+        open={componentLibraryVisible}
+        onCancel={() => setComponentLibraryVisible(false)}
+        footer={null}
+        width={800}
+      >
+        <div className={styles.componentGrid}>
+          {systemComponents.map((component, index) => (
+            <div
+              key={index}
+              className={styles.componentItem}
+              onClick={() => handleAddSystemComponent(component)}
+            >
+              <img src={component.icon} alt={component.title} />
+              <div>{component.title}</div>
+            </div>
+          ))}
+        </div>
+      </Modal>
+    );
+  };
+
+  // 快捷方式点击处理
+  const handleShortcutClick = (shortcut: ShortcutItem) => {
+    if (shortcut.type === 'website') {
+      window.open(shortcut.url, '_blank');
+    } else if (shortcut.type === 'component') {
+      // 在这里处理组件打开逻辑
+      console.log(`打开组件: ${shortcut.component}`);
+      // 这里可以实现组件的打开逻辑
+    }
   };
 
   return (
     <div
       className={styles.container}
-      onContextMenu={handleContextMenu}
+      onClick={closeContextMenu}
       style={{
-        backgroundImage: `url(${wallpaper})`
+        backgroundImage: `url(${wallpaper})`,
       }}
     >
       <Button
@@ -191,6 +352,19 @@ const Home: React.FC = () => {
       >
         摸鱼模式
       </Button>
+
+      <Tooltip title="打开组件库">
+        <Button
+          type="text"
+          icon={<AppstoreOutlined />}
+          onClick={() => setComponentLibraryVisible(true)}
+          className={styles.componentLibraryBtn}
+          style={{ color: '#ffffff', fontSize: '16px' }}
+        >
+          组件库
+        </Button>
+      </Tooltip>
+
       <Dropdown
         overlay={<WallpaperMenu onWallpaperChange={setWallpaper} />}
         trigger={['contextMenu']}
@@ -231,9 +405,16 @@ const Home: React.FC = () => {
         </div>
       </div>
 
-      <div className={styles.shortcutsSection}>
+      <div ref={shortcutsRef} className={styles.shortcutsSection}>
         {shortcuts.map((shortcut, index) => (
-          <Shortcut key={index} {...shortcut} />
+          <div
+            key={index}
+            className={styles.shortcutWrapper}
+            onContextMenu={(e) => handleContextMenu(e, shortcut)}
+            onClick={() => handleShortcutClick(shortcut)}
+          >
+            <Shortcut {...shortcut} />
+          </div>
         ))}
       </div>
 
@@ -245,11 +426,14 @@ const Home: React.FC = () => {
       </div>
 
       <CustomSites
-        visible={true}
-        onClose={() => {}}
+        visible={customSitesVisible}
+        onClose={() => setCustomSitesVisible(false)}
         onAddSite={handleAddCustomSite}
         sites={customSites}
       />
+
+      {renderContextMenu()}
+      {renderComponentLibrary()}
     </div>
   );
 };
