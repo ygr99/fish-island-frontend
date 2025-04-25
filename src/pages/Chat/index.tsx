@@ -112,6 +112,15 @@ const ChatRoom: React.FC = () => {
   const [redPacketRecords, setRedPacketRecords] = useState<API.VO[]>([]);
   const [currentRedPacketId, setCurrentRedPacketId] = useState<string>('');
 
+  // 添加发送频率限制相关的状态
+  const [lastSendTime, setLastSendTime] = useState<number>(0);
+  const [sendCooldown, setSendCooldown] = useState<number>(0);
+  const sendCooldownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 添加防止重复发送的状态
+  const [lastSendContent, setLastSendContent] = useState<string>('');
+  const [lastSendContentTime, setLastSendContentTime] = useState<number>(0);
+
   // 修改 getIpInfo 函数
   const getIpInfo = async () => {
     try {
@@ -640,6 +649,13 @@ const ChatRoom: React.FC = () => {
 
   // 修改 handleSend 函数
   const handleSend = (customContent?: string) => {
+    // 检查发送冷却时间
+    const now = Date.now();
+    if (now - lastSendTime < 1000) { // 限制每秒最多发送一条消息
+      messageApi.warning('发送太快了，请稍后再试');
+      return;
+    }
+
     let content = customContent || inputValue;
 
     // 检查是否包含 iframe 标签
@@ -661,6 +677,12 @@ const ChatRoom: React.FC = () => {
 
     if (!content.trim() && !pendingImageUrl && !pendingFileUrl) {
       message.warning('请输入消息内容');
+      return;
+    }
+
+    // 检查是否重复发送相同内容
+    if (content === lastSendContent && now - lastSendContentTime < 10000) { // 10秒内不能发送相同内容
+      messageApi.warning('请勿重复发送相同内容，请稍后再试');
       return;
     }
 
@@ -724,6 +746,11 @@ const ChatRoom: React.FC = () => {
     setPendingImageUrl(null);
     setPendingFileUrl(null);
     setQuotedMessage(null);
+
+    // 更新最后发送时间和内容
+    setLastSendTime(now);
+    setLastSendContent(content);
+    setLastSendContentTime(now);
 
     // 滚动到底部
     setTimeout(scrollToBottom, 100);
