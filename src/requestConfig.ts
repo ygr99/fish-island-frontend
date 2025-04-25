@@ -55,7 +55,7 @@ export const requestConfig: RequestConfig = {
       const code: number = data.code;
       // 未登录，且不为获取用户登录信息接口
       if (
-        (code === 40100 || code === 50001) &&
+        (code === 40100) &&
         !requestPath.includes('user/get/login') &&
         !location.pathname.includes('/user/login')
       ) {
