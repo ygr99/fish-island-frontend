@@ -1,6 +1,6 @@
 import Footer from '@/components/Footer';
 import type {RunTimeLayoutConfig} from '@umijs/max';
-import {history} from '@umijs/max';
+import {history, useModel} from '@umijs/max';
 import defaultSettings from '../config/defaultSettings';
 import {AvatarDropdown} from './components/RightContent/AvatarDropdown';
 import {requestConfig} from './requestConfig';
@@ -9,10 +9,12 @@ import {useEffect, useState} from "react";
 import AnnouncementModal from '@/components/AnnouncementModal';
 import BossKeySettings from '@/components/BossKeySettings';
 import SideAnnouncement from '@/components/SideAnnouncement';
+import GlobalReader from '@/components/GlobalFloatingReader';
 import routes from '../config/routes';
 import GlobalTitle from '@/components/GlobalTitle';
 import {Board, Player, Position, Move, WinningLine} from '@/game';
 import {unregisterServiceWorker} from './utils/unregisterServiceWorker';
+import {setNotificationEnabled} from './utils/notification';
 
 const loginPath = '/user/login';
 
@@ -32,21 +34,6 @@ const listenRouteChange = () => {
     // 设置网站标题
     const pathname = location.pathname;
     let title = getSiteName();
-
-    // 根据路由设置不同的标题
-    if (pathname === '/index') {
-      title = '首页 - ' + title;
-    } else if (pathname === '/todo') {
-      title = '每日待办 - ' + title;
-    } else if (pathname === '/chat') {
-      title = '摸鱼室 - ' + title;
-    } else if (pathname.startsWith('/game')) {
-      title = '小游戏 - ' + title;
-    } else if (pathname.startsWith('/utils')) {
-      title = '工具箱 - ' + title;
-    } else if (pathname.startsWith('/admin')) {
-      title = '管理页 - ' + title;
-    }
 
     document.title = title;
 
@@ -152,7 +139,7 @@ interface InitialState {
 export async function getInitialState(): Promise<InitialState> {
   // 注销 Service Worker
   await unregisterServiceWorker();
-  
+
   const initialState: InitialState = {
     currentUser: undefined,
     gameState: undefined,
@@ -162,25 +149,30 @@ export async function getInitialState(): Promise<InitialState> {
   // 应用网站设置
   const savedSiteConfig = localStorage.getItem('siteConfig');
   if (savedSiteConfig) {
-    const {siteName, siteIcon} = JSON.parse(savedSiteConfig);
+    const {siteName, siteIcon, notificationEnabled} = JSON.parse(savedSiteConfig);
     // 更新所有图标相关的标签
     const iconTypes = ['icon', 'shortcut icon', 'apple-touch-icon'];
     iconTypes.forEach(type => {
       // 移除所有现有的图标标签
       const existingLinks = document.querySelectorAll(`link[rel="${type}"]`);
       existingLinks.forEach(link => link.remove());
-      
+
       // 创建新的图标标签
       const newLink = document.createElement('link');
       newLink.rel = type;
       newLink.href = siteIcon;
       document.head.appendChild(newLink);
     });
-    
+
     // 更新网站标题
     document.title = siteName;
     // 更新默认设置中的标题
     defaultSettings.title = siteName;
+
+    // 更新通知设置
+    if (notificationEnabled !== undefined) {
+      setNotificationEnabled(notificationEnabled);
+    }
   }
 
   // 检查当前路由是否需要登录验证
@@ -191,7 +183,7 @@ export async function getInitialState(): Promise<InitialState> {
     } catch (error: any) {
       // 如果未登录且需要登录验证，跳转到登录页
       if (location.pathname !== loginPath) {
-        history.push(loginPath);
+
       }
     }
   }
@@ -204,6 +196,9 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
   const {isBossMode, showSettings, setShowSettings, config, setConfig} = useBossKey();
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const [showAnnouncement, setShowAnnouncement] = useState(true);
+  // 使用全局状态
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { isReaderVisible, hideReader } = useModel('globalReader');
 
   // 注册 Service Worker
   const registerServiceWorker = () => {
@@ -266,8 +261,8 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
               alignItems: 'center',
               backgroundColor: '#ffffff'
             }}>
-              <img 
-                src="https://www.baidu.com/img/flexible/logo/pc/result.png" 
+              <img
+                src="https://www.baidu.com/img/flexible/logo/pc/result.png"
                 alt="百度搜索"
                 style={{width: '270px', marginBottom: '20px'}}
               />
@@ -334,10 +329,14 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
           <GlobalTitle/>
           {children}
           <SideAnnouncement/>
-          <AnnouncementModal
-            visible={showAnnouncement}
-            onClose={() => setShowAnnouncement(false)}
-            title="系统公告"
+          {/*<AnnouncementModal*/}
+          {/*  visible={showAnnouncement}*/}
+          {/*  onClose={() => setShowAnnouncement(false)}*/}
+          {/*  title="系统公告"*/}
+          {/*/>*/}
+          <GlobalReader
+            visible={isReaderVisible}
+            onClose={hideReader}
           />
         </>
       );

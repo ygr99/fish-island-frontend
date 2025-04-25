@@ -224,7 +224,8 @@ const AvatarFrames: React.FC = () => {
                   </Button>
                 ) : (
                   <Button
-                    type="primary"
+                    type="default"
+                    danger
                     onClick={() => handlePurchase(frame)}
                     className={styles.purchaseButton}
                   >

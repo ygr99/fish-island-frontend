@@ -38,6 +38,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseDonationRecordsVO_ = {
+    code?: number;
+    data?: DonationRecordsVO;
+    message?: string;
+  };
+
   type BaseResponseInt_ = {
     code?: number;
     data?: number;
@@ -83,6 +89,18 @@ declare namespace API {
   type BaseResponsePageAvatarFrameVO_ = {
     code?: number;
     data?: PageAvatarFrameVO_;
+    message?: string;
+  };
+
+  type BaseResponsePageDonationRecords_ = {
+    code?: number;
+    data?: PageDonationRecords_;
+    message?: string;
+  };
+
+  type BaseResponsePageDonationRecordsVO_ = {
+    code?: number;
+    data?: PageDonationRecordsVO_;
     message?: string;
   };
 
@@ -164,6 +182,61 @@ declare namespace API {
     message?: string;
   };
 
+  type callbackUsingDELETEParams = {
+    auth_code?: string;
+    authorization_code?: string;
+    code?: string;
+    oauth_token?: string;
+    oauth_verifier?: string;
+    state?: string;
+    /** source */
+    source: string;
+  };
+
+  type callbackUsingGETParams = {
+    auth_code?: string;
+    authorization_code?: string;
+    code?: string;
+    oauth_token?: string;
+    oauth_verifier?: string;
+    state?: string;
+    /** source */
+    source: string;
+  };
+
+  type callbackUsingPATCHParams = {
+    auth_code?: string;
+    authorization_code?: string;
+    code?: string;
+    oauth_token?: string;
+    oauth_verifier?: string;
+    state?: string;
+    /** source */
+    source: string;
+  };
+
+  type callbackUsingPOSTParams = {
+    auth_code?: string;
+    authorization_code?: string;
+    code?: string;
+    oauth_token?: string;
+    oauth_verifier?: string;
+    state?: string;
+    /** source */
+    source: string;
+  };
+
+  type callbackUsingPUTParams = {
+    auth_code?: string;
+    authorization_code?: string;
+    code?: string;
+    oauth_token?: string;
+    oauth_verifier?: string;
+    state?: string;
+    /** source */
+    source: string;
+  };
+
   type CosCredentialVo = {
     /** 桶名称 */
     bucket?: string;
@@ -183,6 +256,52 @@ declare namespace API {
 
   type DeleteRequest = {
     id?: number;
+  };
+
+  type DonationRecords = {
+    amount?: number;
+    createTime?: string;
+    id?: number;
+    isDelete?: number;
+    remark?: string;
+    updateTime?: string;
+    userId?: number;
+  };
+
+  type DonationRecordsAddRequest = {
+    amount?: number;
+    remark?: string;
+    userId?: number;
+  };
+
+  type DonationRecordsQueryRequest = {
+    amount?: number;
+    createTime?: string;
+    current?: number;
+    id?: number;
+    pageSize?: number;
+    remark?: string;
+    sortField?: string;
+    sortOrder?: string;
+    updateTime?: string;
+    userId?: number;
+  };
+
+  type DonationRecordsUpdateRequest = {
+    amount?: number;
+    id?: number;
+    isDelete?: number;
+    remark?: string;
+    userId?: number;
+  };
+
+  type DonationRecordsVO = {
+    amount?: number;
+    createTime?: string;
+    donorUser?: LoginUserVO;
+    id?: number;
+    remark?: string;
+    userId?: number;
   };
 
   type EmoticonFavour = {
@@ -210,6 +329,11 @@ declare namespace API {
   type getCosCredentialUsingGETParams = {
     /** fileName */
     fileName?: string;
+  };
+
+  type getDonationRecordsVoByIdUsingGETParams = {
+    /** id */
+    id?: number;
   };
 
   type getMinioPresignedUsingGETParams = {
@@ -257,6 +381,7 @@ declare namespace API {
 
   type LoginUserVO = {
     avatarFramerUrl?: string;
+    bindPlatforms?: PlatformBindVO[];
     createTime?: string;
     email?: string;
     id?: number;
@@ -330,6 +455,84 @@ declare namespace API {
     workExperience?: string;
   };
 
+  type ModelAndView = {
+    empty?: boolean;
+    model?: Record<string, any>;
+    modelMap?: Record<string, any>;
+    reference?: boolean;
+    status?:
+      | 'CONTINUE'
+      | 'SWITCHING_PROTOCOLS'
+      | 'PROCESSING'
+      | 'CHECKPOINT'
+      | 'OK'
+      | 'CREATED'
+      | 'ACCEPTED'
+      | 'NON_AUTHORITATIVE_INFORMATION'
+      | 'NO_CONTENT'
+      | 'RESET_CONTENT'
+      | 'PARTIAL_CONTENT'
+      | 'MULTI_STATUS'
+      | 'ALREADY_REPORTED'
+      | 'IM_USED'
+      | 'MULTIPLE_CHOICES'
+      | 'MOVED_PERMANENTLY'
+      | 'FOUND'
+      | 'MOVED_TEMPORARILY'
+      | 'SEE_OTHER'
+      | 'NOT_MODIFIED'
+      | 'USE_PROXY'
+      | 'TEMPORARY_REDIRECT'
+      | 'PERMANENT_REDIRECT'
+      | 'BAD_REQUEST'
+      | 'UNAUTHORIZED'
+      | 'PAYMENT_REQUIRED'
+      | 'FORBIDDEN'
+      | 'NOT_FOUND'
+      | 'METHOD_NOT_ALLOWED'
+      | 'NOT_ACCEPTABLE'
+      | 'PROXY_AUTHENTICATION_REQUIRED'
+      | 'REQUEST_TIMEOUT'
+      | 'CONFLICT'
+      | 'GONE'
+      | 'LENGTH_REQUIRED'
+      | 'PRECONDITION_FAILED'
+      | 'PAYLOAD_TOO_LARGE'
+      | 'REQUEST_ENTITY_TOO_LARGE'
+      | 'URI_TOO_LONG'
+      | 'REQUEST_URI_TOO_LONG'
+      | 'UNSUPPORTED_MEDIA_TYPE'
+      | 'REQUESTED_RANGE_NOT_SATISFIABLE'
+      | 'EXPECTATION_FAILED'
+      | 'I_AM_A_TEAPOT'
+      | 'INSUFFICIENT_SPACE_ON_RESOURCE'
+      | 'METHOD_FAILURE'
+      | 'DESTINATION_LOCKED'
+      | 'UNPROCESSABLE_ENTITY'
+      | 'LOCKED'
+      | 'FAILED_DEPENDENCY'
+      | 'TOO_EARLY'
+      | 'UPGRADE_REQUIRED'
+      | 'PRECONDITION_REQUIRED'
+      | 'TOO_MANY_REQUESTS'
+      | 'REQUEST_HEADER_FIELDS_TOO_LARGE'
+      | 'UNAVAILABLE_FOR_LEGAL_REASONS'
+      | 'INTERNAL_SERVER_ERROR'
+      | 'NOT_IMPLEMENTED'
+      | 'BAD_GATEWAY'
+      | 'SERVICE_UNAVAILABLE'
+      | 'GATEWAY_TIMEOUT'
+      | 'HTTP_VERSION_NOT_SUPPORTED'
+      | 'VARIANT_ALSO_NEGOTIATES'
+      | 'INSUFFICIENT_STORAGE'
+      | 'LOOP_DETECTED'
+      | 'BANDWIDTH_LIMIT_EXCEEDED'
+      | 'NOT_EXTENDED'
+      | 'NETWORK_AUTHENTICATION_REQUIRED';
+    view?: View;
+    viewName?: string;
+  };
+
   type OrderItem = {
     asc?: boolean;
     column?: string;
@@ -343,6 +546,32 @@ declare namespace API {
     orders?: OrderItem[];
     pages?: number;
     records?: AvatarFrameVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageDonationRecords_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: DonationRecords[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageDonationRecordsVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: DonationRecordsVO[];
     searchCount?: boolean;
     size?: number;
     total?: number;
@@ -451,6 +680,12 @@ declare namespace API {
     url: string;
   };
 
+  type PlatformBindVO = {
+    avatar?: string;
+    nickname?: string;
+    platform?: string;
+  };
+
   type Post = {
     content?: string;
     createTime?: string;
@@ -532,6 +767,11 @@ declare namespace API {
     userId?: number;
   };
 
+  type renderAuthUsingGETParams = {
+    /** source */
+    source: string;
+  };
+
   type Response = {
     credentials?: Credentials;
     expiration?: string;
@@ -590,6 +830,7 @@ declare namespace API {
 
   type TokenLoginUserVo = {
     avatarFramerUrl?: string;
+    bindPlatforms?: PlatformBindVO[];
     createTime?: string;
     email?: string;
     id?: number;
@@ -603,6 +844,11 @@ declare namespace API {
     userName?: string;
     userProfile?: string;
     userRole?: string;
+  };
+
+  type unbindUsingDELETEParams = {
+    /** source */
+    source: string;
   };
 
   type uploadFileByMinioUsingPOSTParams = {
@@ -732,6 +978,10 @@ declare namespace API {
     userName?: string;
     userProfile?: string;
     userRole?: string;
+  };
+
+  type View = {
+    contentType?: string;
   };
 
   type WebParseVO = {

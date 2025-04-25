@@ -57,6 +57,16 @@ function App() {
   const [showRestartModal, setShowRestartModal] = useState(false);
   // 添加游戏结束弹框状态
   const [showGameEndModal, setShowGameEndModal] = useState(false);
+  // 添加超时提示相关状态
+  const [opponentTimeout, setOpponentTimeout] = useState<boolean>(false);
+  const [playerTimeout, setPlayerTimeout] = useState<boolean>(false);
+  const [opponentTimeoutModalVisible, setOpponentTimeoutModalVisible] = useState<boolean>(false);
+  const [playerTimeoutModalVisible, setPlayerTimeoutModalVisible] = useState<boolean>(false);
+  const [opponentLastMoveTime, setOpponentLastMoveTime] = useState<number>(Date.now());
+  const [playerLastMoveTime, setPlayerLastMoveTime] = useState<number>(Date.now());
+  const opponentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const playerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const TIMEOUT_DURATION = 10000; // 10秒超时
 
   // 添加聊天相关的状态
   const [showChat, setShowChat] = useState(true);
@@ -142,6 +152,14 @@ function App() {
     setBoard(newBoard);
     addMove(position, player);
     setOpponentLastMove(position);
+    // 重置对手超时状态
+    setOpponentTimeout(false);
+    setOpponentLastMoveTime(Date.now());
+    // 清除对手超时计时器
+    if (opponentTimeoutRef.current) {
+      clearTimeout(opponentTimeoutRef.current);
+      opponentTimeoutRef.current = null;
+    }
 
     // 检查胜利
     const winResult = checkWin(newBoard, position, player);
@@ -155,6 +173,15 @@ function App() {
     } else {
       setPlayerColor(player === 'black' ? 'white' : 'black')
       setCurrentPlayer(player === 'black' ? 'white' : 'black'); // 切换回本地玩家回合
+      // 设置玩家超时计时器
+      setPlayerLastMoveTime(Date.now());
+      if (playerTimeoutRef.current) {
+        clearTimeout(playerTimeoutRef.current);
+      }
+      playerTimeoutRef.current = setTimeout(() => {
+        setPlayerTimeout(true);
+        setPlayerTimeoutModalVisible(true);
+      }, TIMEOUT_DURATION);
     }
     saveGameState();
   };
@@ -191,6 +218,25 @@ function App() {
     });
     if (data.data.yourColor === 'white') {
       setCurrentPlayer('black');
+      // 设置对手超时计时器
+      setOpponentLastMoveTime(Date.now());
+      if (opponentTimeoutRef.current) {
+        clearTimeout(opponentTimeoutRef.current);
+      }
+      opponentTimeoutRef.current = setTimeout(() => {
+        setOpponentTimeout(true);
+        setOpponentTimeoutModalVisible(true);
+      }, TIMEOUT_DURATION);
+    } else {
+      // 设置玩家超时计时器
+      setPlayerLastMoveTime(Date.now());
+      if (playerTimeoutRef.current) {
+        clearTimeout(playerTimeoutRef.current);
+      }
+      playerTimeoutRef.current = setTimeout(() => {
+        setPlayerTimeout(true);
+        setPlayerTimeoutModalVisible(true);
+      }, TIMEOUT_DURATION);
     }
     saveGameState();
   };
@@ -214,6 +260,23 @@ function App() {
       setOpponentInfo(data.data.playerInfo);
     }
     saveGameState();
+  };
+
+  // 处理对手超时
+  const handleOpponentTimeout = (shouldExit: boolean = false) => {
+    setOpponentTimeoutModalVisible(false);
+    setOpponentTimeout(false);
+    // 如果用户点击了"退出房间"按钮，则调用handleExitRoom函数
+    if (shouldExit) {
+      handleExitRoom();
+    }
+  };
+
+  // 处理玩家超时
+  const handlePlayerTimeout = () => {
+    setPlayerTimeoutModalVisible(false);
+    setPlayerTimeout(false);
+    // 可以在这里添加其他处理逻辑，比如提示玩家
   };
 
   // 在游戏模式改变时建立WebSocket连接
@@ -276,6 +339,25 @@ function App() {
       }
       if (currentPlayer !== playerColor || winner) return;
 
+      // 重置玩家超时状态
+      setPlayerTimeout(false);
+      setPlayerLastMoveTime(Date.now());
+      // 清除玩家超时计时器
+      if (playerTimeoutRef.current) {
+        clearTimeout(playerTimeoutRef.current);
+        playerTimeoutRef.current = null;
+      }
+      
+      // 设置对手超时计时器
+      setOpponentLastMoveTime(Date.now());
+      if (opponentTimeoutRef.current) {
+        clearTimeout(opponentTimeoutRef.current);
+      }
+      opponentTimeoutRef.current = setTimeout(() => {
+        setOpponentTimeout(true);
+        setOpponentTimeoutModalVisible(true);
+      }, TIMEOUT_DURATION);
+
       // 使用全局 WebSocket 服务发送消息
       wsService.send({
         type: 2,
@@ -314,7 +396,7 @@ function App() {
       setCurrentPlayer(opponentColor); // 切换回合显示
       saveGameState();
     }
-  }, [board, winner, onlineStatus, gameMode, currentPlayer, playerColor, opponentColor, roomId, messageApi, saveGameState, currentUser, opponentUserId]);
+  }, [board, winner, onlineStatus, gameMode, currentPlayer, playerColor, opponentColor, roomId, messageApi, saveGameState, currentUser, opponentUserId, opponentTimeoutRef, playerTimeoutRef, TIMEOUT_DURATION]);
 
   useEffect(() => {
     if (gameStarted && currentPlayer !== playerColor && !winner) {
@@ -466,7 +548,7 @@ function App() {
         content: {
           message: {
             id: `${Date.now()}`,
-            content: `[invite]${roomId}[/invite]`,
+            content: `[invite/chess]${roomId}[/invite]`,
             sender: {
               id: String(currentUser.id),
               name: currentUser.userName || '游客',
@@ -518,6 +600,59 @@ function App() {
   const handleContinueGame = () => {
     setShowGameEndModal(false);
   };
+
+  // 在组件卸载时清除计时器
+  useEffect(() => {
+    return () => {
+      if (opponentTimeoutRef.current) {
+        clearTimeout(opponentTimeoutRef.current);
+      }
+      if (playerTimeoutRef.current) {
+        clearTimeout(playerTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // 在游戏开始时设置初始计时器
+  useEffect(() => {
+    if (gameMode === 'online' && gameStarted && onlineStatus === 'playing') {
+      if (currentPlayer === playerColor) {
+        // 玩家回合，设置玩家超时计时器
+        setPlayerLastMoveTime(Date.now());
+        if (playerTimeoutRef.current) {
+          clearTimeout(playerTimeoutRef.current);
+        }
+        playerTimeoutRef.current = setTimeout(() => {
+          setPlayerTimeout(true);
+          setPlayerTimeoutModalVisible(true);
+        }, TIMEOUT_DURATION);
+      } else {
+        // 对手回合，设置对手超时计时器
+        setOpponentLastMoveTime(Date.now());
+        if (opponentTimeoutRef.current) {
+          clearTimeout(opponentTimeoutRef.current);
+        }
+        opponentTimeoutRef.current = setTimeout(() => {
+          setOpponentTimeout(true);
+          setOpponentTimeoutModalVisible(true);
+        }, TIMEOUT_DURATION);
+      }
+    }
+  }, [gameMode, gameStarted, onlineStatus, currentPlayer, playerColor, opponentTimeoutRef, playerTimeoutRef, TIMEOUT_DURATION]);
+
+  // 在游戏结束时清除计时器
+  useEffect(() => {
+    if (winner) {
+      if (opponentTimeoutRef.current) {
+        clearTimeout(opponentTimeoutRef.current);
+        opponentTimeoutRef.current = null;
+      }
+      if (playerTimeoutRef.current) {
+        clearTimeout(playerTimeoutRef.current);
+        playerTimeoutRef.current = null;
+      }
+    }
+  }, [winner, opponentTimeoutRef, playerTimeoutRef]);
 
   if (!gameStarted) {
     return (
@@ -673,8 +808,8 @@ function App() {
                       {/* 对手信息 */}
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full overflow-hidden">
-                          <img 
-                            src={opponentInfo?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${opponentUserId || 'opponent'}`} 
+                          <img
+                            src={opponentInfo?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${opponentUserId || 'opponent'}`}
                             alt="对手头像"
                             className="w-full h-full object-cover"
                           />
@@ -701,8 +836,8 @@ function App() {
                           </div>
                         </div>
                         <div className="w-8 h-8 rounded-full overflow-hidden">
-                          <img 
-                            src={currentUser?.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.id || 'visitor'}`} 
+                          <img
+                            src={currentUser?.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.id || 'visitor'}`}
                             alt="玩家头像"
                             className="w-full h-full object-cover"
                           />
@@ -1056,6 +1191,29 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* 对手超时提示弹窗 */}
+      <Modal
+        title="对手可能已离开"
+        open={opponentTimeoutModalVisible}
+        onOk={() => handleOpponentTimeout(true)}
+        onCancel={() => handleOpponentTimeout(false)}
+        okText="退出房间"
+        cancelText="继续等待"
+      >
+        <p>对手已经超过10秒没有下子，是否退出房间？</p>
+      </Modal>
+      
+      {/* 玩家超时提示弹窗 */}
+      <Modal
+        title="请下子"
+        open={playerTimeoutModalVisible}
+        onOk={handlePlayerTimeout}
+        onCancel={handlePlayerTimeout}
+        okText="收到马上下"
+      >
+        <p>您已经超过10秒没有下子，请尽快下子！</p>
+      </Modal>
     </div>
   );
 }

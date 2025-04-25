@@ -44,6 +44,7 @@ import './app.css';
 import {RcFile} from "antd/lib/upload";
 import COS from 'cos-js-sdk-v5';
 import LoginRegister from '../LoginRegister';
+import {getNotificationEnabled, setNotificationEnabled} from '@/utils/notification';
 lazy(() => import('@/components/MusicPlayer'));
 export type GlobalHeaderRightProps = {
   menu?: boolean;
@@ -53,6 +54,81 @@ type MoYuTimeType = {
   endTime?: Moment;
   lunchTime?: Moment;
   monthlySalary?: number;
+  workdayType?: 'single' | 'double'; 
+};
+
+// 修改检查文件大小函数
+const checkFileSize = (file: File): boolean => {
+  return file.size / 1024 / 1024 < 1;
+};
+
+// 修改压缩图片函数，添加质量自适应
+const compressImage = (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        // 如果图片尺寸大于 800px，等比例缩小
+        const maxSize = 800;
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = Math.round((height * maxSize) / width);
+            width = maxSize;
+          } else {
+            width = Math.round((width * maxSize) / height);
+            height = maxSize;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // 根据原始文件大小动态调整压缩质量
+        const fileSize = file.size / 1024 / 1024; // 转换为MB
+        let quality = 0.8; // 默认质量
+        
+        if (fileSize > 2) {
+          quality = 0.5;
+        } else if (fileSize > 1) {
+          quality = 0.6;
+        } else if (fileSize > 0.5) {
+          quality = 0.7;
+        }
+        
+        // 转换为 Blob
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            } else {
+              reject(new Error('图片压缩失败'));
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = () => {
+        reject(new Error('图片加载失败'));
+      };
+    };
+    reader.onerror = () => {
+      reject(new Error('文件读取失败'));
+    };
+  });
 };
 
 export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
@@ -60,6 +136,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     startTime: moment('08:30', 'HH:mm'),
     endTime: moment('17:30', 'HH:mm'),
     lunchTime: moment('12:00', 'HH:mm'),
+    workdayType: 'double', // 默认双休
   });
 
   // 从 localStorage 读取数据
@@ -72,6 +149,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         endTime: moment(parsedData.endTime, 'HH:mm'),
         lunchTime: moment(parsedData.lunchTime, 'HH:mm'),
         monthlySalary: parsedData.monthlySalary,
+        workdayType: parsedData.workdayType || 'double', // 添加单双休设置
       });
     }
   }, []);
@@ -92,6 +170,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       endTime: values.endTime?.format('HH:mm'),
       lunchTime: values.lunchTime?.format('HH:mm'),
       monthlySalary: values.monthlySalary,
+      workdayType: values.workdayType,
     };
     localStorage.setItem('moYuData', JSON.stringify(dataToSave));
     // 转换回 Moment 对象后设置
@@ -100,6 +179,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       endTime: moment(values.endTime?.format('HH:mm'), 'HH:mm'),
       lunchTime: moment(values.lunchTime?.format('HH:mm'), 'HH:mm'),
       monthlySalary: values.monthlySalary,
+      workdayType: values.workdayType,
     });
   };
 
@@ -166,14 +246,16 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     const savedConfig = localStorage.getItem('siteConfig');
     return savedConfig ? JSON.parse(savedConfig) : {
       siteName: '摸鱼岛',
-      siteIcon: 'https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png'
+      siteIcon: 'https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png',
+      notificationEnabled: true
     };
   });
 
   // 添加默认网站配置
   const defaultSiteConfig = {
     siteName: '摸鱼岛',
-    siteIcon: 'https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png'
+    siteIcon: 'https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png',
+    notificationEnabled: true
   };
 
   const [isMoneyVisible, setIsMoneyVisible] = useState(() => {
@@ -183,8 +265,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
 
   const [holidayInfo, setHolidayInfo] = useState<{
     date: string;
-    days: number;
-    holiday: boolean;
     name: string;
   } | null>(null);
 
@@ -205,10 +285,23 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   // 获取假期信息
   const fetchHolidayInfo = async () => {
     try {
-      const response = await fetch('https://moyuapi.codebug.icu/holiday/next');
+      const response = await fetch('/data/2025-holiday.json');
       const data = await response.json();
-      if (data.code === 200) {
-        setHolidayInfo(data.data);
+      
+      // 获取当前日期
+      const now = moment();
+      
+      // 找到下一个假期
+      const nextHoliday = data.days.find((day: any) => {
+        const holidayDate = moment(day.date);
+        return day.isOffDay && holidayDate.isAfter(now);
+      });
+
+      if (nextHoliday) {
+        setHolidayInfo({
+          date: nextHoliday.date,
+          name: nextHoliday.name
+        });
       }
     } catch (error) {
       console.error('获取假期信息失败:', error);
@@ -227,11 +320,14 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         const now = moment();
         const lunchTime = moment(moYuData.lunchTime);
         const endTime = moment(moYuData.endTime);
-
-        // 计算工作日每小时收入
-        const workdaysInMonth = 22; // 假设每月22个工作日
+        
+        const workdaysInMonth = moYuData.workdayType === 'single' ? 26 : 22; // 单休26天，双休22天
         const workHoursPerDay = moment(moYuData.endTime).diff(moment(moYuData.startTime), 'hours');
         const hourlyRate = moYuData.monthlySalary ? (moYuData.monthlySalary / (workdaysInMonth * workHoursPerDay)) : 0;
+        // 计算工作日每小时收入
+        // const workdaysInMonth = 22; // 假设每月22个工作日
+        // const workHoursPerDay = moment(moYuData.endTime).diff(moment(moYuData.startTime), 'hours');
+        // const hourlyRate = moYuData.monthlySalary ? (moYuData.monthlySalary / (workdaysInMonth * workHoursPerDay)) : 0;
 
         // 计算已工作时长和收入
         const startTime = moment(moYuData.startTime);
@@ -406,11 +502,16 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const handleUpload = async (file: RcFile) => {
     try {
       setUploading(true);
+      
+      // 检查文件大小，如果超过1MB则进行压缩
+      const needCompress = !checkFileSize(file);
+      const fileToUpload = needCompress ? await compressImage(file) : file;
+      
       const res = await uploadFileByMinioUsingPost(
-        { biz: 'user_avatar' },  // 参数
-        {},  // body 参数
-        file,  // 文件参数
-        {  // 其他选项
+        { biz: 'user_avatar' },
+        {},
+        fileToUpload,
+        {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
@@ -801,6 +902,17 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     }
   };
 
+  // 在组件加载时获取通知设置
+  useEffect(() => {
+    const savedConfig = localStorage.getItem('siteConfig');
+    if (savedConfig) {
+      const config = JSON.parse(savedConfig);
+      if (config.notificationEnabled !== undefined) {
+        setNotificationEnabled(config.notificationEnabled);
+      }
+    }
+  }, []);
+
   if (!currentUser) {
     return (
       <>
@@ -828,6 +940,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                   endTime: moYuData.endTime,
                   lunchTime: moYuData.lunchTime,
                   monthlySalary: moYuData.monthlySalary,
+                  workdayType: moYuData.workdayType,
                 }}
                 onFinish={onFinishMoYu}
                 onFinishFailed={onFinishFailedMoYu}
@@ -847,6 +960,13 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
 
                 <Form.Item label="月薪" name="monthlySalary">
                   <Input placeholder="选填，不填则不显示收入" type="number"/>
+                </Form.Item>
+
+                <Form.Item label="工作制" name="workdayType">
+                  <Select>
+                    <Select.Option value="single">单休</Select.Option>
+                    <Select.Option value="double">双休</Select.Option>
+                  </Select>
                 </Form.Item>
 
                 <Form.Item label="显示状态">
@@ -1403,6 +1523,9 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             setSiteConfig(values);
             localStorage.setItem('siteConfig', JSON.stringify(values));
             
+            // 更新通知设置
+            setNotificationEnabled(values.notificationEnabled);
+            
             // 更新所有图标相关的标签
             const iconTypes = ['icon', 'shortcut icon', 'apple-touch-icon'];
             iconTypes.forEach(type => {
@@ -1498,6 +1621,18 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             </div>
           </Form.Item>
 
+          <Form.Item
+            label="消息闪烁"
+            name="notificationEnabled"
+            valuePropName="checked"
+            help="关闭后，收到新消息时标题和图标不会闪烁"
+          >
+            <Switch
+              checkedChildren="开启"
+              unCheckedChildren="关闭"
+            />
+          </Form.Item>
+
           <Form.Item>
             <Space>
               <Button type="primary" htmlType="submit">
@@ -1512,6 +1647,9 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                   siteConfigForm.setFieldsValue(defaultSiteConfig);
                   setSiteConfig(defaultSiteConfig);
                   localStorage.setItem('siteConfig', JSON.stringify(defaultSiteConfig));
+                  
+                  // 更新通知设置
+                  setNotificationEnabled(defaultSiteConfig.notificationEnabled);
 
                   // 更新所有图标相关的标签
                   const iconTypes = ['icon', 'shortcut icon', 'apple-touch-icon'];

@@ -4,6 +4,7 @@
 // API 唯一标识：
 import * as avatarFrameController from './avatarFrameController';
 import * as chatController from './chatController';
+import * as donationRecordsController from './donationRecordsController';
 import * as emoticonFavourController from './emoticonFavourController';
 import * as fileController from './fileController';
 import * as hotPostController from './hotPostController';
@@ -19,6 +20,7 @@ export default {
   avatarFrameController,
   webParserController,
   chatController,
+  donationRecordsController,
   emoticonFavourController,
   fileController,
   hotPostController,

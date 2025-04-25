@@ -1,21 +1,41 @@
 import { BACKEND_HOST_WS } from "@/constants";
+import type { MessageInstance } from "antd/es/message/interface";
 import { message } from "antd";
+import { startNotification, stopNotification } from "@/utils/notification";
 
 class WebSocketService {
   private static instance: WebSocketService;
   private ws: WebSocket | null = null;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
-  private reconnectTimeout: NodeJS.Timeout | null = null;
+  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private messageHandlers: Map<string, ((data: any) => void)[]> = new Map();
   private isManuallyClosed = false;
+  private notificationInterval: number | null = null;
+  private isWindowFocused: boolean = true;
 
   private constructor() {
     // 添加默认的错误消息处理器
     this.addMessageHandler('error', (data) => {
       message.error(data.data || '发生错误');
     });
+
+    // 监听窗口焦点变化
+    window.addEventListener('focus', this.handleWindowFocus);
+    window.addEventListener('blur', this.handleWindowBlur);
   }
+
+  private handleWindowFocus = () => {
+    this.isWindowFocused = true;
+    if (this.notificationInterval) {
+      stopNotification(this.notificationInterval);
+      this.notificationInterval = null;
+    }
+  };
+
+  private handleWindowBlur = () => {
+    this.isWindowFocused = false;
+  };
 
   public static getInstance(): WebSocketService {
     if (!WebSocketService.instance) {
@@ -42,9 +62,13 @@ class WebSocketService {
     this.ws.onopen = () => {
       console.log('WebSocket连接成功');
       this.reconnectAttempts = 0;
-      this.ws?.send(JSON.stringify({
-        type: 1, // 登录连接
-      }));
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws?.send(JSON.stringify({
+          type: 1, // 登录连接
+        }));
+      } else {
+        message.error('WebSocket连接失败');
+      }
     };
 
     this.ws.onclose = () => {
@@ -65,6 +89,17 @@ class WebSocketService {
         const data = JSON.parse(event.data);
         const handlers = this.messageHandlers.get(data.type) || [];
         handlers.forEach(handler => handler(data));
+
+        // 如果是聊天消息且窗口未激活，则触发通知
+        if (data.type === 'chat' && !this.isWindowFocused) {
+          if (this.notificationInterval) {
+            stopNotification(this.notificationInterval);
+          }
+          const interval = startNotification(data.data.content || '新消息');
+          if (interval) {
+            this.notificationInterval = interval;
+          }
+        }
       } catch (error) {
         console.error('处理WebSocket消息失败:', error);
       }
@@ -95,6 +130,14 @@ class WebSocketService {
       this.ws.close();
       this.ws = null;
     }
+    // 清理通知
+    if (this.notificationInterval) {
+      stopNotification(this.notificationInterval);
+      this.notificationInterval = null;
+    }
+    // 移除事件监听器
+    window.removeEventListener('focus', this.handleWindowFocus);
+    window.removeEventListener('blur', this.handleWindowBlur);
   }
 
   public send(data: any) {
@@ -121,6 +164,13 @@ class WebSocketService {
       }
     }
   }
+
+  public clearMessageHandlers() {
+    // 清空所有消息处理器，但保留error默认处理器
+    const errorHandlers = this.messageHandlers.get('error') || [];
+    this.messageHandlers.clear();
+    this.messageHandlers.set('error', errorHandlers);
+  }
 }
 
-export const wsService = WebSocketService.getInstance(); 
+export const wsService = WebSocketService.getInstance();
