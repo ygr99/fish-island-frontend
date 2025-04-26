@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>获取网站图标</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        outline: none;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        background-color: #1a1a2e;
+        color: #f5f5f5;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 600px;
+        height: 90%;
+        display: flex;
+        margin: 0 auto;
+        flex-direction: column;
+        padding: 20px 0;
+      }
+
+      .input-wraper {
+        width: 100%;
+        display: flex;
+        position: relative;
+        justify-content: center;
+      }
+
+      #siteInput {
+        flex: 1;
+        height: 16px;
+        color: #f5f5f5;
+        font-size: 16px;
+        border: 2px solid #3a506b;
+        border-radius: 10px 0 0 10px;
+        padding: 12px 16px;
+        border-right: 0;
+        background-color: #1f4068;
+      }
+
+      #siteInput:focus {
+        border-color: #4d80e4 !important;
+      }
+
+      #extract {
+        width: 108px;
+        height: 44px;
+        color: #fff;
+        cursor: pointer;
+        font-size: 17px;
+        font-weight: 400;
+        line-height: 45px;
+        background: #3f72af;
+        border-radius: 0 10px 10px 0;
+      }
+
+      #extract[disabled] {
+        background: #3a506b;
+        pointer-events: none;
+      }
+
+      .result {
+        flex: 1;
+        width: 100%;
+        padding: 20px;
+        margin-top: 20px;
+        border-radius: 10px;
+        box-sizing: border-box;
+        border: 2px solid #3a506b;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .result img {
+        max-width: 128px;
+        max-height: 128px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 10px;
+      }
+
+      .actions {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+      }
+
+      .action-btn {
+        cursor: pointer;
+        font-size: 14px;
+        color: #3f72af;
+        background-color: rgba(63, 114, 175, 0.1);
+        padding: 8px 12px;
+        border-radius: 4px;
+        transition: all 0.2s;
+      }
+
+      .action-btn:hover {
+        background-color: rgba(63, 114, 175, 0.3);
+      }
+
+      .error-msg {
+        color: #e6a23c;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="input-wraper">
+        <input
+          type="text"
+          id="siteInput"
+          autocomplete="off"
+          placeholder="输入网站地址 (例如: google.com)"
+        />
+        <button id="extract">提取图标</button>
+      </div>
+
+      <div class="result" id="result"></div>
+    </div>
+
+    <script>
+      const siteInput = document.getElementById("siteInput");
+      const extractBtn = document.getElementById("extract");
+      const resultDiv = document.getElementById("result");
+
+      // 页面加载时聚焦输入框
+      window.onload = () => siteInput.focus();
+
+      // 回车键触发提取
+      siteInput.addEventListener("keyup", (e) => {
+        if (e.key === "Enter") extractBtn.click();
+      });
+
+      // 点击提取按钮
+      extractBtn.addEventListener("click", () => {
+        getIcon();
+      });
+
+      // 获取图标函数
+      function getIcon() {
+        // 清空结果区域
+        resultDiv.innerHTML = "";
+
+        // 获取输入值并验证
+        let url = siteInput.value.trim();
+        if (!url) {
+          showError("请输入网站地址");
+          return;
+        }
+
+        // 添加协议前缀如果没有
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+          url = "https://" + url;
+        }
+
+        // 验证URL格式
+        try {
+          new URL(url);
+        } catch (error) {
+          showError("请输入正确的URL地址");
+          return;
+        }
+
+        // 禁用输入和按钮
+        siteInput.disabled = true;
+        extractBtn.disabled = true;
+
+        // 使用icon.bqb.cool服务获取图标
+        const iconUrl = `https://icon.bqb.cool/?url=${encodeURIComponent(url)}`;
+
+        // 创建图片元素
+        const img = new Image();
+        img.onload = () => {
+          siteInput.disabled = false;
+          extractBtn.disabled = false;
+
+          // 显示图标和操作按钮
+          resultDiv.innerHTML = "";
+          resultDiv.appendChild(img);
+
+          // 添加图标URL显示
+          const urlText = document.createElement("div");
+          urlText.textContent = iconUrl;
+          urlText.style.fontSize = "12px";
+          urlText.style.wordBreak = "break-all";
+          urlText.style.textAlign = "center";
+          resultDiv.appendChild(urlText);
+
+          // 添加操作按钮
+          const actions = document.createElement("div");
+          actions.className = "actions";
+
+          // 复制地址按钮
+          const copyBtn = document.createElement("div");
+          copyBtn.className = "action-btn";
+          copyBtn.textContent = "复制地址";
+          copyBtn.onclick = () => copyToClipboard(iconUrl);
+
+          // 保存图标按钮
+          const saveBtn = document.createElement("div");
+          saveBtn.className = "action-btn";
+          saveBtn.textContent = "查看图标";
+          saveBtn.onclick = () => saveImage(iconUrl);
+
+          actions.appendChild(copyBtn);
+          actions.appendChild(saveBtn);
+          resultDiv.appendChild(actions);
+        };
+
+        img.onerror = () => {
+          siteInput.disabled = false;
+          extractBtn.disabled = false;
+          showError("获取图标失败，请检查网址是否正确");
+        };
+
+        img.src = iconUrl;
+      }
+
+      // 显示错误信息
+      function showError(message) {
+        resultDiv.innerHTML = `<div class="error-msg">${message}</div>`;
+      }
+
+      // 复制到剪贴板
+      function copyToClipboard(text) {
+        navigator.clipboard
+          .writeText(text)
+          .then(() => showNotification("图标地址已复制到剪贴板"))
+          .catch(() => {
+            // 备用复制方法
+            const textarea = document.createElement("textarea");
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textarea);
+            showNotification("图标地址已复制到剪贴板");
+          });
+      }
+
+      // 保存图片
+      function saveImage(url) {
+        const a = document.createElement("a");
+        a.href = url;
+        a.target = "_blank";
+        a.click();
+      }
+
+      // 显示通知
+      function showNotification(message) {
+        const notification = document.createElement("div");
+        notification.style.position = "fixed";
+        notification.style.bottom = "20px";
+        notification.style.left = "50%";
+        notification.style.transform = "translateX(-50%)";
+        notification.style.backgroundColor = "rgba(63, 114, 175, 0.9)";
+        notification.style.color = "white";
+        notification.style.padding = "10px 20px";
+        notification.style.borderRadius = "5px";
+        notification.style.zIndex = "9999";
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+          notification.style.opacity = "0";
+          notification.style.transition = "opacity 0.5s";
+          setTimeout(() => document.body.removeChild(notification), 500);
+        }, 2000);
+      }
+    </script>
+  </body>
+</html>
