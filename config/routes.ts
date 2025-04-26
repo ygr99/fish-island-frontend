@@ -46,6 +46,7 @@ export default [
     name: '支持网站',
     routes: [
       { icon: 'DesktopOutlined', path: '/rank/reward', component: './Rank/Reward', name: '打赏榜 👑', requireAuth: false },
+      { icon: 'DesktopOutlined', path: '/rank/about', component: './About', name: '共建与反馈 🚀', requireAuth: false },
       {path: 'https://github.com/lhccong/fish-island-backend', name: '狠狠点个 star 🌟'},
 
     ],
