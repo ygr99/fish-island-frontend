@@ -147,6 +147,9 @@ export default defineConfig({
               },
             },
           },
+          corePlugins: {
+            preflight: false, // 禁用默认样式
+          },
         };
       `,
     },
