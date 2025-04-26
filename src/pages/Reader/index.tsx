@@ -666,7 +666,7 @@ export default function ReaderList() {
             books.length > 0 ? (
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(8, 1fr)',
+                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
                 gap: '12px'
               }}>
                 {/* 添加书籍按钮卡片 */}
@@ -685,7 +685,7 @@ export default function ReaderList() {
                     boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                     height: '100%',
                     border: '2px dashed #d9d9d9',
-                    minHeight: '160px'
+                    minHeight: '120px'
                   }}
                   onClick={showImportModal}
                   onMouseEnter={(e) => {
@@ -702,7 +702,7 @@ export default function ReaderList() {
                   <PlusOutlined style={{ fontSize: '32px', color: token.colorPrimary, marginBottom: '8px' }} />
                   <div style={{ fontSize: '14px', color: token.colorTextSecondary }}>搜索书籍</div>
                 </div>
-  
+
                 {books.map(book => (
                   <div
                     key={book.id}
@@ -717,7 +717,8 @@ export default function ReaderList() {
                       overflow: 'hidden',
                       boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                       height: '100%',
-                      position: 'relative'
+                      position: 'relative',
+                      padding: '16px'
                     }}
                     onClick={() => openReader(book)}
                     onMouseEnter={(e) => {
@@ -745,15 +746,12 @@ export default function ReaderList() {
                       style={{
                         position: 'absolute',
                         top: '8px',
-                        left: '8px',
+                        right: '8px',
                         zIndex: 2,
                         display: 'flex',
                         gap: '8px',
                         opacity: 0,
                         transition: 'opacity 0.3s',
-                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                        padding: '4px',
-                        borderRadius: '4px'
                       }}
                     >
                       <Button
@@ -772,116 +770,50 @@ export default function ReaderList() {
                         title="删除小说"
                       />
                     </div>
-                    
-                    <div style={{ position: 'relative', paddingTop: '120%' }}>
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        overflow: 'hidden'
-                      }}>
-                        {renderCover(book)}
+
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                      <div style={{ marginRight: '8px' }}>
+                        {getFormatIcon(book.format)}
                       </div>
-                      <div style={{
-                        position: 'absolute',
-                        top: '8px',
-                        right: '8px',
-                        zIndex: 1
-                      }}>
-                        <Tag color="blue">
-                          {getFormatIcon(book.format)} {book.format.toUpperCase()}
-                        </Tag>
-                      </div>
-                      {book.lastReadPosition && (
-                        <div style={{
-                          position: 'absolute',
-                          bottom: '0',
-                          left: '0',
-                          right: '0',
-                          padding: '4px 8px',
-                          backgroundColor: 'rgba(0,0,0,0.6)',
-                          color: '#fff',
-                          fontSize: '12px'
-                        }}>
-                          继续阅读
-                        </div>
-                      )}
+                      <Tag color="blue">
+                        {book.format.toUpperCase()}
+                      </Tag>
                     </div>
-                    <div style={{
-                      padding: '8px',
-                      flexGrow: 1,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between'
-                    }}>
-                      <div>
+
+                    <div style={{ flex: 1 }}>
+                      <div style={{
+                        fontSize: '16px',
+                        fontWeight: 'bold',
+                        marginBottom: '8px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        lineHeight: '1.4'
+                      }}>
+                        {book.title}
+                      </div>
+                      {book.author && (
                         <div style={{
-                          fontSize: '13px',
-                          fontWeight: 'bold',
-                          marginBottom: '2px',
+                          fontSize: '12px',
+                          color: '#888',
+                          marginBottom: '8px',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap'
                         }}>
-                          {book.title}
+                          作者: {book.author}
                         </div>
-                        {book.author && (
-                          <div style={{
-                            fontSize: '11px',
-                            color: '#888',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}>
-                            作者: {book.author}
-                          </div>
-                        )}
-                        
-                        {/* 添加书籍来源地址显示 */}
-                        {book.source === 'local' && book.filePath && (
-                          <Tooltip title={book.filePath}>
-                            <div 
-                              style={{
-                                fontSize: '11px',
-                                color: '#1890ff',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                marginTop: '6px',
-                                cursor: 'pointer'
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation(); // 阻止冒泡，避免触发父元素的点击事件
-                                // 尝试打开本地文件
-                                try {
-                                  const fileUrl = `file://${book.filePath}`;
-                                  window.open(fileUrl, '_blank');
-                                } catch (error) {
-                                  console.error('无法打开本地文件:', error);
-                                  message.error('无法打开本地文件');
-                                }
-                              }}
-                            >
-                              <FileOutlined style={{ marginRight: '4px' }} />
-                              {book.filePath.split('/').pop()}
-                            </div>
-                          </Tooltip>
-                        )}
-                      </div>
-                      
-                      <div style={{
-                        marginTop: '6px',
-                        fontSize: '11px',
-                        color: '#aaa'
-                      }}>
-                        {book.lastReadTime ? (
-                          <div>上次阅读: {formatTime(book.lastReadTime)}</div>
-                        ) : (
-                          <div>未开始阅读</div>
-                        )}
-                      </div>
+                      )}
+                      {book.lastReadTime && (
+                        <div style={{
+                          fontSize: '12px',
+                          color: '#aaa'
+                        }}>
+                          上次阅读: {formatTime(book.lastReadTime)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
