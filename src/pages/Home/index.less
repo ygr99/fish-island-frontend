@@ -174,6 +174,7 @@
   z-index: 1;
   margin-left: auto;
   margin-right: auto;
+  min-height: 150px;
 }
 
 .countdownSection {
@@ -246,5 +247,105 @@
 
   &:hover::after {
     opacity: 1;
+  }
+}
+
+// 组件库按钮样式
+.componentLibraryBtn {
+  position: fixed;
+  top: 20px;
+  right: 100px;
+  z-index: 100;
+  
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+// 添加网站按钮样式
+.addSiteBtn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+}
+
+// 快捷方式包装器样式
+.shortcutWrapper {
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s;
+  z-index: 2;
+  
+  &:hover {
+    transform: translateY(-5px);
+  }
+}
+
+// 拖拽相关样式
+.sortableGhost {
+  opacity: 0.4;
+}
+
+.sortableChosen {
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.sortableDrag {
+  cursor: grabbing;
+  z-index: 10;
+  opacity: 0.8;
+  transform: scale(1.05);
+}
+
+// 右键菜单样式
+.contextMenu {
+  position: fixed;
+  background: white;
+  border-radius: 5px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  overflow: hidden;
+  
+  .menuItem {
+    padding: 10px 15px;
+    cursor: pointer;
+    
+    &:hover {
+      background-color: #f5f5f5;
+    }
+  }
+}
+
+// 组件库样式
+.componentGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  
+  .componentItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid #eee;
+    transition: all 0.3s;
+    
+    &:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    img {
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
+      margin-bottom: 10px;
+    }
   }
 } 
