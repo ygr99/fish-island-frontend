@@ -130,8 +130,8 @@ const getDefaultReaderSettings = (): ReaderSettings => {
     nextPageKey: 'ArrowRight',
     quickHide: 'none',
     panicKey: 'Escape',
-    accessToken: 'guest:49bc67e197c44885322d093a603ffd45',
-    apiBaseUrl: 'https://reader.nxnow.top/reader3'
+    accessToken: 'congg:7e0efee65786976202e4fc20c6a98d89',
+    apiBaseUrl: 'https://reader.yucoder.cn/reader3'
   };
 };
 
@@ -155,12 +155,12 @@ export default function ReaderList() {
 
   // 使用全局阅读器状态
   const { showReader } = useModel('globalReader');
-  
+
   // 添加悬浮窗阅读设置
   const [floatingModeEnabled, setFloatingModeEnabled] = useState(
     localStorage.getItem('fish-reader-floating-mode') === 'true'
   );
-  
+
   // 保存悬浮窗阅读设置
   useEffect(() => {
     localStorage.setItem('fish-reader-floating-mode', floatingModeEnabled.toString());
@@ -207,7 +207,7 @@ export default function ReaderList() {
         setLoading(false);
       }
     };
-    
+
     loadBooks();
   }, []);
 
@@ -267,22 +267,22 @@ export default function ReaderList() {
   // 打开阅读器 - 修改以支持悬浮模式
   const openReader = (book: Book) => {
     // 确保书籍有一个默认的lastReadChapter
-    const updatedBook = { 
+    const updatedBook = {
       ...book,
       lastReadChapter: book.lastReadChapter || 0 // 如果没有lastReadChapter，设为0
     };
-    
+
     // 更新书籍信息
     setCurrentBook(updatedBook);
-    
+
     // 保存最后打开的书籍ID到localStorage，确保悬浮阅读器可以找到
     localStorage.setItem("fish-reader-last-book", updatedBook.id.toString());
-    
+
     // 同时确保书籍信息也更新到书籍列表中
     const updatedBooks = books.map(b => b.id === updatedBook.id ? updatedBook : b);
     setBooks(updatedBooks);
     localStorage.setItem("fish-reader-books", JSON.stringify(updatedBooks));
-    
+
     // 根据悬浮模式设置选择打开方式
     if (floatingModeEnabled) {
       // 使用全局悬浮阅读器
@@ -303,16 +303,16 @@ export default function ReaderList() {
   const saveSettings = (settings: ReaderSettings) => {
     // 保存设置到本地存储
     localStorage.setItem("fish-reader-settings", JSON.stringify(settings));
-    
+
     // 更新状态
     setReaderSettings(settings);
-    
+
     // 如果阅读器是打开状态，直接应用新设置
     if (isReaderVisible && currentBook) {
       // 不需要关闭再重新打开阅读器，直接更新设置即可
       // 因为BookReader组件会监听settings属性的变化并自动应用新设置
     }
-    
+
     setIsSettingsVisible(false);
     message.success('设置已保存并应用');
   };
@@ -330,16 +330,16 @@ export default function ReaderList() {
   const handleChapterSelect = (chapterIndex: number, chapter?: Chapter) => {
     if (currentBook) {
       // console.log(`选择章节: ${chapterIndex}, 章节内容长度: ${chapter?.content?.length || 0}`););
-      
+
       let updatedBook: Book;
       if (chapter && currentBook.chapters) {
         // 如果传入了章节对象，更新chapters中对应章节的内容
-        const updatedChapters = currentBook.chapters.map(c => 
-          c.index === chapterIndex ? 
-          { ...c, content: chapter.content } : 
+        const updatedChapters = currentBook.chapters.map(c =>
+          c.index === chapterIndex ?
+          { ...c, content: chapter.content } :
           c
         );
-        
+
         updatedBook = {
           ...currentBook,
           lastReadChapter: chapterIndex,
@@ -351,39 +351,39 @@ export default function ReaderList() {
           lastReadChapter: chapterIndex
         };
       }
-      
+
       // console.log(`更新后的章节内容长度: ${updatedBook.chapters?.find(c => c.index === chapterIndex)?.content?.length || 0}`););
-      
+
       // 首先更新本地存储，确保持久化保存
       const savedBooks = localStorage.getItem("fish-reader-books");
       if (savedBooks) {
         const allBooks = JSON.parse(savedBooks);
-        const updatedBooks = allBooks.map((b: Book) => 
+        const updatedBooks = allBooks.map((b: Book) =>
           b.id === updatedBook.id ? updatedBook : b
         );
         localStorage.setItem("fish-reader-books", JSON.stringify(updatedBooks));
         // console.log('已更新本地存储中的书籍信息'););
       }
-      
+
       // 强制关闭阅读器并重新打开，确保使用新的章节数据
       setIsReaderVisible(false);
-      
+
       // 延迟更新状态，确保UI先关闭再打开
       setTimeout(() => {
         // 更新当前书籍
         setCurrentBook(updatedBook);
-        
+
         // 更新书籍列表中的当前书籍
-        setBooks(books.map(book => 
+        setBooks(books.map(book =>
           book.id === updatedBook.id ? updatedBook : book
         ));
-        
+
         // 关闭章节列表
         setIsChapterListVisible(false);
-        
+
         // 重新打开阅读器
         setIsReaderVisible(true);
-        
+
         // console.log(`阅读器重新加载，显示章节: ${chapterIndex}`););
       }, 100);
     }
@@ -404,17 +404,17 @@ export default function ReaderList() {
   // 搜索结果跳转
   const handleSearchResultSelect = (position: number) => {
     if (currentBook) {
-      const updatedBook = { 
-        ...currentBook, 
-        lastReadPosition: position 
+      const updatedBook = {
+        ...currentBook,
+        lastReadPosition: position
       };
       setCurrentBook(updatedBook);
-      
+
       // 更新书籍列表中的当前书籍
-      setBooks(books.map(book => 
+      setBooks(books.map(book =>
         book.id === updatedBook.id ? updatedBook : book
       ));
-      
+
       setIsSearchVisible(false);
       setIsReaderVisible(true);
     }
@@ -425,7 +425,7 @@ export default function ReaderList() {
     if (e) {
       e.stopPropagation(); // 阻止冒泡，避免触发父元素的点击事件
     }
-    
+
     confirm({
       title: '确认删除',
       content: '确定要删除这本书吗？此操作不可恢复。',
@@ -454,9 +454,9 @@ export default function ReaderList() {
       }
       return book;
     });
-    
+
     setBooks(updatedBooks);
-    
+
     // 同时更新当前书籍
     if (currentBook && currentBook.id === bookId) {
       setCurrentBook({
@@ -471,7 +471,7 @@ export default function ReaderList() {
   // 渲染书籍封面
   const renderCover = (book: Book) => {
     const defaultCover = (
-      <div 
+      <div
         style={{
           width: '100%',
           height: '100%',
@@ -486,11 +486,11 @@ export default function ReaderList() {
         <BookOutlined />
       </div>
     );
-    
+
     if (!book.cover) {
       return defaultCover;
     }
-    
+
     return (
       <img
         src={book.cover}
@@ -543,19 +543,19 @@ export default function ReaderList() {
     if (isReaderVisible) {
       setIsReaderVisible(false);
     }
-    
+
     // 关闭所有可能打开的抽屉和模态框
     setIsSettingsVisible(false);
     setIsChapterListVisible(false);
     setIsSearchVisible(false);
     setIsImportModalVisible(false);
-    
+
     // 切换到学习模式
     if (!isStudyMode) {
       setIsStudyMode(true);
       localStorage.setItem("fish-reader-study-mode", "true");
     }
-    
+
     // 显示提示信息
     message.success('已切换到工作模式');
   };
@@ -577,10 +577,10 @@ export default function ReaderList() {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Header style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between', 
+      <Header style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         padding: '0 16px',
         background: token.colorBgContainer,
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
@@ -602,17 +602,17 @@ export default function ReaderList() {
           {/* 添加悬浮阅读模式切换 */}
           <Tooltip title={floatingModeEnabled ? "悬浮窗阅读模式已开启" : "开启悬浮窗阅读模式"}>
             <Badge dot={isReaderVisible && floatingModeEnabled} offset={[-5, 5]}>
-              <Button 
+              <Button
                 type={floatingModeEnabled ? "primary" : "text"}
-                icon={<PushpinOutlined />} 
+                icon={<PushpinOutlined />}
                 onClick={() => setFloatingModeEnabled(!floatingModeEnabled)}
               />
             </Badge>
           </Tooltip>
           <Tooltip title={isStudyMode ? "切换到摸鱼模式" : "切换到学习模式"}>
-            <Button 
-              type="text" 
-              icon={isStudyMode ? <BookOutlined /> : <LaptopOutlined />} 
+            <Button
+              type="text"
+              icon={isStudyMode ? <BookOutlined /> : <LaptopOutlined />}
               onClick={toggleStudyMode}
             />
           </Tooltip>
@@ -624,22 +624,22 @@ export default function ReaderList() {
 
       <Content style={{padding: isMobile ? "12px" : "24px"}}>
         <Card>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            marginBottom: 20 
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 20
           }}>
             <Title level={4} style={{ fontSize: isMobile ? "18px" : "20px", margin: 0 }}>
               {isStudyMode ? <ReadOutlined /> : <BookOutlined />} {isStudyMode ? '学习心得' : '我的书架'}
             </Title>
             <Space>
               <Tooltip title="悬浮窗阅读模式">
-                <Switch 
-                  checked={floatingModeEnabled} 
-                  onChange={setFloatingModeEnabled} 
-                  checkedChildren="悬浮" 
-                  unCheckedChildren="页内" 
+                <Switch
+                  checked={floatingModeEnabled}
+                  onChange={setFloatingModeEnabled}
+                  checkedChildren="悬浮"
+                  unCheckedChildren="页内"
                 />
               </Tooltip>
             </Space>
@@ -650,9 +650,9 @@ export default function ReaderList() {
           {/* 如果是学习模式，显示学习模式内容，否则显示书架 */}
           {isStudyMode ? (
             <div style={{ textAlign: 'center', padding: '40px 0' }}>
-              <img 
-                src="https://pic1.imgdb.cn/item/680a1eb158cb8da5c8c90187.jpg" 
-                alt="学习图片" 
+              <img
+                src="https://pic1.imgdb.cn/item/680a1eb158cb8da5c8c90187.jpg"
+                alt="学习图片"
                 style={{ width: '150px', marginBottom: '20px' }}
               />
               <Typography.Paragraph style={{ fontSize: '16px' }}>
@@ -741,7 +741,7 @@ export default function ReaderList() {
                     }}
                   >
                     {/* 悬浮操作按钮 */}
-                    <div 
+                    <div
                       className="book-action-buttons"
                       style={{
                         position: 'absolute',
@@ -922,40 +922,40 @@ export default function ReaderList() {
             right: 10,
             zIndex: 1010
           }}>
-            {/* <Button 
-              type="primary" 
-              shape="circle" 
-              icon={<SettingOutlined />} 
+            {/* <Button
+              type="primary"
+              shape="circle"
+              icon={<SettingOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
                 openSettings();
               }}
               style={{ marginRight: 8 }}
             /> */}
-            <Button 
-              type="primary" 
-              shape="circle" 
-              icon={<BarsOutlined />} 
+            <Button
+              type="primary"
+              shape="circle"
+              icon={<BarsOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
                 if (currentBook) openChapterList(currentBook);
               }}
               style={{ marginRight: 8 }}
             />
-            <Button 
-              type="primary" 
-              danger 
-              shape="circle" 
-              icon={<LaptopOutlined />} 
+            <Button
+              type="primary"
+              danger
+              shape="circle"
+              icon={<LaptopOutlined />}
               onClick={activatePanicMode}
               style={{ marginRight: 8 }}
               title="紧急切换到工作模式"
             />
-            <Button 
-              type="primary" 
-              danger 
-              shape="circle" 
-              icon={<DeleteOutlined />} 
+            <Button
+              type="primary"
+              danger
+              shape="circle"
+              icon={<DeleteOutlined />}
               onClick={() => {
                 setIsReaderVisible(false);
               }}
@@ -965,7 +965,7 @@ export default function ReaderList() {
             key={`book-reader-${currentBook.id}`}
             book={currentBook}
             settings={readerSettings}
-            onProgressUpdate={(position, chapterIndex) => 
+            onProgressUpdate={(position, chapterIndex) =>
               updateReadingProgress(currentBook.id, position, chapterIndex)
             }
             onOpenChapterList={() => openChapterList(currentBook)}
@@ -974,4 +974,4 @@ export default function ReaderList() {
       )}
     </Layout>
   );
-} 
+}

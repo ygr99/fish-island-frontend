@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button, message, Tooltip, Spin, Modal, Slider } from 'antd';
-import { 
-  BarsOutlined, 
-  DeleteOutlined, 
+import {
+  BarsOutlined,
+  DeleteOutlined,
   ColumnHeightOutlined,
   BorderOutlined,
   ReloadOutlined
@@ -102,63 +102,63 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
   const [showChapterList, setShowChapterList] = useState(false);
   const [isClickThrough, setIsClickThrough] = useState(false);
   const [chapters, setChapters] = useState<Chapter[]>([]);
-  
+
   // 拖动和调整大小相关状态
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  
+
   // 引用
   const loadingRef = useRef(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const readerRef = useRef<HTMLDivElement>(null);
-  
+
   // 记录加载时间，防止频繁重复加载
   const lastLoadTimeRef = useRef(0);
-  
+
   // 加载书籍数据
   useEffect(() => {
     if (!visible) return;
-    
+
     const loadBook = async () => {
       // 防止重复加载
       if (loadingRef.current) return;
-      
+
       // 加载频率限制
       const now = Date.now();
       if (now - lastLoadTimeRef.current < 1000) return;
-      
+
       lastLoadTimeRef.current = now;
       loadingRef.current = true;
-      
+
       try {
         setLoading(true);
-        
+
         // 从本地存储加载设置
         const savedSettings = localStorage.getItem('fish-reader-settings');
         if (savedSettings) {
           setSettings(JSON.parse(savedSettings));
         }
-        
+
         // 加载上次阅读窗口大小
         const savedSize = localStorage.getItem('fish-reader-size');
         if (savedSize) {
           setSize(JSON.parse(savedSize));
         }
-        
+
         // 加载上次阅读窗口位置
         const savedPosition = localStorage.getItem('fish-reader-position');
         if (savedPosition) {
           setPosition(JSON.parse(savedPosition));
         }
-        
+
         // 加载点击穿透设置
         const savedClickThrough = localStorage.getItem('fish-reader-click-through');
         if (savedClickThrough) {
           setIsClickThrough(JSON.parse(savedClickThrough));
         }
-        
+
         // 加载最后阅读的书籍
         const lastBookId = localStorage.getItem('fish-reader-last-book');
         if (!lastBookId) {
@@ -167,7 +167,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
           loadingRef.current = false;
           return;
         }
-        
+
         // 从本地存储加载书籍列表
         const savedBooks = localStorage.getItem('fish-reader-books');
         if (!savedBooks) {
@@ -176,24 +176,24 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
           loadingRef.current = false;
           return;
         }
-        
+
         const bookList = JSON.parse(savedBooks);
         const currentBook = bookList.find((b: Book) => b.id === parseInt(lastBookId));
-        
+
         if (!currentBook) {
           message.warning('未找到对应的书籍');
           setLoading(false);
           loadingRef.current = false;
           return;
         }
-        
+
         // 设置当前书籍
         setBook(currentBook);
-        
+
         // 设置当前章节索引
         const chapterIdx = currentBook.lastReadChapter || 0;
         setChapterIndex(chapterIdx);
-        
+
         // 加载章节列表
         if (!currentBook.chapters || currentBook.chapters.length === 0) {
           // 需要加载章节列表
@@ -201,7 +201,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
           if (bookWithChapters && bookWithChapters.chapters && bookWithChapters.chapters.length > 0) {
             setBook(bookWithChapters);
             setChapters(bookWithChapters.chapters);
-            
+
             // 加载当前章节内容
             const chapter = bookWithChapters.chapters.find((c: Chapter) => c.index === chapterIdx);
             if (chapter) {
@@ -216,7 +216,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
         } else {
           // 已有章节列表
           setChapters(currentBook.chapters);
-          
+
           // 加载当前章节内容
           const chapter = currentBook.chapters.find((c: Chapter) => c.index === chapterIdx);
           if (chapter) {
@@ -240,10 +240,10 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
         loadingRef.current = false;
       }
     };
-    
+
     loadBook();
   }, [visible]);
-  
+
   // 处理拖动开始
   const handleDragStart = (e: React.MouseEvent) => {
     if (e.target instanceof HTMLElement && e.target.closest('.handle')) {
@@ -255,7 +255,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
       e.preventDefault();
     }
   };
-  
+
   // 处理调整大小开始
   const handleResizeStart = (e: React.MouseEvent) => {
     setIsResizing(true);
@@ -268,7 +268,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
     e.preventDefault();
     e.stopPropagation();
   };
-  
+
   // 处理鼠标移动（拖动和调整大小）
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -276,96 +276,96 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
         // 计算新位置
         const newX = e.clientX - dragStart.x;
         const newY = e.clientY - dragStart.y;
-        
+
         // 边界检查
         const maxX = window.innerWidth - size.width;
         const maxY = window.innerHeight - size.height;
         const safeX = Math.max(0, Math.min(maxX, newX));
         const safeY = Math.max(0, Math.min(maxY, newY));
-        
+
         setPosition({ x: safeX, y: safeY });
       } else if (isResizing) {
         // 计算新尺寸
         const deltaX = e.clientX - resizeStart.x;
         const deltaY = e.clientY - resizeStart.y;
-        
+
         const newWidth = Math.max(200, resizeStart.width + deltaX);
         const newHeight = Math.max(100, resizeStart.height + deltaY);
-        
+
         // 边界检查
         const maxWidth = window.innerWidth - position.x;
         const maxHeight = window.innerHeight - position.y;
         const safeWidth = Math.min(maxWidth, newWidth);
         const safeHeight = Math.min(maxHeight, newHeight);
-        
+
         setSize({ width: safeWidth, height: safeHeight });
       }
     };
-    
+
     const handleMouseUp = () => {
       if (isDragging) {
         setIsDragging(false);
         // 保存位置
         localStorage.setItem('fish-reader-position', JSON.stringify(position));
       }
-      
+
       if (isResizing) {
         setIsResizing(false);
         // 保存尺寸
         localStorage.setItem('fish-reader-size', JSON.stringify(size));
       }
     };
-    
+
     if (isDragging || isResizing) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     }
-    
+
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDragging, isResizing, dragStart, resizeStart, position, size]);
-  
+
   // 加载章节列表
   const loadChapterList = async (book: Book): Promise<Book | null> => {
     if (book.source !== 'online' || !book.url) {
       return book; // 非在线书籍，直接返回
     }
-    
+
     try {
       // 获取API设置
       const savedSettings = localStorage.getItem('fish-reader-settings');
-      let accessToken = 'guest:49bc67e197c44885322d093a603ffd45';
-      let apiBaseUrl = 'https://reader.nxnow.top/reader3';
-      
+      let accessToken = 'congg:7e0efee65786976202e4fc20c6a98d89';
+      let apiBaseUrl = 'https://reader.yucoder.cn/reader3';
+
       if (savedSettings) {
         const parsedSettings = JSON.parse(savedSettings);
         accessToken = parsedSettings.accessToken || accessToken;
         apiBaseUrl = parsedSettings.apiBaseUrl || apiBaseUrl;
       }
-      
+
       // 构造API请求
       const timestamp = Date.now();
       const url = `${apiBaseUrl}/getChapterList?accessToken=${accessToken}&v=${timestamp}`;
-      
+
       // 发送请求
       const response = await axios.post(url, { url: book.url });
-      
+
       if (!response.data || !response.data.data) {
         message.error('获取章节列表失败: 数据格式错误');
         return book;
       }
-      
+
       // 更新书籍对象
       const updatedBook = {
         ...book,
         chapters: response.data.data
       };
-      
+
       // 更新本地存储
       updateBookInStorage(updatedBook);
-      
+
       return updatedBook;
     } catch (error) {
       console.error('加载章节列表失败:', error);
@@ -373,65 +373,65 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
       return book;
     }
   };
-  
+
   // 加载章节内容
   const loadChapterContent = async (book: Book, chapter: Chapter): Promise<Chapter | null> => {
     if (chapter.content) {
       return chapter; // 已有内容，直接返回
     }
-    
+
     if (book.source !== 'online' || !book.url) {
       return chapter; // 非在线书籍，直接返回
     }
-    
+
     try {
       // 获取API设置
       const savedSettings = localStorage.getItem('fish-reader-settings');
-      let accessToken = 'guest:49bc67e197c44885322d093a603ffd45';
-      let apiBaseUrl = 'https://reader.nxnow.top/reader3';
-      
+      let accessToken = 'congg:7e0efee65786976202e4fc20c6a98d89';
+      let apiBaseUrl = 'https://reader.yucoder.cn/reader3';
+
       if (savedSettings) {
         const parsedSettings = JSON.parse(savedSettings);
         accessToken = parsedSettings.accessToken || accessToken;
         apiBaseUrl = parsedSettings.apiBaseUrl || apiBaseUrl;
       }
-      
+
       // 构造API请求
       const timestamp = Date.now();
       const url = `${apiBaseUrl}/getBookContent?accessToken=${accessToken}&v=${timestamp}`;
-      
+
       // 发送请求
-      const response = await axios.post(url, { 
+      const response = await axios.post(url, {
         url: book.url,
         index: chapter.index
       });
-      
+
       if (!response.data || !response.data.data) {
         message.error('获取章节内容失败: 数据格式错误');
         return chapter;
       }
-      
+
       // 更新章节对象
       const updatedChapter = {
         ...chapter,
         content: response.data.data
       };
-      
+
       // 更新书籍中的章节
       if (book.chapters) {
-        const updatedChapters = book.chapters.map((c: Chapter) => 
+        const updatedChapters = book.chapters.map((c: Chapter) =>
           c.index === chapter.index ? updatedChapter : c
         );
-        
+
         const updatedBook = {
           ...book,
           chapters: updatedChapters
         };
-        
+
         // 更新本地存储
         updateBookInStorage(updatedBook);
       }
-      
+
       return updatedChapter;
     } catch (error) {
       console.error('加载章节内容失败:', error);
@@ -439,36 +439,36 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
       return chapter;
     }
   };
-  
+
   // 更新本地存储中的书籍
   const updateBookInStorage = (updatedBook: Book) => {
     try {
       const savedBooks = localStorage.getItem('fish-reader-books');
       if (!savedBooks) return;
-      
+
       const books = JSON.parse(savedBooks);
-      const updatedBooks = books.map((b: Book) => 
+      const updatedBooks = books.map((b: Book) =>
         b.id === updatedBook.id ? updatedBook : b
       );
-      
+
       localStorage.setItem('fish-reader-books', JSON.stringify(updatedBooks));
     } catch (error) {
       console.error('更新本地存储失败:', error);
     }
   };
-  
+
   // 保存阅读进度包括滚动位置
   const updateReadingProgress = (scrollPosition?: number) => {
     if (!book) return;
-    
+
     // 如果没有提供滚动位置，从内容区域获取
-    const position = scrollPosition !== undefined 
-      ? scrollPosition 
+    const position = scrollPosition !== undefined
+      ? scrollPosition
       : contentRef.current?.scrollTop || 0;
-    
+
     // 更新章节的滚动位置
     let updatedBook = { ...book };
-    
+
     if (updatedBook.chapters) {
       const updatedChapters = updatedBook.chapters.map((chapter: Chapter) => {
         if (chapter.index === chapterIndex) {
@@ -479,7 +479,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
         }
         return chapter;
       });
-      
+
       updatedBook = {
         ...updatedBook,
         chapters: updatedChapters,
@@ -495,30 +495,30 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
         lastReadTime: Date.now()
       };
     }
-    
+
     setBook(updatedBook);
     updateBookInStorage(updatedBook);
-    
+
     // 保存最后阅读的书籍ID
     localStorage.setItem('fish-reader-last-book', updatedBook.id.toString());
   };
-  
+
   // 切换章节
   const changeChapter = async (newIndex: number) => {
     if (!book || !book.chapters) return;
-    
+
     // 在切换章节前保存当前进度
     updateReadingProgress();
-    
+
     // 索引边界检查
     if (newIndex < 0 || newIndex >= book.chapters.length) return;
-    
+
     try {
       setLoading(true);
-      
+
       // 更新章节索引
       setChapterIndex(newIndex);
-      
+
       // 获取章节
       const chapter = book.chapters.find((c: Chapter) => c.index === newIndex);
       if (!chapter) {
@@ -526,7 +526,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
         setLoading(false);
         return;
       }
-      
+
       // 检查是否已有内容
       if (chapter.content) {
         setChapterContent(chapter.content);
@@ -539,17 +539,17 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
           setChapterContent('章节内容加载失败');
         }
       }
-      
+
       // 更新阅读进度
       const updatedBook = {
         ...book,
         lastReadChapter: newIndex,
         lastReadTime: Date.now()
       };
-      
+
       setBook(updatedBook);
       updateBookInStorage(updatedBook);
-      
+
       // 关闭章节列表
       setShowChapterList(false);
     } catch (error) {
@@ -559,7 +559,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
       setLoading(false);
     }
   };
-  
+
   // 恢复滚动位置
   useEffect(() => {
     if (!loading && contentRef.current && book && book.chapters) {
@@ -578,34 +578,34 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
       }
     }
   }, [loading, chapterContent, chapterIndex]);
-  
+
   // 定期保存阅读进度
   useEffect(() => {
     if (!visible || !book) return;
-    
+
     // 30秒保存一次阅读进度
     const saveInterval = setInterval(() => {
       if (contentRef.current) {
         updateReadingProgress(contentRef.current.scrollTop);
       }
     }, 30000);
-    
+
     // 清理
     return () => {
       clearInterval(saveInterval);
-      
+
       // 退出前保存一次
       if (contentRef.current) {
         updateReadingProgress(contentRef.current.scrollTop);
       }
     };
   }, [visible, book, chapterIndex]);
-  
+
   // 处理滚动事件
   const handleScroll = () => {
     // 节流处理，不要每次滚动都保存
     if (!book || !contentRef.current) return;
-    
+
     const now = Date.now();
     // 限制为1秒保存一次
     if (now - lastLoadTimeRef.current > 1000) {
@@ -619,7 +619,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
       }, 500);
     }
   };
-  
+
   // 切换点击穿透
   const toggleClickThrough = () => {
     const newValue = !isClickThrough;
@@ -627,20 +627,20 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
     localStorage.setItem('fish-reader-click-through', JSON.stringify(newValue));
     message.info(newValue ? '已启用点击穿透' : '已禁用点击穿透');
   };
-  
+
   // 重新加载
   const handleReload = async () => {
     if (!book) return;
-    
+
     try {
       setLoading(true);
-      
+
       // 重新加载章节列表
       const refreshedBook = await loadChapterList(book);
       if (refreshedBook && refreshedBook.chapters && refreshedBook.chapters.length > 0) {
         setBook(refreshedBook);
         setChapters(refreshedBook.chapters);
-        
+
         // 加载当前章节内容
         const chapter = refreshedBook.chapters.find((c: Chapter) => c.index === chapterIndex);
         if (chapter) {
@@ -649,7 +649,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
             setChapterContent(chapterWithContent.content || '章节内容加载失败');
           }
         }
-        
+
         message.success('重新加载成功');
       } else {
         message.error('重新加载失败');
@@ -661,7 +661,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
       setLoading(false);
     }
   };
-  
+
   // 章节列表组件
   const ChapterListComponent = () => (
     <div
@@ -691,14 +691,14 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
         }}
       >
         <h3 style={{ margin: 0 }}>章节列表</h3>
-        <Button 
-          type="text" 
+        <Button
+          type="text"
           onClick={() => setShowChapterList(false)}
         >
           关闭
         </Button>
       </div>
-      
+
       <div
         style={{
           padding: '0 8px',
@@ -724,15 +724,15 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
       </div>
     </div>
   );
-  
+
   // 键盘快捷键处理
   useEffect(() => {
     if (!visible) return;
-    
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // 仅当阅读器可见时处理快捷键
       if (!book) return;
-      
+
       switch (e.key) {
         case 'ArrowLeft':
           // 上一章
@@ -766,21 +766,21 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
           break;
       }
     };
-    
+
     // 添加键盘事件监听
     window.addEventListener('keydown', handleKeyDown);
-    
+
     // 清理函数
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [visible, book, chapterIndex]);
-  
+
   // 处理右键菜单
   const handleContextMenu = (e: React.MouseEvent) => {
     // 阻止默认右键菜单
     e.preventDefault();
-    
+
     // 创建自定义右键菜单
     const menuDiv = document.createElement('div');
     menuDiv.className = 'reader-context-menu';
@@ -793,7 +793,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
     menuDiv.style.padding = '4px 0';
     menuDiv.style.zIndex = '1100';
     menuDiv.style.width = '180px';
-    
+
     // 菜单项
     const menuItems = [
       { text: '上一章', disabled: !book || !book.chapters || chapterIndex <= 0, action: () => changeChapter(chapterIndex - 1) },
@@ -803,7 +803,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
       { text: '刷新内容', action: handleReload },
       { text: '关闭阅读器', action: onClose }
     ];
-    
+
     // 创建菜单项
     menuItems.forEach((item) => {
       const menuItem = document.createElement('div');
@@ -812,28 +812,28 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
       menuItem.style.fontSize = '14px';
       menuItem.style.color = item.disabled ? '#ccc' : '#333';
       menuItem.innerText = item.text;
-      
+
       if (!item.disabled) {
         menuItem.addEventListener('click', () => {
           document.body.removeChild(menuDiv);
           item.action();
         });
-        
+
         menuItem.addEventListener('mouseover', () => {
           menuItem.style.backgroundColor = '#f5f5f5';
         });
-        
+
         menuItem.addEventListener('mouseout', () => {
           menuItem.style.backgroundColor = 'transparent';
         });
       }
-      
+
       menuDiv.appendChild(menuItem);
     });
-    
+
     // 添加到body
     document.body.appendChild(menuDiv);
-    
+
     // 点击其他区域关闭菜单
     const closeMenu = () => {
       if (document.body.contains(menuDiv)) {
@@ -841,16 +841,16 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
       }
       document.removeEventListener('click', closeMenu);
     };
-    
+
     // 延迟添加事件，避免立即触发
     setTimeout(() => {
       document.addEventListener('click', closeMenu);
     }, 100);
   };
-  
+
   // 如果不可见则不渲染
   if (!visible) return null;
-  
+
   return createPortal(
     <>
       {/* 背景遮罩 */}
@@ -867,7 +867,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
         }}
         onClick={isClickThrough ? undefined : onClose}
       />
-      
+
       {/* 阅读器窗口 */}
       <div
         ref={readerRef}
@@ -907,7 +907,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
           }}
         >
           <div>{book?.title || '阅读器'}</div>
-          
+
           <div style={{ display: 'flex', gap: 8 }}>
             <Tooltip title="章节列表">
               <Button
@@ -917,7 +917,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
                 onClick={() => setShowChapterList(true)}
               />
             </Tooltip>
-            
+
             <Tooltip title="刷新">
               <Button
                 type="text"
@@ -926,7 +926,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
                 onClick={handleReload}
               />
             </Tooltip>
-            
+
             <Tooltip title={isClickThrough ? "禁用点击穿透" : "启用点击穿透"}>
               <Button
                 type={isClickThrough ? "primary" : "text"}
@@ -935,7 +935,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
                 onClick={toggleClickThrough}
               />
             </Tooltip>
-            
+
             <Tooltip title="关闭">
               <Button
                 type="text"
@@ -947,7 +947,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
             </Tooltip>
           </div>
         </div>
-        
+
         {/* 章节导航栏 */}
         <div
           style={{
@@ -966,14 +966,14 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
           >
             上一章
           </Button>
-          
+
           <div style={{ fontSize: 14 }}>
-            {book && book.chapters ? 
-              `${chapterIndex + 1}/${book.chapters.length}` : 
+            {book && book.chapters ?
+              `${chapterIndex + 1}/${book.chapters.length}` :
               '加载中...'
             }
           </div>
-          
+
           <Button
             size="small"
             onClick={() => changeChapter(chapterIndex + 1)}
@@ -982,7 +982,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
             下一章
           </Button>
         </div>
-        
+
         {/* 内容区域 */}
         <div
           ref={contentRef}
@@ -1023,22 +1023,22 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
               <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>
                 {book.chapters[chapterIndex]?.title || `第${chapterIndex + 1}章`}
               </h2>
-              <div 
-                style={{ 
+              <div
+                style={{
                   whiteSpace: 'pre-wrap',
                   textIndent: '2em'
                 }}
               >
                 {chapterContent.split('\n').map((paragraph, index) => (
-                  paragraph.trim() ? 
-                    <p key={index}>{paragraph}</p> : 
+                  paragraph.trim() ?
+                    <p key={index}>{paragraph}</p> :
                     <br key={index} />
                 ))}
               </div>
             </>
           )}
         </div>
-        
+
         {/* 调整大小的手柄 */}
         <div
           style={{
@@ -1064,10 +1064,10 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
           </svg>
         </div>
       </div>
-      
+
       {/* 章节列表弹窗 */}
       {showChapterList && <ChapterListComponent />}
-      
+
       {/* 帮助提示 */}
       <div
         style={{
@@ -1089,4 +1089,4 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
   );
 };
 
-export default GlobalReader; 
+export default GlobalReader;

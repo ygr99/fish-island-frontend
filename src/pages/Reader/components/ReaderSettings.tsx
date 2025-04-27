@@ -114,7 +114,7 @@ const ReaderSettings: React.FC<ReaderSettingsProps> = ({ settings, onSave }) => 
       onSave(updatedSettings);
     });
   };
-  
+
   // 重置设置
   const handleReset = () => {
     form.resetFields();
@@ -131,15 +131,15 @@ const ReaderSettings: React.FC<ReaderSettingsProps> = ({ settings, onSave }) => 
   // 实时更新本地设置
   const updateLocalSettings = (changedValues: any, allValues: any) => {
     const newSettings = { ...localSettings, ...allValues };
-    
+
     if (changedValues.fontColor) {
       newSettings.fontColor = colorToString(changedValues.fontColor);
     }
-    
+
     if (changedValues.backgroundColor) {
       newSettings.backgroundColor = colorToString(changedValues.backgroundColor);
     }
-    
+
     setLocalSettings(newSettings);
   };
 
@@ -166,8 +166,8 @@ const ReaderSettings: React.FC<ReaderSettingsProps> = ({ settings, onSave }) => 
       onValuesChange={updateLocalSettings}
     >
       <div style={{ marginBottom: 24, textAlign: 'right' }}>
-        <Button 
-          icon={<UndoOutlined />} 
+        <Button
+          icon={<UndoOutlined />}
           onClick={handleReset}
           style={{ marginRight: 8 }}
         >
@@ -179,7 +179,7 @@ const ReaderSettings: React.FC<ReaderSettingsProps> = ({ settings, onSave }) => 
       </div>
 
       <Divider orientation="center">外观设置</Divider>
-    
+
       <Form.Item
         label="阅读窗口透明度"
         name="opacity"
@@ -196,7 +196,7 @@ const ReaderSettings: React.FC<ReaderSettingsProps> = ({ settings, onSave }) => 
           }}
         />
       </Form.Item>
-      
+
       <Form.Item
         label="字体大小"
         name="fontSize"
@@ -213,7 +213,7 @@ const ReaderSettings: React.FC<ReaderSettingsProps> = ({ settings, onSave }) => 
           }}
         />
       </Form.Item>
-      
+
       <Form.Item
         label="字体"
         name="fontFamily"
@@ -228,7 +228,7 @@ const ReaderSettings: React.FC<ReaderSettingsProps> = ({ settings, onSave }) => 
       </Form.Item>
 
       <Divider orientation="center">按键设置</Divider>
-      
+
       <Form.Item
         label={
           <Space>
@@ -248,7 +248,7 @@ const ReaderSettings: React.FC<ReaderSettingsProps> = ({ settings, onSave }) => 
           ))}
         </Select>
       </Form.Item>
-      
+
       <Form.Item
         label={
           <Space>
@@ -270,7 +270,7 @@ const ReaderSettings: React.FC<ReaderSettingsProps> = ({ settings, onSave }) => 
       </Form.Item>
 
       <Divider orientation="center">其他设置</Divider>
-      
+
       <Form.Item
         label={
           <Space>
@@ -322,7 +322,7 @@ const ReaderSettings: React.FC<ReaderSettingsProps> = ({ settings, onSave }) => 
         }
         name="accessToken"
       >
-        <Input placeholder="guest:49bc67e197c44885322d093a603ffd45" />
+        <Input placeholder="congg:7e0efee65786976202e4fc20c6a98d89" />
       </Form.Item>
 
       <Form.Item
@@ -336,10 +336,10 @@ const ReaderSettings: React.FC<ReaderSettingsProps> = ({ settings, onSave }) => 
         }
         name="apiBaseUrl"
       >
-        <Input placeholder="https://reader.nxnow.top/reader3" />
+        <Input placeholder="https://reader.yucoder.cn/reader3" />
       </Form.Item>
     </Form>
   );
 };
 
-export default ReaderSettings; 
+export default ReaderSettings;
