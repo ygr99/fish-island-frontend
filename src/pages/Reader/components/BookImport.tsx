@@ -149,7 +149,6 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
           if (!data) return;
 
           const parsedData = JSON.parse(data);
-          // console.log('收到end事件:', parsedData);
 
           // 更新lastIndex
           if (parsedData.lastIndex !== undefined) {
@@ -179,7 +178,7 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
 
       // 监听连接关闭
       eventSource.addEventListener('complete', () => {
-        // console.log('搜索完成, lastIndex:', lastIndexRef.current);
+
         eventSource.close();
         eventSourceRef.current = null;
         setSearching(false);
@@ -252,7 +251,7 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
           if (!data) return;
 
           const parsedData = JSON.parse(data);
-          // console.log('加载更多收到end事件:', parsedData);
+
 
           // 更新lastIndex
           if (parsedData.lastIndex !== undefined) {
@@ -282,7 +281,7 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
 
       // 监听连接关闭
       eventSource.addEventListener('complete', () => {
-        // console.log('加载更多完成, lastIndex:', lastIndexRef.current);
+
         eventSource.close();
         eventSourceRef.current = null;
         setLoadingMore(false);

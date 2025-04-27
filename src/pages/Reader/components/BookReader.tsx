@@ -151,8 +151,6 @@ const BookReader: React.FC<BookReaderProps> = ({
   // 组件初始化时重置所有状态（确保不同书籍之间的数据隔离）
   useEffect(() => {
     // 确保组件初始化时重置状态
-    // console.log(`BookReader组件初始化，书籍ID: ${book.id}, 书籍名: ${book.title}`););
-    // console.log(`上次阅读章节索引: ${book.lastReadChapter}`););
 
     // 重置加载状态
     loadingChapterIndexRef.current = null;
@@ -163,18 +161,20 @@ const BookReader: React.FC<BookReaderProps> = ({
 
     // 检查书籍章节列表状态
     if (book.chapters && book.chapters.length > 0) {
-      // console.log(`书籍有${book.chapters.length}个章节`););
+
       // 如果有章节列表，找到上次阅读的章节
-      const chapter = book.chapters.find(c => c.index === book.lastReadChapter);
+      const currentChapterIdx = currentChapterIndex || book.lastReadChapter || 0;
+      const chapter = book.chapters.find(c => c.index === currentChapterIdx);
+
       if (chapter) {
-        // console.log(`找到上次阅读的章节: ${chapter.title}`););
+
         setCurrentChapter(chapter);
       } else {
-        // console.log(`未找到上次阅读的章节，使用第一章`););
+
         setCurrentChapter(book.chapters[0]);
       }
     } else {
-      // console.log('书籍没有章节列表，需要先加载章节列表'););
+
       setCurrentChapter(null);
     }
 
@@ -184,7 +184,7 @@ const BookReader: React.FC<BookReaderProps> = ({
       try {
         const { width, height, position } = JSON.parse(savedReaderSettings);
         if (width && height && position) {
-          // console.log(`恢复阅读器设置 - 宽度: ${width}, 高度: ${height}, 位置: ${position.x},${position.y}`););
+
 
           // 确保恢复的位置在当前屏幕可见区域内
           const safeX = Math.min(Math.max(0, position.x), window.innerWidth - width);
@@ -218,7 +218,7 @@ const BookReader: React.FC<BookReaderProps> = ({
 
     return () => {
       // 组件卸载时清理所有状态和计时器
-      // console.log(`BookReader组件卸载，清理状态`););
+
       loadingChapterIndexRef.current = null;
       if (chapterChangeDebounceRef.current) {
         clearTimeout(chapterChangeDebounceRef.current);
@@ -227,15 +227,15 @@ const BookReader: React.FC<BookReaderProps> = ({
         clearInterval(continuousPageTurnIntervalRef.current);
       }
     };
-  }, [book.id]); // 仅在book.id变化时执行，移除对readerWidth和readerHeight的依赖
+  }, [book.id, book.lastReadChapter]);
 
   // 监听book.lastReadChapter的变化，确保章节切换时正确更新
   useEffect(() => {
-    // console.log(`lastReadChapter变化: ${book.lastReadChapter}, 当前章节索引: ${currentChapterIndex}`););
+
 
     // 如果book.lastReadChapter和currentChapterIndex不一致，说明是从外部触发的章节变更（如章节列表点击）
     if (book.lastReadChapter !== undefined && book.lastReadChapter !== currentChapterIndex) {
-      // console.log(`从外部切换章节: ${book.lastReadChapter}`););
+
 
       // 更新当前章节索引
       setcurrentChapterIndex(book.lastReadChapter);
@@ -244,17 +244,17 @@ const BookReader: React.FC<BookReaderProps> = ({
       if (book.chapters && book.chapters.length > 0) {
         const chapter = book.chapters.find(c => c.index === book.lastReadChapter);
         if (chapter) {
-          // console.log(`找到新章节对象: ${chapter.title}, 内容长度: ${chapter.content?.length || 0}`););
+
           setCurrentChapter(chapter);
 
           // 如果章节已有内容，直接更新显示
           if (chapter.content) {
-            // console.log(`新章节有缓存内容，直接更新显示`););
+
             setLoading(false);
             setContent(chapter.content);
           } else {
             // 否则会触发loadContent重新加载
-            // console.log(`新章节无缓存内容，将触发内容加载`););
+
             // 重置滚动位置
             if (contentRef.current) {
               contentRef.current.scrollTop = 0;
@@ -270,11 +270,11 @@ const BookReader: React.FC<BookReaderProps> = ({
     const loadContent = async () => {
       // 避免重复加载，但仅在真正加载时才设置loading状态
       if (loadingChapterIndexRef.current === currentChapterIndex) {
-        // console.log('已经在加载中，跳过重复加载'););
+
         return;
       }
 
-      // console.log(`加载章节内容 - 章节索引: ${currentChapterIndex}, 书籍ID: ${book.id}`););
+
 
       // 记录本次加载发起的时间和章节ID
       const currentLoadingTime = Date.now();
@@ -293,7 +293,7 @@ const BookReader: React.FC<BookReaderProps> = ({
         // 如果此时最后的加载请求不是当前这个，说明有更新的请求，放弃当前加载
         if (lastLoadingRef.current.time !== currentLoadingTime ||
           lastLoadingRef.current.chapterIndex !== currentLoadingChapterIndex) {
-          // console.log('检测到更新的加载请求，放弃当前加载'););
+
           return;
         }
 
@@ -303,17 +303,17 @@ const BookReader: React.FC<BookReaderProps> = ({
 
           if (chapter) {
             setCurrentChapter(chapter);
-            // console.log(`找到章节: ${chapter.title}, 内容长度: ${chapter.content?.length || 0}`););
+
 
             if (chapter.content) {
               // 已有缓存内容直接使用
-              // console.log(`使用缓存内容 - 章节: ${chapter.title}, 内容长度: ${chapter.content.length}`););
+
               setContent(chapter.content);
               // 更新阅读进度
               onProgressUpdate(0, currentChapterIndex);
             } else if (book.source === 'online' && book.url) {
               // 需要从网络加载内容
-              // console.log(`需要从网络加载 - 章节: ${chapter.title}`););
+
 
               // 检查localStorage中是否有缓存
               const savedBooks = localStorage.getItem("fish-reader-books");
@@ -325,7 +325,7 @@ const BookReader: React.FC<BookReaderProps> = ({
                 if (savedBook && savedBook.chapters) {
                   const savedChapter = savedBook.chapters.find((c: Chapter) => c.index === currentChapterIndex);
                   if (savedChapter && savedChapter.content) {
-                    // console.log(`从localStorage中找到缓存内容，长度: ${savedChapter.content.length}`););
+
                     cachedContent = savedChapter.content;
                   }
                 }
@@ -333,7 +333,7 @@ const BookReader: React.FC<BookReaderProps> = ({
 
               if (cachedContent) {
                 // 使用localStorage中的缓存内容
-                // console.log(`使用localStorage缓存内容 - 章节: ${chapter.title}`););
+
                 setContent(cachedContent);
                 // 更新当前章节对象的内容（内存中）
                 chapter.content = cachedContent;
@@ -341,11 +341,11 @@ const BookReader: React.FC<BookReaderProps> = ({
                 onProgressUpdate(0, currentChapterIndex);
               } else {
                 // 从API加载章节内容
-                // console.log(`从API加载内容 - 章节: ${chapter.title}`););
+
                 // 加载章节内容
                 const chapterContent = await loadOnlineChapterContent(book, chapter);
                 if (chapterContent) {
-                  // console.log(`成功获取章节内容，长度: ${chapterContent.length}`););
+
                   setContent(chapterContent);
                   // 保存章节内容到缓存
                   updateChapterContent(currentChapterIndex, chapterContent);
@@ -358,13 +358,13 @@ const BookReader: React.FC<BookReaderProps> = ({
               }
             }
           } else {
-            // console.log(`未找到章节信息, 章节ID: ${currentChapterIndex}`););
+
             setContent('<p style="color: #ff4d4f; text-align: center; padding: 20px;">未找到章节信息，请尝试刷新章节列表</p>');
             message.error('未找到章节信息');
           }
         } else if (book.source === 'online' && book.url) {
           // 尝试先加载章节列表
-          // console.log('加载在线书籍章节列表'););
+
           const chapters = await loadOnlineChapters(book);
 
           if (chapters && chapters.length > 0) {
@@ -392,7 +392,7 @@ const BookReader: React.FC<BookReaderProps> = ({
                   if (savedBook && savedBook.chapters) {
                     const savedChapter = savedBook.chapters.find((c: Chapter) => c.index === currentChapterIndex);
                     if (savedChapter && savedChapter.content) {
-                      // console.log(`从localStorage中找到缓存内容，长度: ${savedChapter.content.length}`););
+
                       cachedContent = savedChapter.content;
                     }
                   }
@@ -400,14 +400,14 @@ const BookReader: React.FC<BookReaderProps> = ({
 
                 if (cachedContent) {
                   // 使用localStorage中的缓存内容
-                  // console.log(`使用localStorage缓存内容 - 章节: ${savedChapter.title}`););
+
                   setContent(cachedContent);
                   // 更新阅读进度
                   onProgressUpdate(0, currentChapterIndex);
                 } else {
                   const chapterContent = await loadOnlineChapterContent(book, savedChapter);
                   if (chapterContent) {
-                    // console.log(`成功获取章节内容，长度: ${chapterContent.length}`););
+
                     setContent(chapterContent);
                     // 保存章节内容到缓存
                     updateChapterContent(currentChapterIndex, chapterContent);
@@ -476,8 +476,8 @@ const BookReader: React.FC<BookReaderProps> = ({
       const apiBaseUrl = settings.apiBaseUrl || 'https://reader.yucoder.cn/reader3'; // 默认值作为后备
       const apiUrl = `${apiBaseUrl}${API_URLS.CHAPTER_LIST}?accessToken=${accessToken}&v=${timestamp}`;
 
-      // console.log(`发送章节列表请求: ${apiUrl}`););
-      // console.log(`请求参数: url=${book.url}, refresh=${refresh ? 1 : 0}, bookSourceUrl=${book.sourceInfo.url}`););
+
+
 
       const response = await axios.post(apiUrl, {
         url: book.url || book.sourceInfo.url,
@@ -495,7 +495,7 @@ const BookReader: React.FC<BookReaderProps> = ({
           const updatedBook = { ...book, chapters };
           updateBookInStorage(updatedBook);
 
-          // console.log(`成功获取章节列表，共 ${chapters.length} 章`););
+
           return chapters;
         } else {
           console.warn('获取到空章节列表');
@@ -568,8 +568,8 @@ const BookReader: React.FC<BookReaderProps> = ({
   // 更新本地存储中的书籍信息
   const updateBookInStorage = (updatedBook: Book) => {
     try {
-      // console.log(`准备更新本地存储中的书籍信息 - 书籍ID: ${updatedBook.id}`););
-      // console.log(`更新的书籍章节数: ${updatedBook.chapters?.length || 0}`););
+
+
 
       const savedBooks = localStorage.getItem("fish-reader-books");
       let books = [];
@@ -582,21 +582,21 @@ const BookReader: React.FC<BookReaderProps> = ({
         if (existingBookIndex >= 0) {
           // 更新现有书籍
           books[existingBookIndex] = updatedBook;
-          // console.log(`更新现有书籍: ${updatedBook.title}`););
+
         } else {
           // 添加新书籍
           books.push(updatedBook);
-          // console.log(`添加新书籍: ${updatedBook.title}`););
+
         }
       } else {
         // 没有保存的书籍，创建新数组
         books = [updatedBook];
-        // console.log(`创建新的书籍存储，添加书籍: ${updatedBook.title}`););
+
       }
 
       // 保存到localStorage
       localStorage.setItem("fish-reader-books", JSON.stringify(books));
-      // console.log('书籍信息已更新到本地存储'););
+
 
       // 检查保存后的结果
       const checkSavedBooks = localStorage.getItem("fish-reader-books");
@@ -604,11 +604,11 @@ const BookReader: React.FC<BookReaderProps> = ({
         const parsedBooks = JSON.parse(checkSavedBooks);
         const savedBook = parsedBooks.find((b: Book) => b.id === updatedBook.id);
         if (savedBook) {
-          // console.log(`验证: 书籍已保存, 章节数: ${savedBook.chapters?.length || 0}`););
+
           if (savedBook.chapters && savedBook.chapters.length > 0) {
             const savedChapter = savedBook.chapters.find((c: Chapter) => c.index === (updatedBook.lastReadChapter || 0));
             if (savedChapter) {
-              // console.log(`验证: 当前章节已保存, 内容长度: ${savedChapter.content?.length || 0}`););
+
             }
           }
         }
@@ -621,11 +621,11 @@ const BookReader: React.FC<BookReaderProps> = ({
   // 更新章节内容
   const updateChapterContent = (chapterIndex: number, chapterContent: string) => {
     try {
-      // console.log(`准备更新章节内容 - 章节索引: ${chapterIndex}, 内容长度: ${chapterContent.length}`););
+
 
       // 确保book.chapters已经初始化
       if (!book.chapters) {
-        // console.log('初始化书籍章节列表'););
+
         book.chapters = [];
       }
 
@@ -637,7 +637,7 @@ const BookReader: React.FC<BookReaderProps> = ({
       // 创建章节的深拷贝，避免直接修改原章节对象
       const updatedChapters = book.chapters.map(chapter => {
         if (chapter.index === chapterIndex) {
-          // console.log(`找到要更新的章节: ${chapter.title}`););
+
           return { ...chapter, content: chapterContent };
         }
         return chapter;
@@ -661,7 +661,7 @@ const BookReader: React.FC<BookReaderProps> = ({
 
       // 确认内容已更新
       const updatedChapter = updatedBook.chapters.find(c => c.index === chapterIndex);
-      // console.log(`更新后的章节内容长度: ${updatedChapter?.content?.length || 0}`););
+
 
       // 更新本地存储
       updateBookInStorage(updatedBook);
@@ -1048,7 +1048,7 @@ const BookReader: React.FC<BookReaderProps> = ({
       return;
     }
 
-    // console.log(`准备刷新当前章节: ${currentChapter.title}`);
+
     setRefreshing(true);
     setLoading(true);
 
@@ -1057,7 +1057,7 @@ const BookReader: React.FC<BookReaderProps> = ({
       const freshContent = await loadOnlineChapterContent(book, currentChapter);
 
       if (freshContent) {
-        // console.log(`成功刷新章节内容，长度: ${freshContent.length}`);
+
         message.success('章节内容已刷新');
 
         // 更新章节内容
