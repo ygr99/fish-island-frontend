@@ -514,8 +514,6 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
     if (newIndex < 0 || newIndex >= book.chapters.length) return;
 
     try {
-      setLoading(true);
-
       // 更新章节索引
       setChapterIndex(newIndex);
 
@@ -523,7 +521,6 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
       const chapter = book.chapters.find((c: Chapter) => c.index === newIndex);
       if (!chapter) {
         message.error('找不到对应章节');
-        setLoading(false);
         return;
       }
 
@@ -555,8 +552,6 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
     } catch (error) {
       console.error('切换章节失败:', error);
       message.error('切换章节失败');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -995,16 +990,13 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
             lineHeight: settings.lineHeight,
             fontSize: settings.fontSize,
             fontFamily: settings.fontFamily,
-            userSelect: 'text'
+            userSelect: 'text',
+            transition: 'opacity 0.2s ease-in-out'
           }}
           onScroll={handleScroll}
           onContextMenu={handleContextMenu}
         >
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <Spin size="large" tip="加载中..." />
-            </div>
-          ) : !book ? (
+          {!book ? (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
               <p>未找到书籍</p>
               <Button type="primary" onClick={() => window.location.href = '/reader'}>
@@ -1026,7 +1018,9 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
               <div
                 style={{
                   whiteSpace: 'pre-wrap',
-                  textIndent: '2em'
+                  textIndent: '2em',
+                  opacity: loading ? 0.5 : 1,
+                  transition: 'opacity 0.2s ease-in-out'
                 }}
               >
                 {chapterContent.split('\n').map((paragraph, index) => (
@@ -1035,6 +1029,17 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
                     <br key={index} />
                 ))}
               </div>
+              {loading && (
+                <div style={{ 
+                  position: 'absolute', 
+                  top: '50%', 
+                  left: '50%', 
+                  transform: 'translate(-50%, -50%)',
+                  zIndex: 1
+                }}>
+                  <Spin size="large" />
+                </div>
+              )}
             </>
           )}
         </div>
