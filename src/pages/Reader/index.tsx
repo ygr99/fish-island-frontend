@@ -158,7 +158,7 @@ export default function ReaderList() {
 
   // 添加悬浮窗阅读设置
   const [floatingModeEnabled, setFloatingModeEnabled] = useState(
-    localStorage.getItem('fish-reader-floating-mode') === 'true'
+    localStorage.getItem('fish-reader-floating-mode') === null ? true : localStorage.getItem('fish-reader-floating-mode') === 'true'
   );
 
   // 保存悬浮窗阅读设置
