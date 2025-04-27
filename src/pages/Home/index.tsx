@@ -10,12 +10,13 @@ import styles from './index.less';
 // 导入Sortable库
 // @ts-ignore
 import Sortable from 'sortablejs';
+// 确保组件系统可以访问Sortable库
+if (typeof window !== 'undefined') {
+  window.Sortable = Sortable;
+}
 // 导入组件系统
 // @ts-ignore
 import './components/index.js';
-// 导入组件桥接系统
-// @ts-ignore
-import './components/bridge.js';
 
 // 为window.componentSystem添加类型声明
 declare global {
@@ -30,8 +31,24 @@ declare global {
       >;
       components: any[];
       register: (componentClass: any) => void;
+      renderDesktopComponents: () => void;
+      findContainer: () => HTMLElement | null;
+      desktopComponents: string[];
+      libraryComponents: string[];
+      allRequiredComponents: string[];
+      addToDesktop: (componentName: string) => void;
+      removeFromDesktop: (componentName: string) => void;
+      updateComponentOrder: () => void;
+      loadComponentOrder: () => string[];
     };
     openComponent: (componentName: string) => boolean;
+    ComponentWrapper: {
+      convertAllComponents: (container: HTMLElement) => void;
+      convertComponent: (component: HTMLElement) => HTMLElement | undefined;
+    };
+    handleComponentContextMenu?: (e: MouseEvent, shortcut: ShortcutItem) => void;
+    Sortable: any; // 添加Sortable库的类型声明
+    Sortablejs?: any; // 可选的Sortablejs库的类型声明
     [key: string]: any; // 允许使用索引访问其他属性
   }
 }
@@ -115,35 +132,24 @@ const getSystemComponents = (): ShortcutItem[] => {
   if (typeof window !== 'undefined' && window.componentSystem) {
     const componentMapping = window.componentSystem.componentNameMapping || {};
     const components = window.componentSystem.components || [];
+    const libraryComponents = window.componentSystem.libraryComponents || [];
 
-    console.log('组件系统数据:', {
-      componentMappingSize: Object.keys(componentMapping).length,
-      componentsSize: components.length,
-      components: components.map((c) => ({ name: c.name, icon: c.icon, bgColor: c.bgColor })),
-    });
+    // 只显示libraryComponents中的组件
+    return Object.entries(componentMapping)
+      .filter(([name]) => libraryComponents.includes(name))
+      .map(([name, info]: [string, any]) => {
+        // 查找对应的组件实例，获取它的icon和bgColor
+        const componentInstance = components.find((comp) => comp.name === name);
 
-    return Object.entries(componentMapping).map(([name, info]: [string, any]) => {
-      // 查找对应的组件实例，获取它的icon和bgColor
-      const componentInstance = components.find((comp) => comp.name === name);
-
-      console.log(
-        `组件 [${name}] 实例:`,
-        componentInstance?.name,
-        '图标:',
-        componentInstance?.icon,
-        '背景色:',
-        componentInstance?.bgColor,
-      );
-
-      return {
-        icon: componentInstance?.icon || `fa-puzzle-piece`,
-        title: name,
-        url: '#',
-        type: 'component' as const,
-        component: info.directory,
-        bgColor: componentInstance?.bgColor || 'bg-blue-500',
-      };
-    });
+        return {
+          icon: componentInstance?.icon || `fa-puzzle-piece`,
+          title: name,
+          url: '#',
+          type: 'component' as const,
+          component: info.directory,
+          bgColor: componentInstance?.bgColor || 'bg-blue-500',
+        };
+      });
   }
   return [];
 };
@@ -191,8 +197,6 @@ const Home: React.FC = () => {
   useEffect(() => {
     // 在浏览器环境中，等待组件系统加载完成后获取组件数据
     const loadSystemComponents = () => {
-      console.log('加载系统组件数据');
-
       // 需要先主动加载和注册组件
       if (typeof window !== 'undefined' && window.componentSystem) {
         // 获取所有组件名称
@@ -201,21 +205,17 @@ const Home: React.FC = () => {
 
         // 先检查components数组是否为空
         if (window.componentSystem.components.length === 0) {
-          console.log('组件数组为空，尝试主动注册组件...');
-
           // 主动加载组件脚本
           const loadComponentScript = (name: string) => {
             return new Promise<boolean>((resolve) => {
               const info = componentMapping[name];
               if (!info) {
-                console.log(`组件 ${name} 没有映射信息`);
                 resolve(false);
                 return;
               }
 
               // 如果全局变量已存在，直接注册
               if (info.globalVar && typeof window[info.globalVar] === 'function') {
-                console.log(`组件 ${name} 已加载，直接注册`);
                 window.componentSystem.register(window[info.globalVar]);
                 resolve(true);
                 return;
@@ -225,18 +225,14 @@ const Home: React.FC = () => {
               const script = document.createElement('script');
               script.src = `/components/${info.directory}/index.js`;
               script.onload = () => {
-                console.log(`组件 ${name} 脚本加载成功`);
                 if (info.globalVar && typeof window[info.globalVar] === 'function') {
-                  console.log(`注册组件 ${name}`);
                   window.componentSystem.register(window[info.globalVar]);
                   resolve(true);
                 } else {
-                  console.log(`组件 ${name} 全局变量未找到`);
                   resolve(false);
                 }
               };
               script.onerror = () => {
-                console.error(`加载组件 ${name} 脚本失败`);
                 resolve(false);
               };
               document.head.appendChild(script);
@@ -245,12 +241,16 @@ const Home: React.FC = () => {
 
           // 串行加载组件以确保稳定性
           const loadAllComponents = async () => {
-            console.log('开始加载所有组件...');
             for (const name of componentNames) {
               await loadComponentScript(name);
             }
-            console.log('所有组件加载完成，更新组件列表');
+
             setSystemComponents(getSystemComponents());
+
+            // 手动触发组件渲染（一次性）
+            if (window.componentSystem && window.componentSystem.renderDesktopComponents) {
+              window.componentSystem.renderDesktopComponents();
+            }
           };
 
           loadAllComponents();
@@ -260,6 +260,11 @@ const Home: React.FC = () => {
 
       // 如果组件已加载，直接获取组件数据
       setSystemComponents(getSystemComponents());
+
+      // 手动触发组件渲染（一次性）
+      if (window.componentSystem && window.componentSystem.renderDesktopComponents) {
+        window.componentSystem.renderDesktopComponents();
+      }
     };
 
     // 如果已经在浏览器环境中且组件系统已加载，立即获取组件
@@ -268,8 +273,8 @@ const Home: React.FC = () => {
 
       // 监听组件渲染完成事件
       const handleComponentsRendered = () => {
-        console.log('组件渲染完成，重新获取组件数据');
-        setTimeout(loadSystemComponents, 100); // 延迟100ms确保组件完全加载
+        // 只更新组件列表数据，不触发渲染
+        setSystemComponents(getSystemComponents());
       };
 
       document.addEventListener('componentsRendered', handleComponentsRendered);
@@ -328,7 +333,6 @@ const Home: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // 检查是否按下了 Ctrl+Shift+B
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'b') {
-        console.log('快捷键触发: Ctrl+Shift+B');
         e.preventDefault(); // 阻止默认行为
         handleSwitchToFishMode();
       }
@@ -357,8 +361,30 @@ const Home: React.FC = () => {
           const movedItem = items.splice(evt.oldIndex, 1)[0];
           items.splice(evt.newIndex, 0, movedItem);
           setShortcuts(items);
-          // 保存到本地存储
-          localStorage.setItem('shortcuts', JSON.stringify(items));
+
+          // 保存排序到本地存储
+          try {
+            // 1. 保存完整的快捷方式数据
+            localStorage.setItem('shortcuts', JSON.stringify(items));
+
+            // 2. 保存网站类型快捷方式的标题顺序
+            const websiteTitles = items
+              .filter((item) => item && item.type === 'website')
+              .map((item) => item.title);
+
+            if (websiteTitles.length > 0) {
+              localStorage.setItem('website-shortcuts-order', JSON.stringify(websiteTitles));
+            }
+
+            // 3. 同时更新组件系统中的组件顺序
+            if (window.componentSystem && window.componentSystem.updateComponentOrder) {
+              setTimeout(() => {
+                window.componentSystem.updateComponentOrder();
+              }, 100);
+            }
+          } catch (e) {
+            console.error('保存快捷方式排序失败:', e);
+          }
         },
       });
 
@@ -372,6 +398,134 @@ const Home: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('shortcuts', JSON.stringify(shortcuts));
   }, [shortcuts]);
+
+  // 页面加载后，同步组件系统和React的快捷方式顺序
+  useEffect(() => {
+    // 延迟执行，确保组件系统已加载
+    const syncTimer = setTimeout(() => {
+      // 从本地存储中读取网站快捷方式的排序
+      try {
+        const savedWebsiteOrder = localStorage.getItem('website-shortcuts-order');
+        if (savedWebsiteOrder) {
+          const websiteOrder = JSON.parse(savedWebsiteOrder);
+          if (Array.isArray(websiteOrder) && websiteOrder.length > 0) {
+            // 根据保存的顺序重新排序快捷方式
+            const orderedShortcuts = [...shortcuts].filter(Boolean); // 过滤掉null和undefined
+            // 临时存储已排序的快捷方式
+            const sortedItems: ShortcutItem[] = [];
+
+            // 先按保存的顺序添加网站类型的快捷方式
+            websiteOrder.forEach((title) => {
+              if (!title) return; // 跳过空标题
+              const item = orderedShortcuts.find(
+                (s) => s && s.type === 'website' && s.title === title,
+              );
+              if (item) {
+                sortedItems.push(item);
+              }
+            });
+
+            // 然后添加其他未包含在排序中的快捷方式
+            orderedShortcuts.forEach((item) => {
+              if (item && !sortedItems.includes(item)) {
+                sortedItems.push(item);
+              }
+            });
+
+            // 只有在排序结果不同时才更新状态
+            if (JSON.stringify(sortedItems) !== JSON.stringify(shortcuts)) {
+              setShortcuts(sortedItems);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('加载网站快捷方式排序失败:', e);
+      }
+
+      // 从组件系统加载组件排序
+      if (window.componentSystem && window.componentSystem.loadComponentOrder) {
+        // 从组件系统加载排序顺序
+        const savedOrder = window.componentSystem.loadComponentOrder();
+        if (savedOrder && savedOrder.length > 0) {
+          // 根据保存的顺序重新排序快捷方式
+          const orderedShortcuts = [...shortcuts].filter(Boolean); // 过滤掉null和undefined
+          // 临时存储已排序的快捷方式
+          const sortedItems: ShortcutItem[] = [];
+
+          // 首先按照保存的顺序添加已知的快捷方式
+          savedOrder.forEach((name) => {
+            if (!name) return; // 跳过null或undefined的名称
+
+            const item = orderedShortcuts.find((s) => s && s.title === name);
+            if (item) {
+              sortedItems.push(item);
+            }
+          });
+
+          // 然后添加任何未包含在排序中的快捷方式
+          orderedShortcuts.forEach((item) => {
+            if (item && !sortedItems.includes(item)) {
+              sortedItems.push(item);
+            }
+          });
+
+          // 只有在排序结果不同时才更新状态
+          if (JSON.stringify(sortedItems) !== JSON.stringify(shortcuts)) {
+            setShortcuts(sortedItems);
+          }
+        }
+      }
+    }, 500);
+
+    return () => clearTimeout(syncTimer);
+  }, []);
+
+  // 确保组件系统能找到正确的容器元素
+  useEffect(() => {
+    if (shortcutsRef.current && window.componentSystem) {
+      // 只在容器挂载时尝试渲染一次
+      if (window.componentSystem.renderDesktopComponents) {
+        window.componentSystem.renderDesktopComponents();
+      }
+
+      // 转换现有组件为React样式
+      if (window.ComponentWrapper && shortcutsRef.current) {
+        setTimeout(() => {
+          if (shortcutsRef.current) {
+            window.ComponentWrapper.convertAllComponents(shortcutsRef.current);
+          }
+        }, 300);
+      }
+    }
+  }, [shortcutsRef.current]);
+
+  // 监听组件移除事件
+  useEffect(() => {
+    const handleComponentRemoved = (event: CustomEvent<{ componentName: string }>) => {
+      // 组件被移除后，重新渲染桌面
+      if (window.componentSystem && window.componentSystem.renderDesktopComponents) {
+        setTimeout(() => {
+          window.componentSystem.renderDesktopComponents();
+        }, 100);
+      }
+    };
+
+    document.addEventListener('componentRemoved', handleComponentRemoved as EventListener);
+
+    return () => {
+      document.removeEventListener('componentRemoved', handleComponentRemoved as EventListener);
+    };
+  }, []);
+
+  // 添加组件卸载前的清理工作
+  useEffect(() => {
+    return () => {
+      // 组件卸载前保存当前快捷方式的顺序
+      if (window.componentSystem && window.componentSystem.updateComponentOrder) {
+        window.componentSystem.updateComponentOrder();
+      }
+    };
+  }, []);
 
   const handleSearch = (value: string) => {
     if (!value.trim()) return;
@@ -401,6 +555,22 @@ const Home: React.FC = () => {
     }
   };
 
+  // 暴露给全局的右键菜单处理函数，供转换后的组件使用
+  useEffect(() => {
+    // 注册全局处理函数
+    window.handleComponentContextMenu = (e: MouseEvent, shortcut: ShortcutItem) => {
+      e.preventDefault();
+      setContextMenuPosition({ x: e.clientX, y: e.clientY });
+      setContextMenuVisible(true);
+      setSelectedShortcut(shortcut);
+    };
+
+    // 清理函数
+    return () => {
+      window.handleComponentContextMenu = undefined;
+    };
+  }, []);
+
   // 关闭右键菜单
   const closeContextMenu = () => {
     setContextMenuVisible(false);
@@ -409,8 +579,39 @@ const Home: React.FC = () => {
   // 删除快捷方式
   const handleDeleteShortcut = () => {
     if (selectedShortcut) {
-      const newShortcuts = shortcuts.filter((item) => item !== selectedShortcut);
-      setShortcuts(newShortcuts);
+      if (selectedShortcut.type === 'website') {
+        // 网站类型的快捷方式，从React状态移除
+        const newShortcuts = shortcuts.filter((item) => item !== selectedShortcut);
+        setShortcuts(newShortcuts);
+      } else if (
+        selectedShortcut.type === 'component' &&
+        window.componentSystem &&
+        selectedShortcut.title
+      ) {
+        // 组件类型的快捷方式，从组件系统移除
+        window.componentSystem.removeFromDesktop(selectedShortcut.title);
+
+        // 手动从DOM中移除组件元素，以防组件系统没有正确移除
+        if (shortcutsRef.current) {
+          const componentElement = shortcutsRef.current.querySelector(
+            `[data-component-name="${selectedShortcut.title}"]`,
+          );
+          if (componentElement) {
+            componentElement.remove();
+          }
+        }
+
+        // 强制更新组件库状态，确保"已添加"标记被移除
+        const updatedComponents = [...systemComponents];
+        setSystemComponents(updatedComponents);
+
+        // 触发一个自定义事件，告知其他可能的监听器组件已被移除
+        const event = new CustomEvent('componentRemoved', {
+          detail: { componentName: selectedShortcut.title },
+        });
+        document.dispatchEvent(event);
+      }
+
       closeContextMenu();
     }
   };
@@ -432,9 +633,23 @@ const Home: React.FC = () => {
 
   // 添加系统组件到快捷方式
   const handleAddSystemComponent = (component: ShortcutItem) => {
-    if (!shortcuts.some((s) => s.title === component.title)) {
-      setShortcuts([...shortcuts, component]);
+    // 检查组件是否已经在桌面组件列表中
+    if (
+      window.componentSystem &&
+      window.componentSystem.desktopComponents.includes(component.title)
+    ) {
+      // 如果已经添加了，跳过
+
+      return;
     }
+
+    // 只添加到组件系统，不添加到React的shortcuts状态
+    if (window.componentSystem && component.title) {
+      // 添加组件到桌面系统
+      window.componentSystem.addToDesktop(component.title);
+      // 注意：不要将组件添加到shortcuts数组中，这是造成重复的原因
+    }
+
     setComponentLibraryVisible(false);
   };
 
@@ -456,12 +671,12 @@ const Home: React.FC = () => {
       >
         {isWebsite && (
           <>
-            <div
+            {/* <div
               className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-black"
               onClick={handleEditShortcut}
             >
               <i className="fa-solid fa-edit mr-2"></i>编辑
-            </div>
+            </div> */}
             <div
               className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-red-500"
               onClick={handleDeleteShortcut}
@@ -505,8 +720,21 @@ const Home: React.FC = () => {
               return (
                 <div
                   key={index}
-                  className={styles.componentItem}
-                  onClick={() => handleAddSystemComponent(component)}
+                  className={`${styles.componentItem} ${
+                    window.componentSystem &&
+                    window.componentSystem.desktopComponents.includes(component.title)
+                      ? styles.componentItemDisabled
+                      : ''
+                  }`}
+                  onClick={() => {
+                    // 如果组件已在桌面上，则不执行添加操作
+                    if (
+                      !window.componentSystem ||
+                      !window.componentSystem.desktopComponents.includes(component.title)
+                    ) {
+                      handleAddSystemComponent(component);
+                    }
+                  }}
                 >
                   {isUrlIcon ? (
                     <img src={component.icon} alt={component.title} />
@@ -518,6 +746,12 @@ const Home: React.FC = () => {
                     </div>
                   )}
                   <div>{component.title}</div>
+                  {window.componentSystem &&
+                    window.componentSystem.desktopComponents.includes(component.title) && (
+                      <div className={styles.alreadyAddedBadge}>
+                        <i className="fa-solid fa-check"></i> 已添加
+                      </div>
+                    )}
                 </div>
               );
             })
@@ -533,8 +767,6 @@ const Home: React.FC = () => {
 
   // 快捷方式点击处理
   const handleShortcutClick = (shortcut: ShortcutItem) => {
-    console.log('Clicked shortcut data:', shortcut);
-
     if (shortcut.type === 'website') {
       window.open(shortcut.url, '_blank');
     } else if (shortcut.type === 'component') {
@@ -640,17 +872,23 @@ const Home: React.FC = () => {
         </div>
       </div>
 
-      <div ref={shortcutsRef} className={styles.shortcutsSection}>
-        {shortcuts.map((shortcut, index) => (
-          <div
-            key={index}
-            className={styles.shortcutWrapper}
-            onContextMenu={(e) => handleContextMenu(e, shortcut)}
-            onClick={() => handleShortcutClick(shortcut)}
-          >
-            <Shortcut {...shortcut} />
-          </div>
-        ))}
+      <div ref={shortcutsRef} className={styles.shortcutsSection} id="shortcutsRef">
+        {/* 只渲染网站类型的快捷方式，组件类型由组件系统管理 */}
+        {shortcuts
+          .filter((shortcut) => shortcut && shortcut.type === 'website')
+          .map((shortcut, index) => (
+            <div
+              key={index}
+              className={styles.shortcutWrapper}
+              onContextMenu={(e) => handleContextMenu(e, shortcut)}
+              onClick={() => handleShortcutClick(shortcut)}
+              data-website-shortcut="true"
+              data-shortcut-title={shortcut.title}
+              data-shortcut-order={index}
+            >
+              <Shortcut {...shortcut} />
+            </div>
+          ))}
       </div>
 
       <div className={styles.countdownSection}>

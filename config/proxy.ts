@@ -11,14 +11,25 @@
  */
 export default {
   // 如果需要自定义本地开发服务器  请取消注释按需调整
+  // dev: {
+  //   // localhost:8000/api/** -> https://preview.pro.ant.design/api/**
+  //   '/api/': {
+  //     // 要代理的地址
+  //     target: 'https://preview.pro.ant.design',
+  //     // 配置了这个可以从 http 代理到 https
+  //     // 依赖 origin 的功能可能需要这个，比如 cookie
+  //     changeOrigin: true,
+  //   },
+  // },
   dev: {
-    // localhost:8000/api/** -> http://123.60.153.252:99/api/**
+    // 只对 /api/ 路径进行代理，但仅当它来自 public/components 目录
     '/api/': {
-      // 要代理的地址
       target: 'http://123.60.153.252:99',
-      // 配置了这个可以从 http 代理到 https
-      // 依赖 origin 的功能可能需要这个，比如 cookie
       changeOrigin: true,
+      // 添加路径过滤，只处理来自 public/components 的请求
+      filter: (pathname: string) => {
+        return pathname.includes('/public/components/');
+      },
     },
   },
 

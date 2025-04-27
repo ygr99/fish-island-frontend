@@ -24,7 +24,7 @@ const Shortcut: React.FC<ShortcutProps> = ({ icon, title, url, bgColor = 'bg-blu
   // 是否是FontAwesome图标的判断 - 通常以fa-开头
   const isFontAwesomeIcon = icon && icon.includes('fa-');
 
-  console.log('Shortcut渲染:', { title, icon, bgColor, isUrlIcon, isFontAwesomeIcon });
+  // console.log('Shortcut渲染:', { title, icon, bgColor, isUrlIcon, isFontAwesomeIcon });
 
   return (
     <div className={styles.shortcut}>
@@ -32,12 +32,12 @@ const Shortcut: React.FC<ShortcutProps> = ({ icon, title, url, bgColor = 'bg-blu
         {isUrlIcon ? (
           <img src={icon} alt={title} className={styles.icon} />
         ) : isFontAwesomeIcon ? (
-          <div className={`flex items-center justify-center ${bgColor} rounded-md w-full h-full`}>
+          <div className={`${bgColor} rounded-md w-full h-full flex items-center justify-center`}>
             <i className={`${icon} text-white text-xl`}></i>
           </div>
         ) : (
           // 默认情况: 既不是URL也不是FA图标，显示默认图标
-          <div className={`flex items-center justify-center ${bgColor} rounded-md w-full h-full`}>
+          <div className={`${bgColor} rounded-md w-full h-full flex items-center justify-center`}>
             <i className="fa-solid fa-puzzle-piece text-white text-xl"></i>
           </div>
         )}

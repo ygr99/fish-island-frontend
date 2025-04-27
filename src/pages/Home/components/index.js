@@ -5,8 +5,20 @@
 class ComponentSystem {
   constructor() {
     this.components = [];
-    this.containerSelector = '.grid';
+    // React中ref会将元素通过ID或特殊属性标记
+    this.containerSelectors = [
+      '[class*="shortcutsSection"]', // 处理模块化CSS的情况
+      '.shortcutsSection',
+      '#shortcutsRef',
+      'div[ref="shortcutsRef"]',
+    ];
     this.componentOrder = this.loadComponentOrder() || [];
+    // 初始化组件顺序映射
+    this.componentOrders = this.loadComponentOrders() || {};
+    // 初始化网站快捷方式排序
+    this.websiteSortOrder = this.loadWebsiteShortcutsOrder() || [];
+    // 使用自定义顺序标志
+    this.useCustomOrder = Boolean(Object.keys(this.componentOrders).length);
 
     // 组件映射关系：{ 中文名: {目录名: 字符串, 全局变量名: 字符串} }
     this.componentNameMapping = {
@@ -42,10 +54,6 @@ class ComponentSystem {
         directory: 'RandomTV',
         globalVar: 'RandomTV',
       },
-      随机网易云: {
-        directory: 'RandomNeteaseMusic',
-        globalVar: 'RandomNeteaseMusic',
-      },
       热榜: {
         directory: 'HotList',
         globalVar: 'HotList',
@@ -65,10 +73,6 @@ class ComponentSystem {
       随机炫猿导航: {
         directory: 'RandomXydh',
         globalVar: 'RandomXydh',
-      },
-      聊天室: {
-        directory: 'ChatRoom',
-        globalVar: 'ChatRoom',
       },
       工具箱: {
         directory: 'Toolbox',
@@ -90,72 +94,35 @@ class ComponentSystem {
 
     // 桌面上显示的组件列表
     this.desktopComponents = this.loadDesktopComponents() || [
-      '随机哔哩哔哩',
+      '游戏中心',
+      '工具箱',
       '随机小姐姐',
       '随机黑丝',
-      '随机唱鸭',
-      '游戏中心',
-      '日历',
-      '天气',
-      '必应壁纸',
-      '快递查询',
-      '记事本',
-      '网站库',
-      '随机追剧',
-      '随机网易云',
-      '热榜',
-      'RSS阅读器',
-      '随机一本书',
-      '随机博客',
-      '随机炫猿导航',
-      '聊天室',
-      '随机诡异故事',
-      '随机分页',
-      '工具箱',
-      '八宫格周视图',
-      '倒数日',
-      '食忆日历',
-      '聚合一言',
-      '直播视界',
-      '音乐',
+      '随机哔哩哔哩',
     ];
 
     // 组件库中显示的组件列表
     this.libraryComponents = this.loadLibraryComponents() || [
-      '随机哔哩哔哩',
+      '游戏中心',
+      '工具箱',
       '随机小姐姐',
       '随机黑丝',
+      '随机哔哩哔哩',
       '随机唱鸭',
-      '游戏中心',
-      '日历',
-      '天气',
       '必应壁纸',
       '快递查询',
-      '记事本',
-      '网站库',
       '随机追剧',
-      '随机网易云',
       '热榜',
       'RSS阅读器',
       '随机一本书',
       '随机博客',
       '随机炫猿导航',
-      '聊天室',
-      '随机诡异故事',
-      '随机分页',
-      '工具箱',
-      '八宫格周视图',
-      '倒数日',
-      '食忆日历',
       '聚合一言',
       '直播视界',
-      '音乐',
     ];
 
-    // 所有需要加载的组件（并集）
-    this.allRequiredComponents = [
-      ...new Set([...this.desktopComponents, ...this.libraryComponents]),
-    ];
+    // 所有需要加载的组件（包含所有componentNameMapping中的组件）
+    this.allRequiredComponents = [...this.allComponentNames];
   }
 
   /**
@@ -183,22 +150,14 @@ class ComponentSystem {
   register(ComponentClass) {
     try {
       const component = new ComponentClass();
-      console.log(`注册组件 [${component.name}]`, {
-        icon: component.icon,
-        bgColor: component.bgColor,
-        iconClass: component.iconClass,
-        backgroundColor: component.backgroundColor,
-      });
 
       // 确保组件有必要的属性
       if (!component.icon) {
         // 如果icon未设置但iconClass已设置，使用iconClass
         if (component.iconClass) {
           component.icon = component.iconClass;
-          console.log(`组件 [${component.name}] 使用iconClass作为icon: ${component.icon}`);
         } else {
           component.icon = 'fa-puzzle-piece'; // 默认图标
-          console.log(`组件 [${component.name}] 使用默认图标: ${component.icon}`);
         }
       }
 
@@ -206,12 +165,8 @@ class ComponentSystem {
         // 如果bgColor未设置但backgroundColor已设置，使用backgroundColor
         if (component.backgroundColor) {
           component.bgColor = component.backgroundColor;
-          console.log(
-            `组件 [${component.name}] 使用backgroundColor作为bgColor: ${component.bgColor}`,
-          );
         } else {
           component.bgColor = 'bg-blue-500'; // 默认背景色
-          console.log(`组件 [${component.name}] 使用默认背景色: ${component.bgColor}`);
         }
       }
 
@@ -220,29 +175,46 @@ class ComponentSystem {
       }
 
       this.components.push(component);
-      console.log(`组件 [${component.name}] 已注册完成，属性：`, {
-        icon: component.icon,
-        bgColor: component.bgColor,
-        description: component.description,
-      });
 
       // 如果是新组件，添加到排序列表末尾
       if (!this.componentOrder.includes(component.name)) {
         this.componentOrder.push(component.name);
         this.saveComponentOrder();
       }
-    } catch (error) {
-      console.error('注册组件失败:', error);
+    } catch (error) {}
+  }
+
+  /**
+   * 查找渲染容器
+   * @returns {HTMLElement|null} 找到的容器元素
+   */
+  findContainer() {
+    for (const selector of this.containerSelectors) {
+      const container = document.querySelector(selector);
+      if (container) {
+        return container;
+      }
     }
+
+    // 尝试查找快捷方式包装元素
+    const shortcutWrappers = document.querySelectorAll('[class*="shortcutWrapper"]');
+    if (shortcutWrappers.length > 0) {
+      const parentElement = shortcutWrappers[0].parentElement;
+      if (parentElement) {
+        return parentElement;
+      }
+    }
+
+    return null;
   }
 
   /**
    * 渲染桌面组件到页面
    */
   renderDesktopComponents() {
-    const container = document.querySelector(this.containerSelector);
+    const container = this.findContainer();
+
     if (!container) {
-      console.error(`找不到容器: ${this.containerSelector}`);
       return;
     }
 
@@ -251,35 +223,29 @@ class ComponentSystem {
       this.desktopComponents.includes(comp.name),
     );
 
+    // 如果没有组件要渲染，提前返回
+    if (componentsToRender.length === 0) {
+      return;
+    }
+
     // 根据排序方式处理组件顺序
     let orderedComponents = [];
 
-    if (this.useCustomOrder && this.componentOrders) {
-      // 使用自定义排序（基于用户调整后的顺序）
-      orderedComponents = [...componentsToRender].sort((a, b) => {
-        const orderA = this.componentOrders[a.name] || 9999;
-        const orderB = this.componentOrders[b.name] || 9999;
-        return orderA - orderB;
-      });
+    // 使用默认排序（组件放在最前面）
+    // 按保存的顺序排序组件
+    this.componentOrder.forEach((name) => {
+      const component = componentsToRender.find((c) => c.name === name);
+      if (component) {
+        orderedComponents.push(component);
+      }
+    });
 
-      console.log('使用自定义组件排序', this.componentOrders);
-    } else {
-      // 使用默认排序（组件放在最前面）
-      // 按保存的顺序排序组件
-      this.componentOrder.forEach((name) => {
-        const component = componentsToRender.find((c) => c.name === name);
-        if (component) {
-          orderedComponents.push(component);
-        }
-      });
-
-      // 将未在排序列表中的组件添加到末尾
-      componentsToRender.forEach((component) => {
-        if (!orderedComponents.includes(component)) {
-          orderedComponents.push(component);
-        }
-      });
-    }
+    // 将未在排序列表中的组件添加到末尾
+    componentsToRender.forEach((component) => {
+      if (!orderedComponents.includes(component)) {
+        orderedComponents.push(component);
+      }
+    });
 
     // 渲染自定义组件
     orderedComponents.forEach((component) => {
@@ -302,38 +268,12 @@ class ComponentSystem {
       componentElement.setAttribute('data-custom-component', 'true');
       componentElement.setAttribute('data-component-name', component.name);
 
-      // 根据排序策略决定插入位置
-      if (this.useCustomOrder && this.componentOrders) {
-        // 自定义排序时，根据order属性确定位置
-        const order = this.componentOrders[component.name] || 0;
-
-        // 找到应该插入的位置（找到第一个order值大于当前组件的元素）
-        let insertBeforeElement = null;
-
-        // 遍历所有元素，包括自定义组件和网站
-        Array.from(container.children).forEach((element) => {
-          const elementOrder = parseInt(element.getAttribute('data-order') || 9999);
-          if (elementOrder > order && !insertBeforeElement) {
-            insertBeforeElement = element;
-          }
-        });
-
-        if (insertBeforeElement) {
-          container.insertBefore(componentElement, insertBeforeElement);
-        } else {
-          container.appendChild(componentElement);
-        }
-
-        // 添加order属性
-        componentElement.setAttribute('data-order', order);
+      // 默认排序时，组件放在最前面
+      const firstDefaultApp = container.querySelector('.app-container');
+      if (firstDefaultApp) {
+        container.insertBefore(componentElement, firstDefaultApp);
       } else {
-        // 默认排序时，组件放在最前面
-        const firstDefaultApp = container.querySelector('.app-container');
-        if (firstDefaultApp) {
-          container.insertBefore(componentElement, firstDefaultApp);
-        } else {
-          container.appendChild(componentElement);
-        }
+        container.appendChild(componentElement);
       }
     });
 
@@ -355,7 +295,13 @@ class ComponentSystem {
       },
     });
     document.dispatchEvent(event);
-    console.log('触发组件渲染完成事件');
+
+    // 转换所有组件为React样式
+    if (window.ComponentWrapper) {
+      setTimeout(() => {
+        window.ComponentWrapper.convertAllComponents(container);
+      }, 100);
+    }
   }
 
   /**
@@ -363,6 +309,7 @@ class ComponentSystem {
    * @returns {Array} 组件对象数组
    */
   getLibraryComponents() {
+    // 只返回libraryComponents列表中的组件
     return this.components.filter((comp) => this.libraryComponents.includes(comp.name));
   }
 
@@ -374,6 +321,11 @@ class ComponentSystem {
     if (!this.desktopComponents.includes(componentName)) {
       this.desktopComponents.push(componentName);
       this.saveDesktopComponents();
+
+      // 添加后立即渲染组件
+      setTimeout(() => {
+        this.renderDesktopComponents();
+      }, 100);
     }
   }
 
@@ -386,6 +338,20 @@ class ComponentSystem {
     if (index !== -1) {
       this.desktopComponents.splice(index, 1);
       this.saveDesktopComponents();
+
+      // 从DOM中删除组件元素
+      const container = this.findContainer();
+      if (container) {
+        // 查找带有特定组件名称的元素
+        const componentElement = container.querySelector(
+          `[data-component-name="${componentName}"]`,
+        );
+        if (componentElement) {
+          componentElement.remove();
+        } else {
+          console.warn(`未找到要移除的组件元素 [${componentName}]`);
+        }
+      }
     }
   }
 
@@ -418,9 +384,7 @@ class ComponentSystem {
   saveDesktopComponents() {
     try {
       localStorage.setItem('desktop-components', JSON.stringify(this.desktopComponents));
-    } catch (e) {
-      console.error('保存桌面组件列表失败:', e);
-    }
+    } catch (e) {}
   }
 
   /**
@@ -431,7 +395,6 @@ class ComponentSystem {
       const saved = localStorage.getItem('desktop-components');
       return saved ? JSON.parse(saved) : null;
     } catch (e) {
-      console.error('加载桌面组件列表失败:', e);
       return null;
     }
   }
@@ -442,9 +405,7 @@ class ComponentSystem {
   saveLibraryComponents() {
     try {
       localStorage.setItem('library-components', JSON.stringify(this.libraryComponents));
-    } catch (e) {
-      console.error('保存组件库组件列表失败:', e);
-    }
+    } catch (e) {}
   }
 
   /**
@@ -455,7 +416,6 @@ class ComponentSystem {
       const saved = localStorage.getItem('library-components');
       return saved ? JSON.parse(saved) : null;
     } catch (e) {
-      console.error('加载组件库组件列表失败:', e);
       return null;
     }
   }
@@ -466,7 +426,6 @@ class ComponentSystem {
   renderAll() {
     const container = document.querySelector(this.containerSelector);
     if (!container) {
-      console.error(`找不到容器: ${this.containerSelector}`);
       return;
     }
 
@@ -527,10 +486,13 @@ class ComponentSystem {
    * @param {HTMLElement} container - 容器元素
    */
   initSortable(container) {
-    if (!window.Sortable) {
+    if (!window.Sortable && !window.Sortablejs) {
       console.warn('Sortable库未加载，拖拽功能不可用');
       return;
     }
+
+    // 使用可用的Sortable库
+    const SortableLib = window.Sortable || window.Sortablejs;
 
     // 检测是否为移动设备
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
@@ -539,12 +501,11 @@ class ComponentSystem {
 
     // 如果是移动设备，禁用拖拽功能
     if (isMobile) {
-      console.log('检测到移动设备，拖拽功能已禁用');
       return null;
     }
 
     try {
-      const sortable = Sortable.create(container, {
+      const sortable = SortableLib.create(container, {
         animation: 150,
         ghostClass: 'sortable-ghost',
         chosenClass: 'sortable-chosen',
@@ -555,16 +516,21 @@ class ComponentSystem {
           this.useCustomOrder = true;
           this.componentOrders = this.componentOrders || {};
 
+          // 调用更新组件顺序方法
+          this.updateComponentOrder();
+
           // 保存新的顺序
           Array.from(container.children).forEach((item, index) => {
             // 更新顺序属性
-            item.setAttribute('data-order', index);
+            if (item) {
+              item.setAttribute('data-order', index);
 
-            if (item.hasAttribute('data-custom-component')) {
-              // 是自定义组件
-              const componentName = item.getAttribute('data-component-name');
-              if (componentName) {
-                this.componentOrders[componentName] = index;
+              if (item.hasAttribute && item.hasAttribute('data-custom-component')) {
+                // 是自定义组件
+                const componentName = item.getAttribute('data-component-name');
+                if (componentName) {
+                  this.componentOrders[componentName] = index;
+                }
               }
             }
           });
@@ -581,7 +547,6 @@ class ComponentSystem {
 
       return sortable;
     } catch (error) {
-      console.error('初始化拖拽排序失败:', error);
       return null;
     }
   }
@@ -590,23 +555,67 @@ class ComponentSystem {
    * 更新组件的排序顺序
    */
   updateComponentOrder() {
-    const container = document.querySelector(this.containerSelector);
+    const container = this.findContainer();
     if (!container) return;
 
-    const customComponentElements = container.querySelectorAll('[data-custom-component="true"]');
+    // 获取容器中所有的组件元素（包括自定义组件和网站快捷方式）
+    const allElements = Array.from(container.children);
     const newOrder = [];
+    const websiteOrder = []; // 新增：保存网站类型快捷方式的顺序
 
-    customComponentElements.forEach((element) => {
-      const nameElement = element.querySelector('span');
-      if (nameElement) {
-        const componentName = nameElement.textContent;
-        newOrder.push(componentName);
+    // 遍历所有元素，获取组件名称和网站快捷方式
+    allElements.forEach((element) => {
+      // 检查是否是自定义组件
+      if (element && element.hasAttribute && element.hasAttribute('data-custom-component')) {
+        const componentName = element.getAttribute('data-component-name');
+        if (componentName) {
+          newOrder.push(componentName);
+        }
+      }
+      // 新增：检查是否是网站快捷方式
+      else if (element && element.hasAttribute && element.hasAttribute('data-website-shortcut')) {
+        const shortcutTitle = element.getAttribute('data-shortcut-title');
+        if (shortcutTitle) {
+          websiteOrder.push(shortcutTitle);
+        }
       }
     });
 
+    // 只有在找到至少一个组件的情况下才更新顺序
     if (newOrder.length > 0) {
       this.componentOrder = newOrder;
       this.saveComponentOrder();
+
+      // 重新排序组件系统中的desktopComponents数组，确保它与当前DOM顺序一致
+      const newDesktopComponents = [];
+
+      // 首先添加按照新顺序排列的组件
+      newOrder.forEach((name) => {
+        if (name && this.desktopComponents.includes(name)) {
+          newDesktopComponents.push(name);
+        }
+      });
+
+      // 然后添加任何剩余的桌面组件（以防有些组件在DOM中不可见）
+      this.desktopComponents.forEach((name) => {
+        if (name && !newDesktopComponents.includes(name)) {
+          newDesktopComponents.push(name);
+        }
+      });
+
+      // 更新桌面组件列表并保存
+      this.desktopComponents = newDesktopComponents;
+      this.saveDesktopComponents();
+    }
+
+    // 新增：保存网站快捷方式顺序
+    if (websiteOrder.length > 0) {
+      // 更新内部存储
+      this.websiteSortOrder = websiteOrder;
+      // 保存到localStorage
+      try {
+        localStorage.setItem('website-shortcuts-order', JSON.stringify(websiteOrder));
+      } catch (e) {}
     }
   }
 
@@ -615,10 +624,10 @@ class ComponentSystem {
    */
   saveComponentOrder() {
     try {
-      localStorage.setItem('custom-components-order', JSON.stringify(this.componentOrder));
-    } catch (e) {
-      console.error('保存组件顺序失败:', e);
-    }
+      // 过滤掉无效数据再保存
+      const validOrder = this.componentOrder.filter((item) => item);
+      localStorage.setItem('custom-components-order', JSON.stringify(validOrder));
+    } catch (e) {}
   }
 
   /**
@@ -627,10 +636,56 @@ class ComponentSystem {
   loadComponentOrder() {
     try {
       const savedOrder = localStorage.getItem('custom-components-order');
-      return savedOrder ? JSON.parse(savedOrder) : [];
+      const parsedOrder = savedOrder ? JSON.parse(savedOrder) : [];
+      // 过滤掉可能的无效数据
+      return Array.isArray(parsedOrder) ? parsedOrder.filter((item) => item) : [];
     } catch (e) {
-      console.error('加载组件顺序失败:', e);
       return [];
+    }
+  }
+
+  /**
+   * 从本地存储加载网站快捷方式排序
+   */
+  loadWebsiteShortcutsOrder() {
+    try {
+      const savedOrder = localStorage.getItem('website-shortcuts-order');
+      const parsedOrder = savedOrder ? JSON.parse(savedOrder) : [];
+      return Array.isArray(parsedOrder) ? parsedOrder.filter((item) => item) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /**
+   * 保存组件顺序列表到本地存储
+   */
+  saveComponentOrders() {
+    try {
+      if (this.componentOrders) {
+        // 清理可能的无效数据
+        const cleanedOrders = {};
+        Object.entries(this.componentOrders).forEach(([key, value]) => {
+          if (key && value !== undefined && value !== null) {
+            cleanedOrders[key] = value;
+          }
+        });
+        localStorage.setItem('component-orders', JSON.stringify(cleanedOrders));
+      }
+    } catch (e) {}
+  }
+
+  /**
+   * 从本地存储加载组件顺序列表
+   */
+  loadComponentOrders() {
+    try {
+      const savedOrders = localStorage.getItem('component-orders');
+      const parsedOrders = savedOrders ? JSON.parse(savedOrders) : {};
+      // 验证是一个有效的对象
+      return typeof parsedOrders === 'object' && parsedOrders !== null ? parsedOrders : {};
+    } catch (e) {
+      return {};
     }
   }
 
@@ -646,9 +701,10 @@ class ComponentSystem {
         // 使用映射获取目录名
         const directoryName = this.getDirectoryName(componentName);
         script.src = `/components/${directoryName}/index.js`;
-        script.onload = resolve;
+        script.onload = () => {
+          resolve();
+        };
         script.onerror = (e) => {
-          console.error(`加载组件失败: ${componentName} (${directoryName})`, e);
           reject(e);
         };
         document.head.appendChild(script);
@@ -663,30 +719,45 @@ class ComponentSystem {
 window.componentSystem = new ComponentSystem();
 
 // 文档加载完成后初始化组件
+
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     const componentSystem = window.componentSystem;
 
     // 只加载需要的组件（桌面或组件库中的）
+
     await componentSystem.loadComponents(componentSystem.allRequiredComponents);
 
     // 注册所有已加载的组件
+
     componentSystem.allRequiredComponents.forEach((componentName) => {
       const globalVarName = componentSystem.getGlobalVarName(componentName);
 
       if (globalVarName && window[globalVarName]) {
         componentSystem.register(window[globalVarName]);
       } else {
-        console.error(`无法找到组件类: ${globalVarName}`);
       }
     });
 
+    // 确认组件注册结果
+    console.log(
+      '已注册的组件:',
+      componentSystem.components.map((comp) => comp.name),
+    );
+
     // 渲染桌面组件
+
     componentSystem.renderDesktopComponents();
-  } catch (error) {
-    console.error('加载组件失败:', error);
-  }
+  } catch (error) {}
 });
+
+// 确保在页面完全加载后也尝试渲染组件
+
+window.onload = function () {
+  if (window.componentSystem) {
+    window.componentSystem.renderDesktopComponents();
+  }
+};
 
 // 清理ComponentLibrary模块，移除示例组件数据
 const ComponentLibrary = (function () {
@@ -767,3 +838,199 @@ if (typeof window !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = ComponentLibrary;
 }
+
+/**
+ * 组件包装器
+ * 负责将组件系统生成的原生组件样式转换为React Shortcut组件样式
+ */
+class ComponentWrapper {
+  /**
+   * 将所有原生组件转换为React风格组件
+   * @param {HTMLElement} container - 容器元素
+   */
+  static convertAllComponents(container) {
+    if (!container) return;
+
+    // 查找所有原生组件 - 修复选择器，防止重复添加
+    const nativeComponents = container.querySelectorAll(
+      '.app-container[data-custom-component="true"]:not(.converted)',
+    );
+
+    nativeComponents.forEach((component) => {
+      ComponentWrapper.convertComponent(component);
+      // 标记为已转换
+      component.classList.add('converted');
+    });
+  }
+
+  /**
+   * 转换单个组件
+   * @param {HTMLElement} component - 组件元素
+   */
+  static convertComponent(component) {
+    if (!component) return;
+
+    // 获取组件名称
+    const componentName = component.getAttribute('data-component-name');
+    if (!componentName) return;
+
+    // 检查是否已经存在同名的React风格组件
+    const existingReactComponent = document.querySelector(
+      `.shortcutWrapper___bmAvR[data-component-name="${componentName}"]`,
+    );
+    if (existingReactComponent) {
+      return;
+    }
+
+    // 获取原组件的图标和元素
+    const iconElement = component.querySelector('.app-icon');
+    if (!iconElement) return;
+
+    // 获取背景色和图标类名
+    const bgColorClass =
+      Array.from(iconElement.classList).find((cls) => cls.startsWith('bg-')) || 'bg-blue-500';
+    const iconClass =
+      iconElement.querySelector('i')?.className || 'fa-puzzle-piece text-white text-2xl';
+
+    // 创建新的React风格组件结构
+    const newHtml = `
+      <div class="shortcutWrapper___bmAvR">
+        <div class="shortcut___hastY">
+          <div class="iconWrapper___KH5xY">
+            <div class="${bgColorClass} rounded-md w-full h-full flex items-center justify-center">
+              <i class="${iconClass.replace('text-2xl', 'text-xl')}"></i>
+            </div>
+          </div>
+          <div class="title___V8Vc9">${componentName}</div>
+        </div>
+      </div>
+    `;
+
+    // 使用文档片段提高性能
+    const temp = document.createElement('template');
+    temp.innerHTML = newHtml.trim();
+    const newComponent = temp.content.firstChild;
+
+    // 保留原组件的属性
+    newComponent.setAttribute('data-custom-component', 'true');
+    newComponent.setAttribute('data-component-name', componentName);
+    if (component.id) {
+      newComponent.querySelector('.shortcut___hastY').id = component.id;
+    }
+
+    // 添加右键菜单事件
+    newComponent.addEventListener('contextmenu', (e) => {
+      // 检查是否存在全局事件处理函数
+      if (window.handleComponentContextMenu) {
+        window.handleComponentContextMenu(e, {
+          title: componentName,
+          type: 'component',
+          icon: iconClass,
+          bgColor: bgColorClass,
+          component: componentName,
+        });
+      }
+    });
+
+    // 添加点击事件
+    newComponent.addEventListener('click', () => {
+      // 如果存在openComponent函数，则调用
+      if (window.openComponent && componentName) {
+        window.openComponent(componentName);
+      }
+    });
+
+    // 替换原组件
+    component.parentNode.replaceChild(newComponent, component);
+
+    return newComponent;
+  }
+}
+
+// 将包装器添加到全局对象
+window.ComponentWrapper = ComponentWrapper;
+
+/**
+ * 组件桥接系统
+ * 用于在React中打开组件弹窗
+ */
+
+// 组件桥接函数映射
+const componentBridges = {};
+
+// 创建通用组件加载函数
+function loadComponent(componentName) {
+  // 从组件系统中获取目录名和全局变量名
+  let directoryName = componentName;
+  let globalVarName = componentName;
+
+  // 如果存在组件系统，使用映射关系
+  if (
+    window.componentSystem &&
+    window.componentSystem.componentNameMapping &&
+    window.componentSystem.componentNameMapping[componentName]
+  ) {
+    directoryName = window.componentSystem.componentNameMapping[componentName].directory;
+    globalVarName = window.componentSystem.componentNameMapping[componentName].globalVar;
+  } else {
+  }
+
+  // 检查全局变量中是否已经存在此组件
+  if (window[globalVarName]) {
+    try {
+      const component = new window[globalVarName]();
+      if (typeof component.handleClick === 'function') {
+        component.handleClick();
+      } else {
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // 尝试加载组件脚本
+  return new Promise((resolve) => {
+    // 构建组件路径，从 public 目录加载
+    const scriptUrl = `/components/${directoryName}/index.js`;
+
+    const script = document.createElement('script');
+    script.src = scriptUrl;
+
+    script.onload = function () {
+      if (window[globalVarName]) {
+        try {
+          const component = new window[globalVarName]();
+
+          if (typeof component.handleClick === 'function') {
+            component.handleClick();
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        } catch (e) {
+          resolve(false);
+        }
+      } else {
+        resolve(false);
+      }
+    };
+
+    script.onerror = function () {
+      resolve(false);
+    };
+
+    document.head.appendChild(script);
+  });
+}
+
+// 对外暴露的调用接口
+window.openComponent = function (componentName) {
+  // 如果已经有定义的桥接函数，直接使用
+  if (componentBridges[componentName]) {
+    return componentBridges[componentName]();
+  }
+
+  // 否则尝试加载组件
+  return loadComponent(componentName);
+};
