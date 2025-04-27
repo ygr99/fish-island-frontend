@@ -266,10 +266,12 @@ export default function ReaderList() {
 
   // 打开阅读器 - 修改以支持悬浮模式
   const openReader = (book: Book) => {
+    const savedBooks = JSON.parse(localStorage.getItem("fish-reader-books") || '[]');
+    const currentBook = savedBooks.find((b: Book) => b.id === book.id)
     // 确保书籍有一个默认的lastReadChapter
     const updatedBook = {
       ...book,
-      lastReadChapter: book.lastReadChapter || 0 // 如果没有lastReadChapter，设为0
+      lastReadChapter: currentBook?.lastReadChapter || 0 // 如果没有lastReadChapter，设为0
     };
 
     // 更新书籍信息
@@ -286,7 +288,6 @@ export default function ReaderList() {
     // 根据悬浮模式设置选择打开方式
     if (floatingModeEnabled) {
       // 使用全局悬浮阅读器
-      message.success('正在悬浮窗中打开书籍，可拖动悬浮窗位置');
       showReader(updatedBook.id);
     } else {
       // 使用页面内阅读器
@@ -329,15 +330,15 @@ export default function ReaderList() {
   // 章节跳转
   const handleChapterSelect = (chapterIndex: number, chapter?: Chapter) => {
     if (currentBook) {
-      // console.log(`选择章节: ${chapterIndex}, 章节内容长度: ${chapter?.content?.length || 0}`););
+
 
       let updatedBook: Book;
       if (chapter && currentBook.chapters) {
         // 如果传入了章节对象，更新chapters中对应章节的内容
         const updatedChapters = currentBook.chapters.map(c =>
           c.index === chapterIndex ?
-          { ...c, content: chapter.content } :
-          c
+            { ...c, content: chapter.content } :
+            c
         );
 
         updatedBook = {
@@ -352,7 +353,7 @@ export default function ReaderList() {
         };
       }
 
-      // console.log(`更新后的章节内容长度: ${updatedBook.chapters?.find(c => c.index === chapterIndex)?.content?.length || 0}`););
+
 
       // 首先更新本地存储，确保持久化保存
       const savedBooks = localStorage.getItem("fish-reader-books");
@@ -362,11 +363,12 @@ export default function ReaderList() {
           b.id === updatedBook.id ? updatedBook : b
         );
         localStorage.setItem("fish-reader-books", JSON.stringify(updatedBooks));
-        // console.log('已更新本地存储中的书籍信息'););
+
       }
 
       // 强制关闭阅读器并重新打开，确保使用新的章节数据
       setIsReaderVisible(false);
+
 
       // 延迟更新状态，确保UI先关闭再打开
       setTimeout(() => {
@@ -381,10 +383,14 @@ export default function ReaderList() {
         // 关闭章节列表
         setIsChapterListVisible(false);
 
-        // 重新打开阅读器
-        setIsReaderVisible(true);
-
-        // console.log(`阅读器重新加载，显示章节: ${chapterIndex}`););
+        // 根据悬浮模式设置选择打开方式
+        if (floatingModeEnabled) {
+          // 使用全局悬浮阅读器
+          showReader(updatedBook.id);
+        } else {
+          // 使用页面内阅读器
+          setIsReaderVisible(true);
+        }
       }, 100);
     }
   };
@@ -622,7 +628,7 @@ export default function ReaderList() {
         </Space>
       </Header>
 
-      <Content style={{padding: isMobile ? "12px" : "24px"}}>
+      <Content style={{ padding: isMobile ? "12px" : "24px" }}>
         <Card>
           <div style={{
             display: 'flex',
@@ -922,44 +928,40 @@ export default function ReaderList() {
             right: 10,
             zIndex: 1010
           }}>
-            {/* <Button
-              type="primary"
-              shape="circle"
-              icon={<SettingOutlined />}
-              onClick={(e) => {
-                e.stopPropagation();
-                openSettings();
-              }}
-              style={{ marginRight: 8 }}
-            /> */}
-            <Button
-              type="primary"
-              shape="circle"
-              icon={<BarsOutlined />}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (currentBook) openChapterList(currentBook);
-              }}
-              style={{ marginRight: 8 }}
-            />
-            <Button
-              type="primary"
-              danger
-              shape="circle"
-              icon={<LaptopOutlined />}
-              onClick={activatePanicMode}
-              style={{ marginRight: 8 }}
-              title="紧急切换到工作模式"
-            />
-            <Button
-              type="primary"
-              danger
-              shape="circle"
-              icon={<DeleteOutlined />}
-              onClick={() => {
-                setIsReaderVisible(false);
-              }}
-            />
+            <Tooltip title="章节列表">
+              <Button
+                type="primary"
+                shape="circle"
+                icon={<BarsOutlined />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (currentBook) openChapterList(currentBook);
+                }}
+                style={{ marginRight: 8 }}
+              />
+            </Tooltip>
+            <Tooltip title="紧急切换到工作模式">
+              <Button
+                type="primary"
+                danger
+                shape="circle"
+                icon={<LaptopOutlined />}
+                onClick={activatePanicMode}
+                style={{ marginRight: 8 }}
+                title="紧急切换到工作模式"
+              />
+            </Tooltip>
+            <Tooltip title="关闭阅读器">
+              <Button
+                type="primary"
+                danger
+                shape="circle"
+                icon={<DeleteOutlined />}
+                onClick={() => {
+                  setIsReaderVisible(false);
+                }}
+              />
+            </Tooltip>
           </div>
           <BookReader
             key={`book-reader-${currentBook.id}`}
