@@ -17,6 +17,8 @@ class ComponentSystem {
     this.componentOrders = this.loadComponentOrders() || {};
     // 初始化网站快捷方式排序
     this.websiteSortOrder = this.loadWebsiteShortcutsOrder() || [];
+    // 初始化网站快捷方式顺序映射
+    this.websiteShortcutOrders = this.loadWebsiteShortcutOrders() || {};
     // 使用自定义顺序标志
     this.useCustomOrder = Boolean(Object.keys(this.componentOrders).length);
 
@@ -288,6 +290,21 @@ class ComponentSystem {
       container.querySelectorAll('[data-website-shortcut="true"]'),
     );
 
+    // 从localStorage中获取保存的网站快捷方式顺序信息
+    const websiteShortcutOrders = this.loadWebsiteShortcutOrders();
+
+    // 设置网站快捷方式的排序属性
+    websiteElements.forEach((element) => {
+      const shortcutTitle = element.getAttribute('data-shortcut-title');
+      if (
+        shortcutTitle &&
+        websiteShortcutOrders &&
+        websiteShortcutOrders[shortcutTitle] !== undefined
+      ) {
+        element.setAttribute('data-shortcut-order', websiteShortcutOrders[shortcutTitle]);
+      }
+    });
+
     // 所有元素合并后按data-shortcut-order排序
     const allElements = [...renderedElements, ...websiteElements];
     allElements.sort((a, b) => {
@@ -300,6 +317,9 @@ class ComponentSystem {
     allElements.forEach((element) => {
       container.appendChild(element);
     });
+
+    // 强制浏览器立即更新DOM
+    container.offsetHeight;
 
     // 初始化组件事件
     orderedComponents.forEach((component) => {
@@ -534,37 +554,94 @@ class ComponentSystem {
         ghostClass: 'sortable-ghost',
         chosenClass: 'sortable-chosen',
         dragClass: 'sortable-drag',
-        handle: '.app-icon', // 只能通过图标拖动
+        handle: '.iconWrapper___KH5xY, .app-icon', // 增加React组件的图标选择器，确保两种元素都可拖拽
+        group: 'shortcuts', // 添加分组标识，确保不同类型的快捷方式可以混合排序
         onEnd: (evt) => {
-          // 更新组件排序
-          this.useCustomOrder = true;
-          this.componentOrders = this.componentOrders || {};
+          // 立即获取当前DOM中所有元素
+          const allElements = Array.from(container.children);
 
-          // 调用更新组件顺序方法
-          this.updateComponentOrder();
+          // 记录每个元素的顺序
+          allElements.forEach((element, index) => {
+            element.setAttribute('data-shortcut-order', index.toString());
 
-          // 保存新的顺序
-          Array.from(container.children).forEach((item, index) => {
-            // 更新顺序属性
-            if (item) {
-              item.setAttribute('data-order', index);
+            // 保存组件顺序
+            if (element.hasAttribute && element.hasAttribute('data-custom-component')) {
+              const componentName = element.getAttribute('data-component-name');
+              if (componentName) {
+                this.componentOrders = this.componentOrders || {};
+                this.componentOrders[componentName] = index;
+              }
+            }
 
-              if (item.hasAttribute && item.hasAttribute('data-custom-component')) {
-                // 是自定义组件
-                const componentName = item.getAttribute('data-component-name');
-                if (componentName) {
-                  this.componentOrders[componentName] = index;
-                }
+            // 保存网站快捷方式顺序
+            if (element.hasAttribute && element.hasAttribute('data-website-shortcut')) {
+              const shortcutTitle = element.getAttribute('data-shortcut-title');
+              if (shortcutTitle) {
+                this.websiteShortcutOrders = this.websiteShortcutOrders || {};
+                this.websiteShortcutOrders[shortcutTitle] = index;
               }
             }
           });
 
-          // 保存排序信息
-          this.saveComponentOrders();
+          // 组装顺序数据
+          const componentOrder = [];
+          const websiteOrder = [];
 
-          // 通知存储系统保存所有桌面数据
-          if (window.storage && typeof window.storage.saveDesktopData === 'function') {
-            window.storage.saveDesktopData();
+          allElements.forEach((element) => {
+            if (element.hasAttribute && element.hasAttribute('data-custom-component')) {
+              const name = element.getAttribute('data-component-name');
+              if (name) componentOrder.push(name);
+            }
+            if (element.hasAttribute && element.hasAttribute('data-website-shortcut')) {
+              const title = element.getAttribute('data-shortcut-title');
+              if (title) websiteOrder.push(title);
+            }
+          });
+
+          // 立即保存到localStorage
+          try {
+            // 保存组件顺序
+            if (componentOrder.length > 0) {
+              this.componentOrder = componentOrder;
+              localStorage.setItem('custom-components-order', JSON.stringify(componentOrder));
+            }
+
+            // 保存网站快捷方式标题顺序
+            if (websiteOrder.length > 0) {
+              this.websiteSortOrder = websiteOrder;
+              localStorage.setItem('website-shortcuts-order', JSON.stringify(websiteOrder));
+            }
+
+            // 保存详细顺序映射
+            localStorage.setItem('component-orders', JSON.stringify(this.componentOrders || {}));
+            localStorage.setItem(
+              'website-shortcut-orders',
+              JSON.stringify(this.websiteShortcutOrders || {}),
+            );
+
+            // 如果有桌面组件，更新它们的顺序
+            if (componentOrder.length > 0) {
+              const newDesktopComponents = [];
+
+              // 按新顺序添加桌面组件
+              componentOrder.forEach((name) => {
+                if (this.desktopComponents.includes(name)) {
+                  newDesktopComponents.push(name);
+                }
+              });
+
+              // 添加其他可能的桌面组件
+              this.desktopComponents.forEach((name) => {
+                if (!newDesktopComponents.includes(name)) {
+                  newDesktopComponents.push(name);
+                }
+              });
+
+              this.desktopComponents = newDesktopComponents;
+              localStorage.setItem('desktop-components', JSON.stringify(newDesktopComponents));
+            }
+          } catch (e) {
+            console.error('保存排序信息失败', e);
           }
         },
       });
@@ -593,28 +670,36 @@ class ComponentSystem {
     });
 
     const newOrder = [];
-    const websiteOrder = []; // 新增：保存网站类型快捷方式的顺序
+    const websiteOrder = []; // 保存网站类型快捷方式的标题顺序
+    this.websiteShortcutOrders = this.websiteShortcutOrders || {}; // 确保对象存在
 
     // 遍历所有元素，获取组件名称和网站快捷方式
-    allElements.forEach((element) => {
+    allElements.forEach((element, index) => {
       // 检查是否是自定义组件
       if (element && element.hasAttribute && element.hasAttribute('data-custom-component')) {
         const componentName = element.getAttribute('data-component-name');
         if (componentName) {
           newOrder.push(componentName);
+          // 更新组件顺序映射
+          this.componentOrders = this.componentOrders || {};
+          this.componentOrders[componentName] = index;
         }
       }
-      // 新增：检查是否是网站快捷方式
+      // 检查是否是网站快捷方式
       else if (element && element.hasAttribute && element.hasAttribute('data-website-shortcut')) {
         const shortcutTitle = element.getAttribute('data-shortcut-title');
         if (shortcutTitle) {
           websiteOrder.push(shortcutTitle);
+          // 更新网站快捷方式顺序映射
+          this.websiteShortcutOrders[shortcutTitle] = index;
         }
       }
 
       // 确保每个元素都有data-shortcut-order属性
-      const orderIndex = allElements.indexOf(element);
-      element.setAttribute('data-shortcut-order', orderIndex.toString());
+      element.setAttribute('data-shortcut-order', index.toString());
+
+      // 将元素按顺序重新附加到容器，强制DOM立即更新
+      container.appendChild(element);
     });
 
     // 只有在找到至少一个组件的情况下才更新顺序
@@ -644,14 +729,22 @@ class ComponentSystem {
       this.saveDesktopComponents();
     }
 
-    // 新增：保存网站快捷方式顺序
+    // 保存网站快捷方式顺序
     if (websiteOrder.length > 0) {
       // 更新内部存储
       this.websiteSortOrder = websiteOrder;
       // 保存到localStorage
       try {
         localStorage.setItem('website-shortcuts-order', JSON.stringify(websiteOrder));
+        // 立即保存网站快捷方式的详细顺序
+        this.saveWebsiteShortcutOrders();
       } catch (e) {}
+    }
+
+    // 强制浏览器立即更新DOM
+    if (container) {
+      // 读取offsetHeight触发浏览器重新计算布局，强制DOM刷新
+      container.offsetHeight;
     }
   }
 
@@ -748,6 +841,38 @@ class ComponentSystem {
     });
 
     return Promise.all(promises);
+  }
+
+  /**
+   * 保存网站快捷方式顺序到本地存储
+   */
+  saveWebsiteShortcutOrders() {
+    try {
+      if (this.websiteShortcutOrders) {
+        // 清理可能的无效数据
+        const cleanedOrders = {};
+        Object.entries(this.websiteShortcutOrders).forEach(([key, value]) => {
+          if (key && value !== undefined && value !== null) {
+            cleanedOrders[key] = value;
+          }
+        });
+        localStorage.setItem('website-shortcut-orders', JSON.stringify(cleanedOrders));
+      }
+    } catch (e) {}
+  }
+
+  /**
+   * 从本地存储加载网站快捷方式顺序
+   */
+  loadWebsiteShortcutOrders() {
+    try {
+      const savedOrders = localStorage.getItem('website-shortcut-orders');
+      const parsedOrders = savedOrders ? JSON.parse(savedOrders) : {};
+      // 验证是一个有效的对象
+      return typeof parsedOrders === 'object' && parsedOrders !== null ? parsedOrders : {};
+    } catch (e) {
+      return {};
+    }
   }
 }
 

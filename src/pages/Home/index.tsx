@@ -40,6 +40,11 @@ declare global {
       removeFromDesktop: (componentName: string) => void;
       updateComponentOrder: () => void;
       loadComponentOrder: () => string[];
+      loadWebsiteShortcutOrders?: () => Record<string, number>;
+      saveWebsiteShortcutOrders?: () => void;
+      componentOrders?: Record<string, number>;
+      websiteShortcutOrders?: Record<string, number>;
+      websiteSortOrder?: string[];
     };
     openComponent: (componentName: string) => boolean;
     ComponentWrapper: {
@@ -362,43 +367,59 @@ const Home: React.FC = () => {
           items.splice(evt.newIndex, 0, movedItem);
           setShortcuts(items);
 
-          // 保存排序到本地存储
-          try {
-            // 1. 保存完整的快捷方式数据
-            localStorage.setItem('shortcuts', JSON.stringify(items));
+          // 立即保存排序到本地存储
+          localStorage.setItem('shortcuts', JSON.stringify(items));
 
-            // 2. 保存网站类型快捷方式的标题顺序
-            const websiteTitles = items
-              .filter((item) => item && item.type === 'website')
-              .map((item) => item.title);
+          // 获取所有网站快捷方式的标题顺序
+          const websiteTitles = items
+            .filter((item) => item && item.type === 'website')
+            .map((item) => item.title);
 
-            if (websiteTitles.length > 0) {
-              localStorage.setItem('website-shortcuts-order', JSON.stringify(websiteTitles));
-            }
+          // 立即保存网站快捷方式标题顺序
+          localStorage.setItem('website-shortcuts-order', JSON.stringify(websiteTitles));
 
-            // 3. 同时更新组件系统中的组件顺序
-            if (window.componentSystem && window.componentSystem.updateComponentOrder) {
-              // 确保所有元素都有正确的顺序属性
-              if (shortcutsRef.current) {
-                const allElements = Array.from(shortcutsRef.current.children);
-                allElements.forEach((element, index) => {
-                  element.setAttribute('data-shortcut-order', index.toString());
-                });
+          // 如果有组件系统，强制立即保存DOM元素的排序
+          if (window.componentSystem) {
+            const allElements = Array.from(shortcutsRef.current?.children || []);
+
+            // 强制更新每个元素的排序属性
+            allElements.forEach((element, index) => {
+              element.setAttribute('data-shortcut-order', index.toString());
+
+              // 组件排序信息
+              if (element.hasAttribute('data-custom-component')) {
+                const componentName = element.getAttribute('data-component-name');
+                if (componentName && window.componentSystem) {
+                  window.componentSystem.componentOrders =
+                    window.componentSystem.componentOrders || {};
+                  window.componentSystem.componentOrders[componentName] = index;
+                }
               }
 
-              // 延长等待时间，确保DOM更新后再调用updateComponentOrder
-              setTimeout(() => {
-                window.componentSystem.updateComponentOrder();
-                // 保存完成后，强制调用一次renderDesktopComponents确保顺序正确应用
-                setTimeout(() => {
-                  if (window.componentSystem.renderDesktopComponents) {
-                    window.componentSystem.renderDesktopComponents();
-                  }
-                }, 50);
-              }, 200);
+              // 网站快捷方式排序信息
+              if (element.hasAttribute('data-website-shortcut')) {
+                const shortcutTitle = element.getAttribute('data-shortcut-title');
+                if (shortcutTitle && window.componentSystem) {
+                  window.componentSystem.websiteShortcutOrders =
+                    window.componentSystem.websiteShortcutOrders || {};
+                  window.componentSystem.websiteShortcutOrders[shortcutTitle] = index;
+                }
+              }
+            });
+
+            // 直接调用localStorage保存，不依赖组件系统方法
+            try {
+              const componentOrders = window.componentSystem.componentOrders || {};
+              const websiteShortcutOrders = window.componentSystem.websiteShortcutOrders || {};
+
+              localStorage.setItem('component-orders', JSON.stringify(componentOrders));
+              localStorage.setItem(
+                'website-shortcut-orders',
+                JSON.stringify(websiteShortcutOrders),
+              );
+            } catch (e) {
+              console.error('保存排序信息失败:', e);
             }
-          } catch (e) {
-            console.error('保存快捷方式排序失败:', e);
           }
         },
       });
@@ -524,19 +545,50 @@ const Home: React.FC = () => {
   // 确保组件系统能找到正确的容器元素
   useEffect(() => {
     if (shortcutsRef.current && window.componentSystem) {
-      // 只在容器挂载时尝试渲染一次
-      if (window.componentSystem.renderDesktopComponents) {
-        window.componentSystem.renderDesktopComponents();
-      }
+      // 确保DOM和样式完全加载后再进行操作
+      setTimeout(() => {
+        // 检查网站快捷方式，确保都有正确的data-shortcut-order属性
+        if (shortcutsRef.current) {
+          const websiteElements = shortcutsRef.current.querySelectorAll(
+            '[data-website-shortcut="true"]',
+          );
 
-      // 转换现有组件为React样式
-      if (window.ComponentWrapper && shortcutsRef.current) {
-        setTimeout(() => {
-          if (shortcutsRef.current) {
-            window.ComponentWrapper.convertAllComponents(shortcutsRef.current);
+          // 获取保存的网站快捷方式顺序
+          try {
+            const savedWebsiteOrders = window.componentSystem.loadWebsiteShortcutOrders
+              ? window.componentSystem.loadWebsiteShortcutOrders()
+              : {};
+
+            websiteElements.forEach((element) => {
+              const title = element.getAttribute('data-shortcut-title');
+              if (title && savedWebsiteOrders[title] !== undefined) {
+                element.setAttribute('data-shortcut-order', savedWebsiteOrders[title].toString());
+              }
+            });
+          } catch (e) {
+            console.error('加载网站快捷方式排序失败:', e);
           }
-        }, 300);
-      }
+        }
+
+        // 渲染组件系统中的组件
+        if (window.componentSystem.renderDesktopComponents) {
+          window.componentSystem.renderDesktopComponents();
+        }
+
+        // 转换现有组件为React样式
+        if (window.ComponentWrapper && shortcutsRef.current) {
+          setTimeout(() => {
+            if (shortcutsRef.current) {
+              window.ComponentWrapper.convertAllComponents(shortcutsRef.current);
+
+              // 完成后再次初始化排序
+              if (window.componentSystem && window.componentSystem.updateComponentOrder) {
+                window.componentSystem.updateComponentOrder();
+              }
+            }
+          }, 300);
+        }
+      }, 200);
     }
   }, [shortcutsRef.current]);
 
@@ -914,7 +966,8 @@ const Home: React.FC = () => {
       </div>
 
       <div ref={shortcutsRef} className={styles.shortcutsSection} id="shortcutsRef">
-        {/* 只渲染网站类型的快捷方式，组件类型由组件系统管理 */}
+        {/* 组件类型的快捷方式由组件系统管理，会在renderDesktopComponents中动态添加 */}
+        {/* 只渲染网站类型的快捷方式，使用data-website-shortcut标记以便于组件系统识别 */}
         {shortcuts
           .filter((shortcut) => shortcut && shortcut.type === 'website')
           .map((shortcut, index) => (
