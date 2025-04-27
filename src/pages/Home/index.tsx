@@ -378,9 +378,24 @@ const Home: React.FC = () => {
 
             // 3. 同时更新组件系统中的组件顺序
             if (window.componentSystem && window.componentSystem.updateComponentOrder) {
+              // 确保所有元素都有正确的顺序属性
+              if (shortcutsRef.current) {
+                const allElements = Array.from(shortcutsRef.current.children);
+                allElements.forEach((element, index) => {
+                  element.setAttribute('data-shortcut-order', index.toString());
+                });
+              }
+
+              // 延长等待时间，确保DOM更新后再调用updateComponentOrder
               setTimeout(() => {
                 window.componentSystem.updateComponentOrder();
-              }, 100);
+                // 保存完成后，强制调用一次renderDesktopComponents确保顺序正确应用
+                setTimeout(() => {
+                  if (window.componentSystem.renderDesktopComponents) {
+                    window.componentSystem.renderDesktopComponents();
+                  }
+                }, 50);
+              }, 200);
             }
           } catch (e) {
             console.error('保存快捷方式排序失败:', e);
@@ -475,7 +490,33 @@ const Home: React.FC = () => {
           }
         }
       }
-    }, 500);
+
+      // 确保组件系统在加载完后立即渲染一次
+      if (shortcutsRef.current && window.componentSystem) {
+        setTimeout(() => {
+          if (window.componentSystem.renderDesktopComponents) {
+            window.componentSystem.renderDesktopComponents();
+
+            // 确保所有元素都有正确的order属性
+            setTimeout(() => {
+              if (shortcutsRef.current) {
+                const allElements = Array.from(shortcutsRef.current.children);
+                allElements.forEach((element, index) => {
+                  if (!element.hasAttribute('data-shortcut-order')) {
+                    element.setAttribute('data-shortcut-order', index.toString());
+                  }
+                });
+
+                // 更新顺序存储
+                if (window.componentSystem.updateComponentOrder) {
+                  window.componentSystem.updateComponentOrder();
+                }
+              }
+            }, 300);
+          }
+        }, 100);
+      }
+    }, 800); // 增加延迟确保组件系统和React都已完全初始化
 
     return () => clearTimeout(syncTimer);
   }, []);

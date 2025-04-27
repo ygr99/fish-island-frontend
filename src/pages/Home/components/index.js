@@ -247,13 +247,17 @@ class ComponentSystem {
       }
     });
 
+    // 存储已渲染的组件元素，稍后用于排序
+    const renderedElements = [];
+
     // 渲染自定义组件
     orderedComponents.forEach((component) => {
       // 检查是否已经存在同名组件元素
       const existingElement = container.querySelector(`[data-component-name="${component.name}"]`);
 
-      // 如果已存在，则跳过
+      // 如果已存在，则跳过渲染但添加到renderedElements
       if (existingElement) {
+        renderedElements.push(existingElement);
         return;
       }
 
@@ -268,13 +272,33 @@ class ComponentSystem {
       componentElement.setAttribute('data-custom-component', 'true');
       componentElement.setAttribute('data-component-name', component.name);
 
-      // 默认排序时，组件放在最前面
-      const firstDefaultApp = container.querySelector('.app-container');
-      if (firstDefaultApp) {
-        container.insertBefore(componentElement, firstDefaultApp);
-      } else {
-        container.appendChild(componentElement);
+      // 从localStorage中获取保存的顺序信息
+      const componentOrders = this.loadComponentOrders();
+      if (componentOrders && componentOrders[component.name] !== undefined) {
+        componentElement.setAttribute('data-shortcut-order', componentOrders[component.name]);
       }
+
+      // 添加到容器并保存引用
+      container.appendChild(componentElement);
+      renderedElements.push(componentElement);
+    });
+
+    // 获取网站快捷方式元素
+    const websiteElements = Array.from(
+      container.querySelectorAll('[data-website-shortcut="true"]'),
+    );
+
+    // 所有元素合并后按data-shortcut-order排序
+    const allElements = [...renderedElements, ...websiteElements];
+    allElements.sort((a, b) => {
+      const orderA = parseInt(a.getAttribute('data-shortcut-order') || '9999');
+      const orderB = parseInt(b.getAttribute('data-shortcut-order') || '9999');
+      return orderA - orderB;
+    });
+
+    // 按照排序后的顺序重新排列DOM
+    allElements.forEach((element) => {
+      container.appendChild(element);
     });
 
     // 初始化组件事件
@@ -560,6 +584,14 @@ class ComponentSystem {
 
     // 获取容器中所有的组件元素（包括自定义组件和网站快捷方式）
     const allElements = Array.from(container.children);
+
+    // 先根据data-shortcut-order属性排序所有元素
+    allElements.sort((a, b) => {
+      const orderA = parseInt(a.getAttribute('data-shortcut-order') || '9999');
+      const orderB = parseInt(b.getAttribute('data-shortcut-order') || '9999');
+      return orderA - orderB;
+    });
+
     const newOrder = [];
     const websiteOrder = []; // 新增：保存网站类型快捷方式的顺序
 
@@ -579,6 +611,10 @@ class ComponentSystem {
           websiteOrder.push(shortcutTitle);
         }
       }
+
+      // 确保每个元素都有data-shortcut-order属性
+      const orderIndex = allElements.indexOf(element);
+      element.setAttribute('data-shortcut-order', orderIndex.toString());
     });
 
     // 只有在找到至少一个组件的情况下才更新顺序
@@ -892,6 +928,9 @@ class ComponentWrapper {
     const iconClass =
       iconElement.querySelector('i')?.className || 'fa-puzzle-piece text-white text-2xl';
 
+    // 获取排序序号
+    const orderIndex = component.getAttribute('data-shortcut-order') || '';
+
     // 创建新的React风格组件结构
     const newHtml = `
       <div class="shortcutWrapper___bmAvR">
@@ -914,6 +953,11 @@ class ComponentWrapper {
     // 保留原组件的属性
     newComponent.setAttribute('data-custom-component', 'true');
     newComponent.setAttribute('data-component-name', componentName);
+    // 保留排序序号
+    if (orderIndex) {
+      newComponent.setAttribute('data-shortcut-order', orderIndex);
+    }
+
     if (component.id) {
       newComponent.querySelector('.shortcut___hastY').id = component.id;
     }
