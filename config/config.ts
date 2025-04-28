@@ -164,8 +164,8 @@ export default defineConfig({
   openAPI: [
     {
       requestLibPath: "import { request } from '@umijs/max'",
-      // schemaPath: 'https://fish.codebug.icu/fish/api/v2/api-docs',
-      schemaPath: 'https://moyuapi.codebug.icu/fish/api/v2/api-docs',
+      schemaPath: 'https://api.yucoder.cn/api/v2/api-docs',
+      // schemaPath: 'https://moyuapi.codebug.icu/fish/api/v2/api-docs',
       // schemaPath: 'http://localhost:8123/api/v2/api-docs',
       projectName: 'backend',
     },
