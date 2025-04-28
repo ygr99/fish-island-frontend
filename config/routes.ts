@@ -8,6 +8,7 @@ export default [
   { path: '/todo', icon: 'CalendarOutlined', component: './TODO', name: '每日待办', requireAuth: true },
   { path: '/chat', icon: 'MessageOutlined', component: './Chat', name: '摸鱼室', requireAuth: true },
   { path: '/reader', icon: 'BookOutlined', component: './Reader', name: '摸鱼阅读', requireAuth: true },
+  { path: '/travel', icon: 'CompassOutlined', component: './Travel', name: '摸鱼旅游', requireAuth: true },
   // { path: '/draw', icon: 'MessageOutlined', component: './Draw', name: '你画我猜', requireAuth: true },
   {
     path: '/game',
