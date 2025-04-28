@@ -369,17 +369,17 @@ const ChatRoom: React.FC = () => {
         }
       }
 
-      const res = await uploadTo111666UsingPost(
-        {},  // body 参数
-        file,  // 文件参数
-        {  // 其他选项
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
+      // const res = await uploadTo111666UsingPost(
+      //   {},  // body 参数
+      //   file,  // 文件参数
+      //   {  // 其他选项
+      //     headers: {
+      //       'Content-Type': 'multipart/form-data',
+      //     },
+      //   }
+      // );
 
-      if (!res.data || res.data === 'https://i.111666.bestnull') {
+      // if (!res.data || res.data === 'https://i.111666.bestnull') {
         // 如果上传失败或返回的是兜底URL，使用备用上传逻辑
         const fallbackRes = await uploadFileByMinioUsingPost(
           { biz: 'user_file' },  // 业务标识参数
@@ -398,10 +398,10 @@ const ChatRoom: React.FC = () => {
 
         // 设置预览图片
         setPendingImageUrl(fallbackRes.data);
-      } else {
-        // 设置预览图片
-        setPendingImageUrl(res.data);
-      }
+      // } else {
+      //   // 设置预览图片
+      //   setPendingImageUrl(res.data);
+      // }
 
     } catch (error) {
       messageApi.error(`上传失败：${error}`);
