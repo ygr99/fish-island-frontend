@@ -21,17 +21,6 @@ export default {
   //     changeOrigin: true,
   //   },
   // },
-  dev: {
-    // 只对 /api/ 路径进行代理，但仅当它来自 public/components 目录
-    '/api/': {
-      target: 'http://123.60.153.252:99',
-      changeOrigin: true,
-      // 添加路径过滤，只处理来自 public/components 的请求
-      filter: (pathname: string) => {
-        return pathname.includes('/public/components/');
-      },
-    },
-  },
 
   /**
    * @name 详细的代理配置
