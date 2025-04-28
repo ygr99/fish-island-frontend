@@ -1,0 +1,472 @@
+.travelContainer {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.travelCard {
+  width: 100%;
+  max-width: 800px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
+  color: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.travelContainerFullscreen {
+  display: flex;
+  justify-content: center;
+  padding: 0;
+  height: 100vh;
+  width: 100vw;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  background: #000;
+}
+
+.travelCardFullscreen {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  border-radius: 0;
+  overflow: hidden;
+  background: none;
+  
+  :global(.ant-card-head) {
+    display: none;
+  }
+  
+  :global(.ant-card-body) {
+    padding: 0;
+  }
+}
+
+.cardTitle {
+  font-size: 18px;
+  color: white;
+  
+  .subtitle {
+    font-size: 12px;
+    margin-top: 2px;
+    opacity: 0.8;
+  }
+}
+
+.travelForm {
+  padding: 20px 0;
+  
+  .formItem {
+    margin-bottom: 16px;
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+  }
+}
+
+.startButton {
+  margin-top: 20px;
+  height: 48px;
+  font-size: 18px;
+  background: #00c853;
+  border: none;
+  
+  &:hover {
+    background: #00a040;
+  }
+}
+
+.vehicleOption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  
+  .speedInfo {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+  }
+}
+
+.mapFeatureInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+.travelProgress {
+  padding: 5px 0;
+  height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+}
+
+.travelHeader {
+  position: relative;
+  margin-bottom: 12px;
+  text-align: center;
+  padding: 8px 0;
+  
+  h4 {
+    margin: 2px 0 4px;
+    color: white;
+    font-size: 18px;
+  }
+}
+
+.backButton {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  font-size: 12px;
+  
+  &:hover {
+    color: #00c853;
+  }
+}
+
+.vehicleInfo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 0;
+}
+
+.weatherInfo {
+  margin-top: 2px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 4px;
+    background-color: #64b5f6;
+  }
+}
+
+.progressInfo {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.progressItem {
+  margin-bottom: 4px;
+  width: 100%;
+  
+  :global(.ant-progress-text) {
+    color: white;
+    font-size: 12px;
+  }
+  
+  :global(.ant-progress) {
+    line-height: 1;
+  }
+  
+  :global(.ant-progress-inner) {
+    height: 6px;
+  }
+  
+  :global(.ant-progress-bg) {
+    height: 6px !important;
+  }
+}
+
+.travelStats {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 0;
+  width: 100%;
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  
+  span {
+    font-size: 12px;
+  }
+}
+
+.travelVoice {
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-style: italic;
+  font-size: 12px;
+}
+
+.mapContainer {
+  height: 300px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 20px;
+  background-color: #263238;
+  position: relative;
+  flex: 1;
+}
+
+.mapContainerFullscreen {
+  flex: 1;
+  height: auto;
+  margin: 0;
+  border-radius: 0;
+}
+
+.floatingControls {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 100;
+}
+
+.controlButton {
+  width: 40px;
+  height: 40px;
+  background-color: rgba(0, 0, 0, 0.6);
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+}
+
+.weatherDisplay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 12px;
+  color: white;
+  font-weight: 400;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-right: 4px;
+    background-color: #1E88E5;
+  }
+}
+
+.threeDButton {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 4px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 700;
+  color: #333;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  
+  &:hover {
+    background-color: rgba(255, 255, 255, 1);
+  }
+}
+
+.bottomPanel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));
+  padding: 12px 20px;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+}
+
+.travelVoiceCompact {
+  color: white;
+  font-size: 12px;
+  margin-bottom: 8px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.progressBar {
+  height: 3px;
+  position: relative;
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 1.5px;
+  overflow: hidden;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: var(--progress-percent, 0%);
+    background-color: #2196F3;
+    border-radius: 1.5px;
+  }
+}
+
+.destinationInfo {
+  position: absolute;
+  bottom: 50px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 90;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.distanceMarker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.timeMarker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mapLoadingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 10;
+  border-radius: 8px;
+  
+  :global(.ant-spin-text) {
+    color: white;
+    margin-top: 8px;
+  }
+  
+  :global(.ant-spin-dot-item) {
+    background-color: #1976d2;
+  }
+}
+
+.topDirectionInfo {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  z-index: 100;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.directionPlace {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.directionVehicle {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+:global {
+  .ant-card-head {
+    min-height: 40px;
+    padding: 0 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .ant-card-head-title {
+    padding: 8px 0;
+  }
+  
+  .ant-card-body {
+    padding: 12px;
+    color: white;
+  }
+  
+  .ant-divider {
+    color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+    margin: 8px 0;
+    font-size: 12px;
+    
+    &::before, &::after {
+      width: 5%;
+    }
+  }
+  
+  .ant-select-selector, .ant-input, .ant-input-affix-wrapper {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+  }
+  
+  .ant-select-selection-item {
+    color: white !important;
+  }
+  
+  .ant-select-arrow {
+    color: rgba(255, 255, 255, 0.8) !important;
+  }
+  
+  .ant-input-prefix {
+    color: rgba(255, 255, 255, 0.8) !important;
+  }
+  
+  .ant-progress-inner {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .ant-progress-bg {
+    background-color: #00c853;
+  }
+} 
