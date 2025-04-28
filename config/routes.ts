@@ -44,11 +44,10 @@ export default [
   {
     path: '/rank',
     icon: 'github',
-    name: '关于网站',
+    name: '支持网站',
     routes: [
       { icon: 'DesktopOutlined', path: '/rank/reward', component: './Rank/Reward', name: '打赏榜 👑', requireAuth: false },
       { icon: 'DesktopOutlined', path: '/rank/about', component: './About', name: '共建与反馈 🚀', requireAuth: false },
-      { icon: 'DesktopOutlined', path: '/rank/other', component: './Other', name: '其他产品 🔥', requireAuth: false },
       {path: 'https://github.com/lhccong/fish-island-backend', name: '狠狠点个 star 🌟'},
 
     ],
