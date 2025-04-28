@@ -93,19 +93,18 @@ const ChapterList: React.FC<ChapterListProps> = ({ book, onChapterSelect, settin
 
   // 加载章节
   useEffect(() => {
-    // console.log('ChapterList组件初始化或book变更', book.id););
-    
+
     // 防止重复初始化
     if (hasInitializedRef.current && book.chapters && book.chapters.length > 0) {
-      // console.log('ChapterList组件已初始化且有缓存数据，跳过加载'););
+
       setChapters(book.chapters);
       setFilteredChapters(book.chapters);
       setLoading(false);
       return;
     }
-    
+
     hasInitializedRef.current = true;
-    
+
     const loadChapters = async () => {
       setLoading(true);
       try {
@@ -115,7 +114,7 @@ const ChapterList: React.FC<ChapterListProps> = ({ book, onChapterSelect, settin
           const books = JSON.parse(savedBooks);
           const savedBook = books.find((b: Book) => b.id === book.id);
           if (savedBook && savedBook.chapters && savedBook.chapters.length > 0) {
-            // console.log('从localStorage获取最新章节数据', savedBook.chapters.length););
+
             setChapters(savedBook.chapters);
             setFilteredChapters(savedBook.chapters);
             // 标记该书籍已加载章节列表
@@ -124,24 +123,24 @@ const ChapterList: React.FC<ChapterListProps> = ({ book, onChapterSelect, settin
             return;
           }
         }
-        
+
         if (book.chapters && book.chapters.length > 0) {
           // 如果已有章节数据，直接使用缓存数据
-          // console.log('使用book对象中的章节数据', book.chapters.length););
+
           setChapters(book.chapters);
           setFilteredChapters(book.chapters);
-          
+
           // 标记该书籍已加载章节列表
           loadedBooksCache.add(book.id);
         } else if (book.source === 'online' && book.url && !loadedBooksCache.has(book.id)) {
           // 只有当书籍没有章节列表且未曾加载过时，才调用API
-          // console.log('书籍无章节缓存，调用API获取章节列表'););
+
           await refreshChapters();
-          
+
           // 标记该书籍已加载章节列表
           loadedBooksCache.add(book.id);
         } else if (!book.chapters || book.chapters.length === 0) {
-          // console.log('书籍无章节数据，但已加载过或不是在线书籍'););
+
           message.info('无法获取章节列表，请尝试刷新');
         }
       } catch (error) {
@@ -186,7 +185,7 @@ const ChapterList: React.FC<ChapterListProps> = ({ book, onChapterSelect, settin
   // 获取章节内容
   const fetchChapterContent = async (chapter: Chapter) => {
     if (loadingContent) return; // 防止重复请求
-    
+
     // 首先检查localStorage中的最新数据
     const savedBooks = localStorage.getItem("fish-reader-books");
     if (savedBooks) {
@@ -195,16 +194,16 @@ const ChapterList: React.FC<ChapterListProps> = ({ book, onChapterSelect, settin
       if (savedBook && savedBook.chapters) {
         const savedChapter = savedBook.chapters.find((c: Chapter) => c.index === chapter.index);
         if (savedChapter && savedChapter.content) {
-          // console.log(`从localStorage获取章节"${chapter.title}"内容，长度: ${savedChapter.content.length}`););
+
           // 更新本地章节列表
           if (!chapter.content) {
             const updatedChapter = { ...chapter, content: savedChapter.content };
-            const updatedChapters = chapters.map((c: Chapter) => 
+            const updatedChapters = chapters.map((c: Chapter) =>
               c.index === chapter.index ? updatedChapter : c
             );
             setChapters(updatedChapters);
-            setFilteredChapters(searchText ? 
-              filteredChapters.map((c: Chapter) => c.index === chapter.index ? updatedChapter : c) : 
+            setFilteredChapters(searchText ?
+              filteredChapters.map((c: Chapter) => c.index === chapter.index ? updatedChapter : c) :
               updatedChapters
             );
           }
@@ -212,78 +211,78 @@ const ChapterList: React.FC<ChapterListProps> = ({ book, onChapterSelect, settin
         }
       }
     }
-    
+
     // 如果章节已有内容，直接返回
     if (chapter.content) {
-      // console.log(`章节"${chapter.title}"已有内容，直接使用缓存`););
+
       return chapter;
     }
-    
+
     setLoadingContent(true);
     message.loading('获取章节内容...', 0);
-    
+
     try {
       const timestamp = new Date().getTime();
       // 从settings中获取accessToken和apiBaseUrl
-      const accessToken = settings.accessToken || 'guest:49bc67e197c44885322d093a603ffd45';
-      const apiBaseUrl = settings.apiBaseUrl || 'https://reader.nxnow.top/reader3';
+      const accessToken = settings.accessToken || 'congg:7e0efee65786976202e4fc20c6a98d89';
+      const apiBaseUrl = settings.apiBaseUrl || 'https://reader.yucoder.cn/reader3';
       const apiUrl = `${apiBaseUrl}${API_URLS.BOOK_CONTENT}?accessToken=${accessToken}&v=${timestamp}`;
-      
-      // console.log(`发送获取章节内容请求: ${apiUrl}`););
-      // console.log(`请求参数: url=${book.url}, index=${chapter.index}`););
-      
+
+
+
+
       const response = await axios.post(apiUrl, {
         url: book.url,
         index: chapter.index
       });
-      
-      // console.log('章节内容API响应状态:', response.status););
-      // console.log('章节内容API响应数据结构:', Object.keys(response.data || {})););
-      
+
+
+
+
       if (response.data && response.data.data) {
         // 直接获取response.data.data作为内容，而不是response.data.data.content
         const content = response.data.data || '';
-        
-        // console.log(`获取到的内容类型: ${typeof content}`););
-        // console.log(`内容长度: ${content.length || 0}`););
-        
+
+
+
+
         if (content && content.length > 0) {
-          // console.log(`成功获取章节"${chapter.title}"内容，长度: ${content.length}`););
-          
+
+
           // 更新章节内容
           const updatedChapter = { ...chapter, content };
-          
+
           // 更新章节列表中对应章节的内容
-          const updatedChapters = chapters.map(c => 
+          const updatedChapters = chapters.map(c =>
             c.index === chapter.index ? updatedChapter : c
           );
-          
+
           setChapters(updatedChapters);
-          
+
           // 同步更新过滤后的章节列表
           if (searchText) {
-            const updatedFilteredChapters = filteredChapters.map(c => 
+            const updatedFilteredChapters = filteredChapters.map(c =>
               c.index === chapter.index ? updatedChapter : c
             );
             setFilteredChapters(updatedFilteredChapters);
           } else {
             setFilteredChapters(updatedChapters);
           }
-          
+
           // 更新本地存储
           const updatedBook = {
             ...book,
             chapters: updatedChapters,
             lastReadChapter: chapter.index
           };
-          
+
           // 保存到本地存储
           updateBookInStorage(updatedBook);
-          
+
           message.success(`章节"${chapter.title}"内容加载完成`);
-          
+
           // 确认返回带内容的章节对象
-          // console.log(`返回更新后的章节对象，内容长度: ${updatedChapter.content.length}`););
+
           return updatedChapter;
         } else {
           console.error('获取到的内容为空');
@@ -300,22 +299,22 @@ const ChapterList: React.FC<ChapterListProps> = ({ book, onChapterSelect, settin
       setLoadingContent(false);
       message.destroy(); // 关闭加载提示
     }
-    
+
     return chapter;
   };
 
   // 处理章节点击
   const handleChapterClick = async (chapter: Chapter) => {
-    // console.log(`点击章节: ${chapter.title}, 索引: ${chapter.index}`););
-    
+
+
     // 检查章节内容是否存在，不存在则获取
     if (!chapter.content && book.source === 'online') {
-      // console.log('章节无内容，开始获取内容'););
+
       const updatedChapter = await fetchChapterContent(chapter) || chapter;
       // 不管有没有内容，都调用父组件回调，并传递章节对象
       onChapterSelect(chapter.index, updatedChapter);
     } else {
-      // console.log('章节已有内容或非在线书籍，直接使用现有内容'););
+
       // 直接调用父组件的回调，并传递章节对象
       onChapterSelect(chapter.index, chapter);
     }
@@ -344,30 +343,30 @@ const ChapterList: React.FC<ChapterListProps> = ({ book, onChapterSelect, settin
         const books = JSON.parse(savedBooks);
         const savedBook = books.find((b: Book) => b.id === book.id);
         if (savedBook && savedBook.chapters && savedBook.chapters.length > 0) {
-          // console.log('使用本地存储中的章节数据，跳过API调用'););
+
           setChapters(savedBook.chapters);
           setFilteredChapters(savedBook.chapters);
           setLoading(false);
           setRefreshing(false);
-          
+
           // 短时间内禁用刷新按钮
           setTimeout(() => {
             setRefreshDisabled(false);
           }, 1000);
-          
+
           return;
         }
       }
-      
+
       const timestamp = new Date().getTime();
       // 从settings中获取accessToken和apiBaseUrl
-      const accessToken = settings.accessToken || 'guest:49bc67e197c44885322d093a603ffd45';
-      const apiBaseUrl = settings.apiBaseUrl || 'https://reader.nxnow.top/reader3';
+      const accessToken = settings.accessToken || 'congg:7e0efee65786976202e4fc20c6a98d89';
+      const apiBaseUrl = settings.apiBaseUrl || 'https://reader.yucoder.cn/reader3';
       const apiUrl = `${apiBaseUrl}${API_URLS.CHAPTER_LIST}?accessToken=${accessToken}&v=${timestamp}`;
-      
-      // console.log(`发送章节列表请求: ${apiUrl}`););
-      // console.log(`请求参数: url=${book.url}, refresh=0, bookSourceUrl=${book.sourceInfo.url}`););
-      
+
+
+
+
       const response = await axios.post(apiUrl, {
         url: book.url || book.sourceInfo.url,
         refresh: 0, // 不强制刷新
@@ -377,7 +376,7 @@ const ChapterList: React.FC<ChapterListProps> = ({ book, onChapterSelect, settin
       // 检查响应数据格式并正确处理
       if (response.data && response.data.data && Array.isArray(response.data.data)) {
         const parsedChapters = response.data.data;
-        
+
         if (parsedChapters.length > 0) {
           // 保留现有章节的内容
           if (chapters.length > 0) {
@@ -388,16 +387,16 @@ const ChapterList: React.FC<ChapterListProps> = ({ book, onChapterSelect, settin
               }
             });
           }
-          
+
           setChapters(parsedChapters);
           setFilteredChapters(parsedChapters);
-          
+
           // 同时更新本地存储
           const updatedBook = {
             ...book,
             chapters: parsedChapters
           };
-          
+
           // 更新本地存储中的书籍章节信息
           updateBookInStorage(updatedBook);
           message.success(`成功获取 ${parsedChapters.length} 个章节`);
@@ -425,16 +424,16 @@ const ChapterList: React.FC<ChapterListProps> = ({ book, onChapterSelect, settin
   useEffect(() => {
     if (!loading && filteredChapters.length > 0 && book.lastReadChapter !== undefined && book.lastReadChapter >= 0 && currentChapterRef.current && listContainerRef.current) {
       // 使用setTimeout确保DOM已完全渲染
-      // console.log(`尝试滚动到当前章节: ${book.lastReadChapter}`););
+
       setTimeout(() => {
         if (currentChapterRef.current) {
-          // console.log('滚动到当前阅读章节'););
+
           currentChapterRef.current.scrollIntoView({
             behavior: 'smooth',
             block: 'center'
           });
         } else {
-          // console.log('未找到当前章节引用，无法滚动'););
+
         }
       }, 300);
     }
@@ -548,4 +547,4 @@ const ChapterList: React.FC<ChapterListProps> = ({ book, onChapterSelect, settin
   );
 };
 
-export default ChapterList; 
+export default ChapterList;

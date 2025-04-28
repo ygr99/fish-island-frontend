@@ -45,9 +45,10 @@ interface EmailRegisterRequest {
 interface LoginRegisterProps {
   isModalOpen: boolean;
   onCancel: () => void;
+  onForgotPassword?: () => void;
 }
 
-const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel }) => {
+const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, onForgotPassword }) => {
   const [type, setType] = useState<string>('login');
   const [form] = Form.useForm();
   const [valueData, setValueData] = useState<API.UserRegisterRequest>();
@@ -254,6 +255,18 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel }) 
                     },
                   ]}
                 />
+                <div style={{ textAlign: 'right', marginTop: '-8px', marginBottom: '8px' }}>
+                  <Button
+                    type="link"
+                    style={{ padding: 0, fontSize: 13 }}
+                    onClick={() => {
+                      onCancel();
+                      onForgotPassword && onForgotPassword();
+                    }}
+                  >
+                    忘记密码？
+                  </Button>
+                </div>
               </>
             )}
             {type === 'register' && (

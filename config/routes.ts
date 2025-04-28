@@ -1,8 +1,8 @@
 export default [
   { path: '/user', layout: false, requireAuth: false, routes: [
-    { path: '/user/login', component: './User/Login', requireAuth: false },
-    { path: '/user/register', component: './User/Register', requireAuth: false }
-  ]},
+      { path: '/user/login', component: './User/Login', requireAuth: false },
+      { path: '/user/register', component: './User/Register', requireAuth: false }
+    ]},
   { path: '/index', icon: 'BarsOutlined', component: './Index', name: '最新', requireAuth: false },
   { path: '/home', layout: false, icon: 'smile', component: './Home', name: '浏览器页面', requireAuth: false },
   { path: '/todo', icon: 'CalendarOutlined', component: './TODO', name: '每日待办', requireAuth: true },
@@ -44,9 +44,11 @@ export default [
   {
     path: '/rank',
     icon: 'github',
-    name: '支持网站',
+    name: '关于网站',
     routes: [
       { icon: 'DesktopOutlined', path: '/rank/reward', component: './Rank/Reward', name: '打赏榜 👑', requireAuth: false },
+      { icon: 'DesktopOutlined', path: '/rank/about', component: './About', name: '共建与反馈 🚀', requireAuth: false },
+      { icon: 'DesktopOutlined', path: '/rank/other', component: './Other', name: '其他产品 🔥', requireAuth: false },
       {path: 'https://github.com/lhccong/fish-island-backend', name: '狠狠点个 star 🌟'},
 
     ],

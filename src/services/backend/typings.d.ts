@@ -68,6 +68,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseListVO_ = {
+    code?: number;
+    data?: VO[];
+    message?: string;
+  };
+
   type BaseResponseLoginUserVO_ = {
     code?: number;
     data?: LoginUserVO;
@@ -149,6 +155,12 @@ declare namespace API {
   type BaseResponsePostVO_ = {
     code?: number;
     data?: PostVO;
+    message?: string;
+  };
+
+  type BaseResponseRedPacket_ = {
+    code?: number;
+    data?: RedPacket;
     message?: string;
   };
 
@@ -245,6 +257,16 @@ declare namespace API {
     /** 区域 */
     region?: string;
     response?: Response;
+  };
+
+  type CreateRedPacketRequest = {
+    /** 红包个数 */
+    count: number;
+    name?: string;
+    /** 红包总金额（积分） */
+    totalAmount: number;
+    /** 红包类型：1-随机红包，2-平均红包 */
+    type: number;
   };
 
   type Credentials = {
@@ -351,6 +373,16 @@ declare namespace API {
     id?: number;
   };
 
+  type getRedPacketDetailUsingGETParams = {
+    /** 红包ID */
+    redPacketId: string;
+  };
+
+  type getRedPacketRecordsUsingGETParams = {
+    /** 红包ID */
+    redPacketId: string;
+  };
+
   type getUserByIdUsingGETParams = {
     /** id */
     id?: number;
@@ -359,6 +391,11 @@ declare namespace API {
   type getUserVoByIdUsingGETParams = {
     /** id */
     id?: number;
+  };
+
+  type grabRedPacketUsingPOSTParams = {
+    /** 红包ID */
+    redPacketId: string;
   };
 
   type HotPostDataVO = {
@@ -767,6 +804,24 @@ declare namespace API {
     userId?: number;
   };
 
+  type RedPacket = {
+    amountPerPacket?: number;
+    count?: number;
+    createTime?: string;
+    creatorAvatar?: string;
+    creatorId?: number;
+    creatorName?: string;
+    expireTime?: string;
+    grabCount?: number;
+    id?: string;
+    name?: string;
+    remainingAmount?: number;
+    remainingCount?: number;
+    status?: number;
+    totalAmount?: number;
+    type?: number;
+  };
+
   type renderAuthUsingGETParams = {
     /** source */
     source: string;
@@ -982,6 +1037,23 @@ declare namespace API {
 
   type View = {
     contentType?: string;
+  };
+
+  type VO = {
+    /** 抢到的金额 */
+    amount?: number;
+    /** 抢红包时间 */
+    grabTime?: string;
+    /** 记录ID */
+    id?: string;
+    /** 红包ID */
+    redPacketId?: string;
+    /** 用户头像 */
+    userAvatar?: string;
+    /** 用户ID */
+    userId?: number;
+    /** 用户昵称 */
+    userName?: string;
   };
 
   type WebParseVO = {

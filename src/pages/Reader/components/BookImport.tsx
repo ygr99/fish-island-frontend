@@ -14,8 +14,8 @@ import { BookOutlined, SearchOutlined, LoadingOutlined, GlobalOutlined, DownOutl
 const { Search } = Input;
 
 // 全局变量
-const SEARCH_URL = 'https://reader.nxnow.top/reader3/searchBookMultiSSE';
-const ACCESS_TOKEN = 'guest:49bc67e197c44885322d093a603ffd45';
+const SEARCH_URL = 'https://reader.yucoder.cn/reader3/searchBookMultiSSE';
+const ACCESS_TOKEN = 'congg:7e0efee65786976202e4fc20c6a98d89';
 
 interface BookImportProps {
   onAddLocalBook: (book: any) => void;
@@ -50,7 +50,7 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  
+
   // 使用ref保存EventSource实例和最后index值，便于后续清理
   const eventSourceRef = useRef<EventSource | null>(null);
   const lastIndexRef = useRef<number>(-1);
@@ -94,7 +94,7 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
     lastIndexRef.current = -1;
     setPage(1);
     setHasMore(false);
-    
+
     // 清理之前可能存在的连接
     cleanupEventSource();
 
@@ -108,30 +108,30 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
       page: '1',
       accessToken: ACCESS_TOKEN
     });
-    
+
     const searchUrl = `${SEARCH_URL}?${queryParams.toString()}`;
-    
+
     try {
       // 创建SSE连接
       const eventSource = new EventSource(searchUrl);
       eventSourceRef.current = eventSource;
-      
+
       let newResults: SearchResult[] = [];
-      
+
       // 监听message事件
       eventSource.onmessage = (event) => {
         try {
           // 提取data部分
           const data = event.data.trim();
           if (!data) return;
-          
+
           // 解析JSON
           const parsedData = JSON.parse(data);
           setLastIndex(parsedData.lastIndex);
-          
+
           // 过滤封面为空的数据
           let filteredData = parsedData.data && Array.isArray(parsedData.data) ? parsedData.data.filter((item: SearchResult) => item.coverUrl) : [];
-            
+
           // 合并搜索结果
           if (filteredData.length > 0) {
             newResults = [...newResults, ...filteredData];
@@ -141,24 +141,23 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
           console.error('解析SSE消息失败:', error);
         }
       };
-      
+
       // 监听end事件
       eventSource.addEventListener('end', (event) => {
         try {
           const data = event.data.trim();
           if (!data) return;
-          
+
           const parsedData = JSON.parse(data);
-          // console.log('收到end事件:', parsedData);
-          
+
           // 更新lastIndex
           if (parsedData.lastIndex !== undefined) {
             setLastIndex(parsedData.lastIndex);
           }
-          
+
           // 根据isEnd确定是否还有更多数据
           setHasMore(parsedData.isEnd === false);
-          
+
           // 完成搜索
           eventSource.close();
           eventSourceRef.current = null;
@@ -167,7 +166,7 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
           console.error('解析end事件失败:', error);
         }
       });
-      
+
       // 监听错误
       eventSource.onerror = (error) => {
         console.error('SSE连接错误:', error);
@@ -176,20 +175,20 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
         eventSourceRef.current = null;
         setSearching(false);
       };
-      
+
       // 监听连接关闭
       eventSource.addEventListener('complete', () => {
-        // console.log('搜索完成, lastIndex:', lastIndexRef.current);
+
         eventSource.close();
         eventSourceRef.current = null;
         setSearching(false);
-        
+
         // 如果没有收到end事件，我们假设有更多结果
         if (newResults.length > 0) {
           setHasMore(true);
         }
       });
-      
+
     } catch (error) {
       console.error('创建SSE连接失败:', error);
       message.error('搜索请求失败，请检查网络连接');
@@ -200,10 +199,10 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
   // 加载更多结果
   const loadMore = () => {
     if (loadingMore || !hasMore) return;
-    
+
     setLoadingMore(true);
     const nextPage = page + 1;
-    
+
     // 构建搜索URL
     const queryParams = new URLSearchParams({
       key: searchKeyword,
@@ -214,23 +213,23 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
       page: nextPage.toString(),
       accessToken: ACCESS_TOKEN
     });
-    
+
     const searchUrl = `${SEARCH_URL}?${queryParams.toString()}`;
-    
+
     try {
       // 创建SSE连接
       const eventSource = new EventSource(searchUrl);
       eventSourceRef.current = eventSource;
-      
+
       let newResults: SearchResult[] = [];
-      
+
       // 监听message事件
       eventSource.onmessage = (event) => {
         try {
           // 提取data部分
           const data = event.data.trim();
           if (!data) return;
-          
+
           // 解析JSON
           const parsedData = JSON.parse(data);
           setLastIndex(parsedData.lastIndex);
@@ -244,24 +243,24 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
           console.error('解析SSE消息失败:', error);
         }
       };
-      
+
       // 监听end事件
       eventSource.addEventListener('end', (event) => {
         try {
           const data = event.data.trim();
           if (!data) return;
-          
+
           const parsedData = JSON.parse(data);
-          // console.log('加载更多收到end事件:', parsedData);
-          
+
+
           // 更新lastIndex
           if (parsedData.lastIndex !== undefined) {
             setLastIndex(parsedData.lastIndex);
           }
-          
+
           // 根据isEnd确定是否还有更多数据
           setHasMore(parsedData.isEnd === false);
-          
+
           // 完成加载
           eventSource.close();
           eventSourceRef.current = null;
@@ -271,7 +270,7 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
           console.error('解析end事件失败:', error);
         }
       });
-      
+
       // 监听错误
       eventSource.onerror = (error) => {
         console.error('SSE连接错误:', error);
@@ -279,21 +278,21 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
         eventSourceRef.current = null;
         setLoadingMore(false);
       };
-      
+
       // 监听连接关闭
       eventSource.addEventListener('complete', () => {
-        // console.log('加载更多完成, lastIndex:', lastIndexRef.current);
+
         eventSource.close();
         eventSourceRef.current = null;
         setLoadingMore(false);
         setPage(nextPage);
-        
+
         // 如果没有收到end事件，我们假设有更多结果
         if (newResults.length > 0) {
           setHasMore(true);
         }
       });
-      
+
     } catch (error) {
       console.error('创建SSE连接失败:', error);
       message.error('加载更多失败，请检查网络连接');
@@ -320,18 +319,18 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
       lastReadChapter: 0,
       lastReadTime: null
     };
-    
+
     onAddOnlineBook(newBook);
     message.success(`已添加《${result.name}》到书架`);
   };
 
   return (
     <div style={{ position: 'relative', height: '70vh', display: 'flex', flexDirection: 'column' }}>
-      <div 
-        style={{ 
-          position: 'sticky', 
-          top: 0, 
-          zIndex: 10, 
+      <div
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
           background: '#fff',
           padding: '12px 0',
           borderBottom: '1px solid #f0f0f0'
@@ -347,13 +346,13 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
           onSearch={handleSearch}
         />
       </div>
-      
+
       <div style={{ flex: 1, overflow: 'auto', padding: '8px 0' }}>
         {searching && searchResults.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '30px 0' }}>
-            <Spin 
-              indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} 
-              tip="正在搜索..." 
+            <Spin
+              indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />}
+              tip="正在搜索..."
             />
           </div>
         ) : searchResults.length > 0 ? (
@@ -365,10 +364,10 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
                 <List.Item
                   key={`${result.bookUrl}-${result.origin}`}
                   actions={[
-                    <Button 
-                      key="add" 
-                      type="primary" 
-                      size="small" 
+                    <Button
+                      key="add"
+                      type="primary"
+                      size="small"
                       onClick={() => addSearchResultToShelf(result)}
                     >
                       添加到书架
@@ -376,9 +375,9 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
                   ]}
                   extra={
                     result.coverUrl ? (
-                      <img 
-                        width={70} 
-                        alt={result.name} 
+                      <img
+                        width={70}
+                        alt={result.name}
                         src={result.coverUrl}
                         style={{ maxHeight: 100, objectFit: 'cover' }}
                         onError={(e) => {
@@ -392,12 +391,12 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
                               div.style.display = 'flex';
                               div.style.alignItems = 'center';
                               div.style.justifyContent = 'center';
-                              
+
                               const icon = document.createElement('span');
                               icon.className = 'anticon anticon-book';
                               icon.style.fontSize = '24px';
                               icon.style.color = '#999';
-                              
+
                               div.appendChild(icon);
                               return div;
                             })()
@@ -436,12 +435,12 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
                             <span>字数: {result.wordCount}</span>
                           )}
                         </div>
-                        <div style={{ 
-                          fontSize: 12, 
-                          color: '#1890ff', 
+                        <div style={{
+                          fontSize: 12,
+                          color: '#1890ff',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap' 
+                          whiteSpace: 'nowrap'
                         }}>
                           <GlobalOutlined style={{ marginRight: 4 }} />
                           {result.originName || result.origin}
@@ -450,12 +449,12 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
                     }
                   />
                   {result.intro && (
-                    <Tooltip 
+                    <Tooltip
                       title={
-                        <div style={{ 
-                          width: '100%', 
-                          padding: '10px', 
-                          whiteSpace: 'normal', 
+                        <div style={{
+                          width: '100%',
+                          padding: '10px',
+                          whiteSpace: 'normal',
                           wordBreak: 'break-word',
                           wordWrap: 'break-word',
                           fontSize: '14px',
@@ -463,10 +462,10 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
                         }}>
                           {result.intro}
                         </div>
-                      } 
-                      placement="bottomLeft" 
-                      color="#fff" 
-                      overlayInnerStyle={{ 
+                      }
+                      placement="bottomLeft"
+                      color="#fff"
+                      overlayInnerStyle={{
                         color: '#333',
                         minWidth: '400px',
                         maxWidth: '600px',
@@ -474,8 +473,8 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
                         overflow: 'auto'
                       }}
                     >
-                      <div style={{ 
-                        fontSize: 13, 
+                      <div style={{
+                        fontSize: 13,
                         color: '#666',
                         margin: '4px 0 0',
                         display: '-webkit-box',
@@ -493,8 +492,8 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
               )}
               footer={
                 hasMore ? (
-                  <div 
-                    style={{ 
+                  <div
+                    style={{
                       textAlign: 'center',
                       padding: '12px 0',
                       cursor: 'pointer',
@@ -514,7 +513,7 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
                 ) : null
               }
             />
-            
+
             {searching && (
               <div style={{ textAlign: 'center', padding: '12px 0' }}>
                 <Spin size="small" tip="搜索中..." />
@@ -524,10 +523,10 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
         ) : searchKeyword && !searching ? (
           <Empty description="没有找到相关书籍" />
         ) : (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '40px 0', 
-            color: '#999' 
+          <div style={{
+            textAlign: 'center',
+            padding: '40px 0',
+            color: '#999'
           }}>
             <SearchOutlined style={{ fontSize: 40, color: '#ccc', display: 'block', marginBottom: 16 }} />
             <p>输入关键词搜索书籍</p>
@@ -538,4 +537,4 @@ const BookImport: React.FC<BookImportProps> = ({ onAddOnlineBook }) => {
   );
 };
 
-export default BookImport; 
+export default BookImport;

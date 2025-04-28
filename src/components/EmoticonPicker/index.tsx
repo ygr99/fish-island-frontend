@@ -19,8 +19,10 @@ interface Emoticon {
   isError?: boolean;
 }
 
-interface BaiduEmoticon {
-  url: string;
+interface SogouEmoticon {
+  thumbSrc: string;
+  idx: number;
+  source: string;
   isError?: boolean;
 }
 
@@ -34,15 +36,15 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
   const { initialState } = useModel('@@initialState');
   const { currentUser } = initialState || {};
   const [keyword, setKeyword] = useState('');
-  const [baiduEmoticons, setBaiduEmoticons] = useState<BaiduEmoticon[]>([]);
-  const [baiduLoading, setBaiduLoading] = useState(false);
-  const [baiduPage, setBaiduPage] = useState(1);
+  const [sogouEmoticons, setSogouEmoticons] = useState<SogouEmoticon[]>([]);
+  const [sogouLoading, setSogouLoading] = useState(false);
+  const [sogouPage, setSogouPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [favoriteEmoticons, setFavoriteEmoticons] = useState<API.EmoticonFavour[]>([]);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [favoritePage, setFavoritePage] = useState(1);
   const [favoriteHasMore, setFavoriteHasMore] = useState(true);
-  const baiduListRef = useRef<HTMLDivElement>(null);
+  const sogouListRef = useRef<HTMLDivElement>(null);
   const favoriteListRef = useRef<HTMLDivElement>(null);
   const hasFetchedFavorites = useRef(false);
 
@@ -141,43 +143,54 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
     }
   };
 
-  const searchBaiduEmoticons = async (searchKeyword: string, page: number = 1) => {
+  const searchSogouEmoticons = async (searchKeyword: string, page: number = 1) => {
     if (!searchKeyword.trim()) {
-      setBaiduEmoticons([]);
+      setSogouEmoticons([]);
       return;
     }
 
-    setBaiduLoading(true);
+    setSogouLoading(true);
     try {
       const response = await fetch(
-        `https://cn.apihz.cn/api/img/apihzbqbbaidu.php?id=88888888&key=88888888&limit=${PAGE_SIZE}&page=${page}&words=${encodeURIComponent(searchKeyword)}`
+        `https://moyuapi.codebug.icu/sogou-api/napi/wap/emoji/searchlist?keyword=${encodeURIComponent(searchKeyword)}&spver=&rcer=&tag=0&routeName=emosearch`
       );
       const data = await response.json();
-      if (data.code === 200 && data.res) {
-        const newEmoticons = data.res.map((url: string) => ({ url, isError: false }));
+      if (data.status === 0 && data.data?.emotions) {
+        const newEmoticons = data.data.emotions.map((emoticon: Emoticon) => ({ ...emoticon, isError: false }));
+        // 如果是第一页，直接设置新结果
         if (page === 1) {
-          setBaiduEmoticons(newEmoticons);
+          setSogouEmoticons(newEmoticons);
         } else {
-          setBaiduEmoticons(prev => [...prev, ...newEmoticons]);
+          // 如果是加载更多，则追加到现有结果
+          setSogouEmoticons(prev => [...prev, ...newEmoticons]);
         }
         setHasMore(newEmoticons.length === PAGE_SIZE);
-        setBaiduPage(page);
+        setSogouPage(page);
+      } else {
+        // 如果请求失败或没有数据，清空结果
+        setSogouEmoticons([]);
+        setHasMore(false);
       }
     } catch (error) {
-      console.error('搜索百度表情包失败:', error);
+      console.error('搜索搜狗表情包失败:', error);
+      // 发生错误时清空结果
+      setSogouEmoticons([]);
+      setHasMore(false);
     } finally {
-      setBaiduLoading(false);
+      setSogouLoading(false);
     }
   };
 
-  const debouncedBaiduSearch = debounce(searchBaiduEmoticons, 500);
+  const debouncedSogouSearch = debounce(searchSogouEmoticons, 500);
 
   useEffect(() => {
-    setBaiduPage(1);
+    // 每次关键词改变时，重置页码和状态
+    setSogouPage(1);
     setHasMore(true);
-    debouncedBaiduSearch(keyword, 1);
+    setSogouEmoticons([]); // 清空之前的结果
+    debouncedSogouSearch(keyword, 1);
     return () => {
-      debouncedBaiduSearch.cancel();
+      debouncedSogouSearch.cancel();
     };
   }, [keyword]);
 
@@ -201,20 +214,20 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
 
   useEffect(() => {
     const handleScroll = () => {
-      if (!baiduListRef.current || baiduLoading || !hasMore) return;
+      if (!sogouListRef.current || sogouLoading || !hasMore) return;
 
-      const { scrollTop, scrollHeight, clientHeight } = baiduListRef.current;
+      const { scrollTop, scrollHeight, clientHeight } = sogouListRef.current;
       if (scrollHeight - scrollTop - clientHeight < 50) {
-        debouncedBaiduSearch(keyword, baiduPage + 1);
+        debouncedSogouSearch(keyword, sogouPage + 1);
       }
     };
 
-    const listElement = baiduListRef.current;
+    const listElement = sogouListRef.current;
     if (listElement) {
       listElement.addEventListener('scroll', handleScroll);
       return () => listElement.removeEventListener('scroll', handleScroll);
     }
-  }, [baiduLoading, hasMore, baiduPage, keyword]);
+  }, [sogouLoading, hasMore, sogouPage, keyword]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -233,10 +246,10 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
     }
   }, [favoriteLoading, favoriteHasMore, favoritePage]);
 
-  const handleImageError = (emoticon: BaiduEmoticon) => {
-    setBaiduEmoticons(prev =>
+  const handleImageError = (emoticon: SogouEmoticon) => {
+    setSogouEmoticons(prev =>
       prev.map(e =>
-        e.url === emoticon.url
+        e.source === emoticon.source
           ? { ...e, isError: true }
           : e
       )
@@ -281,18 +294,18 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
     ));
   };
 
-  const renderBaiduEmoticonList = (items: BaiduEmoticon[]) => {
+  const renderSogouEmoticonList = (items: SogouEmoticon[]) => {
     return (
-      <div ref={baiduListRef} className={styles.emoticonList}>
+      <div ref={sogouListRef} className={styles.emoticonList}>
         {items
           .filter(emoticon => !emoticon.isError)
           .map((emoticon) => (
-            <div key={emoticon.url} className={styles.emoticonItemWrapper}>
+            <div key={emoticon.source} className={styles.emoticonItemWrapper}>
               <Tooltip
                 title={
                   <div className={styles.previewContainer}>
                     <img
-                      src={emoticon.url}
+                      src={emoticon.thumbSrc}
                       alt="preview"
                       className={styles.previewImage}
                     />
@@ -303,26 +316,26 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
                 mouseEnterDelay={0.5}
               >
                 <img
-                  src={emoticon.url}
+                  src={emoticon.thumbSrc}
                   alt="emoticon"
                   className={styles.emoticonItem}
-                  onClick={() => onSelect(emoticon.url)}
+                  onClick={() => onSelect(emoticon.thumbSrc)}
                   onError={() => handleImageError(emoticon)}
                 />
               </Tooltip>
               <Button
                 type="text"
                 size="small"
-                icon={isFavorite(emoticon.url) ? <StarFilled /> : <StarOutlined />}
+                icon={isFavorite(emoticon.thumbSrc) ? <StarFilled style={{ color: '#fadb14' }} /> : <StarOutlined />}
                 className={styles.favoriteButton}
                 onClick={(e) => {
                   e.stopPropagation();
-                  toggleFavorite(emoticon.url);
+                  toggleFavorite(emoticon.thumbSrc);
                 }}
               />
             </div>
           ))}
-        {baiduLoading && (
+        {sogouLoading && (
           <div className={styles.loading}>
             <Spin />
           </div>
@@ -340,7 +353,7 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
         className={styles.searchInput}
       />
       {keyword.trim() ? (
-        renderBaiduEmoticonList(baiduEmoticons)
+        renderSogouEmoticonList(sogouEmoticons)
       ) : (
         <>
           <div ref={favoriteListRef} className={styles.emoticonList}>

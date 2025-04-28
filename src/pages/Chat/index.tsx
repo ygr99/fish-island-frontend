@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Alert, Avatar, Button, Input, message, Popover, Spin, Popconfirm, Modal} from 'antd';
+import {Alert, Avatar, Button, Input, message, Popover, Spin, Popconfirm, Modal, Radio} from 'antd';
 import COS from 'cos-js-sdk-v5';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -11,7 +11,8 @@ import {
   SmileOutlined,
   SoundOutlined,
   DeleteOutlined,
-  PaperClipOutlined
+  PaperClipOutlined,
+  GiftOutlined
 } from '@ant-design/icons';
 import styles from './index.less';
 import {useModel} from "@@/exports";
@@ -23,6 +24,8 @@ import {getCosCredentialUsingGet, uploadTo111666UsingPost} from "@/services/back
 import {uploadFileByMinioUsingPost} from "@/services/backend/fileController";
 import { wsService } from '@/services/websocket';
 import { history } from '@umijs/max';
+import { createRedPacketUsingPost, grabRedPacketUsingPost } from '@/services/backend/redPacketController';
+import { getRedPacketRecordsUsingGet, getRedPacketDetailUsingGet } from '@/services/backend/redPacketController';
 
 interface Message {
   id: string;
@@ -55,7 +58,6 @@ const ChatRoom: React.FC = () => {
   const [isEmoticonPickerVisible, setIsEmoticonPickerVisible] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
-  const [isUserListCollapsed, setIsUserListCollapsed] = useState(false);
   const {initialState} = useModel('@@initialState');
   const {currentUser} = initialState || {};
   const [messageApi, contextHolder] = message.useMessage();
@@ -72,7 +74,7 @@ const ChatRoom: React.FC = () => {
   // 添加已加载消息ID的集合
   const [loadedMessageIds] = useState<Set<string>>(new Set());
 
-  const [announcement, setAnnouncement] = useState<string>('欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢：感谢玄德大佬、yovvis大佬 赞助的对象存储服务🌟');
+  const [announcement, setAnnouncement] = useState<string>('欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢：感谢 yovvis 大佬赞助的服务器资源🌟，域名9月份过期，请移步新域名：<a href="https://yucoder.cn/" target="_blank" rel="noopener noreferrer">https://yucoder.cn/</a>。');
   const [showAnnouncement, setShowAnnouncement] = useState<boolean>(true);
 
   const [isComponentMounted, setIsComponentMounted] = useState(true);
@@ -99,6 +101,28 @@ const ChatRoom: React.FC = () => {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [mentionSearchText, setMentionSearchText] = useState('');
   const mentionListRef = useRef<HTMLDivElement>(null);
+
+  const [isRedPacketModalVisible, setIsRedPacketModalVisible] = useState(false);
+  const [redPacketAmount, setRedPacketAmount] = useState<number>(0);
+  const [redPacketCount, setRedPacketCount] = useState<number>(1);
+  const [redPacketMessage, setRedPacketMessage] = useState<string>('恭喜发财，大吉大利！');
+  const [redPacketType, setRedPacketType] = useState<number>(1); // 1-随机红包 2-平均红包
+
+  // 添加红包记录相关状态
+  const [isRedPacketRecordsVisible, setIsRedPacketRecordsVisible] = useState(false);
+  const [redPacketRecords, setRedPacketRecords] = useState<API.VO[]>([]);
+  const [currentRedPacketId, setCurrentRedPacketId] = useState<string>('');
+  const [redPacketDetail, setRedPacketDetail] = useState<API.RedPacket | null>(null);
+  const [redPacketDetailsMap, setRedPacketDetailsMap] = useState<Map<string, API.RedPacket | null>>(new Map());
+
+  // 添加发送频率限制相关的状态
+  const [lastSendTime, setLastSendTime] = useState<number>(0);
+  const [sendCooldown, setSendCooldown] = useState<number>(0);
+  const sendCooldownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 添加防止重复发送的状态
+  const [lastSendContent, setLastSendContent] = useState<string>('');
+  const [lastSendContentTime, setLastSendContentTime] = useState<number>(0);
 
   // 修改 getIpInfo 函数
   const getIpInfo = async () => {
@@ -345,17 +369,17 @@ const ChatRoom: React.FC = () => {
         }
       }
 
-      const res = await uploadTo111666UsingPost(
-        {},  // body 参数
-        file,  // 文件参数
-        {  // 其他选项
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
+      // const res = await uploadTo111666UsingPost(
+      //   {},  // body 参数
+      //   file,  // 文件参数
+      //   {  // 其他选项
+      //     headers: {
+      //       'Content-Type': 'multipart/form-data',
+      //     },
+      //   }
+      // );
 
-      if (!res.data || res.data === 'https://i.111666.bestnull') {
+      // if (!res.data || res.data === 'https://i.111666.bestnull') {
         // 如果上传失败或返回的是兜底URL，使用备用上传逻辑
         const fallbackRes = await uploadFileByMinioUsingPost(
           { biz: 'user_file' },  // 业务标识参数
@@ -374,10 +398,10 @@ const ChatRoom: React.FC = () => {
 
         // 设置预览图片
         setPendingImageUrl(fallbackRes.data);
-      } else {
-        // 设置预览图片
-        setPendingImageUrl(res.data);
-      }
+      // } else {
+      //   // 设置预览图片
+      //   setPendingImageUrl(res.data);
+      // }
 
     } catch (error) {
       messageApi.error(`上传失败：${error}`);
@@ -628,6 +652,13 @@ const ChatRoom: React.FC = () => {
 
   // 修改 handleSend 函数
   const handleSend = (customContent?: string) => {
+    // 检查发送冷却时间
+    const now = Date.now();
+    if (now - lastSendTime < 1000) { // 限制每秒最多发送一条消息
+      messageApi.warning('发送太快了，请稍后再试');
+      return;
+    }
+
     let content = customContent || inputValue;
 
     // 检查是否包含 iframe 标签
@@ -649,6 +680,12 @@ const ChatRoom: React.FC = () => {
 
     if (!content.trim() && !pendingImageUrl && !pendingFileUrl) {
       message.warning('请输入消息内容');
+      return;
+    }
+
+    // 检查是否重复发送相同内容
+    if (content === lastSendContent && now - lastSendContentTime < 10000) { // 10秒内不能发送相同内容
+      messageApi.warning('请勿重复发送相同内容，请稍后再试');
       return;
     }
 
@@ -712,6 +749,11 @@ const ChatRoom: React.FC = () => {
     setPendingImageUrl(null);
     setPendingFileUrl(null);
     setQuotedMessage(null);
+
+    // 更新最后发送时间和内容
+    setLastSendTime(now);
+    setLastSendContent(content);
+    setLastSendContentTime(now);
 
     // 滚动到底部
     setTimeout(scrollToBottom, 100);
@@ -843,11 +885,13 @@ const ChatRoom: React.FC = () => {
             <div className={styles.userInfoCardNameRow}>
               <span className={styles.userInfoCardName}>{user.name}</span>
               <span className={styles.userInfoCardLevel}>
+                {/* eslint-disable-next-line @typescript-eslint/no-use-before-define */}
                 <span className={styles.levelEmoji}>{getLevelEmoji(user.level)}</span>
                 <span className={styles.levelText}>{user.level}</span>
               </span>
             </div>
             <div className={styles.userInfoCardAdminTag}>
+              {/* eslint-disable-next-line @typescript-eslint/no-use-before-define */}
               {getAdminTag(user.isAdmin, user.level)}
             </div>
             <div className={styles.userInfoCardPoints}>
@@ -1054,8 +1098,162 @@ const ChatRoom: React.FC = () => {
     }
   };
 
-  // 修改 MessageContent 组件的渲染逻辑
+  // 添加发送红包的处理函数
+  const handleSendRedPacket = async () => {
+    if (!currentUser?.id) {
+      messageApi.error('请先登录！');
+      return;
+    }
+
+    if (redPacketAmount <= 0 || redPacketCount <= 0) {
+      messageApi.error('请输入有效的红包金额和数量！');
+      return;
+    }
+
+    try {
+      const response = await createRedPacketUsingPost({
+        totalAmount: redPacketAmount,
+        count: redPacketCount,
+        type: redPacketType, // 使用选择的红包类型
+        name: redPacketMessage
+      });
+
+      if (response.data) {
+        // 发送红包消息
+        const newMessage: Message = {
+          id: `${Date.now()}`,
+          content: `[redpacket]${response.data}[/redpacket]`,
+          sender: {
+            id: String(currentUser.id),
+            name: currentUser.userName || '游客',
+            avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+            level: currentUser.level || 1,
+            points: currentUser.points || 0,
+            isAdmin: currentUser.userRole === 'admin',
+            region: userIpInfo?.region || '未知地区',
+            country: userIpInfo?.country || '未知国家',
+            avatarFramerUrl: currentUser.avatarFramerUrl,
+          },
+          timestamp: new Date(),
+        };
+
+        wsService.send({
+          type: 2,
+          userId: -1,
+          data: {
+            type: 'chat',
+            content: {
+              message: newMessage
+            }
+          }
+        });
+
+        setMessages(prev => [...prev, newMessage]);
+        setTotal(prev => prev + 1);
+        setHasMore(true);
+
+        messageApi.success('红包发送成功！');
+        setIsRedPacketModalVisible(false);
+        setRedPacketAmount(0);
+        setRedPacketCount(1);
+        setRedPacketMessage('恭喜发财，大吉大利！');
+      }
+    } catch (error) {
+      messageApi.error('红包发送失败！');
+    }
+  };
+
+  // 修改获取红包详情的函数
+  const fetchRedPacketDetail = async (redPacketId: string) => {
+    // 如果已经有缓存，直接返回
+    const cachedDetail = redPacketDetailsMap.get(redPacketId);
+    if (cachedDetail !== undefined) {
+      return cachedDetail;
+    }
+
+    try {
+      const response = await getRedPacketDetailUsingGet({ redPacketId });
+      if (response.data) {
+        // 更新缓存
+        const detail = response.data as API.RedPacket;
+        setRedPacketDetailsMap(prev => new Map(prev).set(redPacketId, detail));
+        return detail;
+      }
+    } catch (error) {
+      console.error('获取红包详情失败:', error);
+    }
+    return null;
+  };
+
+  // 修改 renderMessageContent 函数，添加红包消息的渲染
   const renderMessageContent = (content: string) => {
+    // 检查是否是红包消息
+    const redPacketMatch = content.match(/\[redpacket\](.*?)\[\/redpacket\]/);
+    if (redPacketMatch) {
+      const redPacketId = redPacketMatch[1];
+      const detail = redPacketDetailsMap.get(redPacketId);
+
+      // 如果没有缓存，则获取详情
+      if (!detail) {
+        fetchRedPacketDetail(redPacketId);
+      }
+
+      return (
+        <div className={styles.redPacketMessage}>
+          <div className={styles.redPacketContent}>
+            <GiftOutlined className={styles.redPacketIcon} />
+            <div className={styles.redPacketInfo}>
+              <div className={styles.redPacketTitle}>
+                <span className={styles.redPacketText}>
+                  {detail?.name || '红包'}
+                </span>
+                <span className={styles.redPacketStatus}>
+                  {detail?.remainingCount === 0 ? '（已抢完）' :
+                   detail?.status === 2 ? '（已过期）' :
+                   `（剩余${detail?.remainingCount || 0}个）`}
+                </span>
+              </div>
+              <div className={styles.redPacketActions}>
+                <Button
+                  type="primary"
+                  size="small"
+                  onClick={async () => {
+                    try {
+                      const response = await grabRedPacketUsingPost({
+                        redPacketId: redPacketId
+                      });
+                      if (response.data) {
+                        messageApi.success(`恭喜你抢到 ${response.data} 积分！`);
+                        // 刷新红包记录和详情
+                        await Promise.all([
+                          fetchRedPacketRecords(redPacketId),
+                          fetchRedPacketDetail(redPacketId)
+                        ]);
+                      }
+                    } catch (error) {
+                      messageApi.error('红包已被抢完或已过期！');
+                    }
+                  }}
+                  className={styles.grabRedPacketButton}
+                  disabled={detail?.remainingCount === 0 || detail?.status === 2}
+                >
+                  抢红包
+                </Button>
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => handleViewRedPacketRecords(redPacketId)}
+                  className={styles.viewRecordsButton}
+                >
+                  查看记录
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // 检查是否是邀请消息
     const inviteMatch = content.match(/\[invite\/(\w+)\](\d+)\[\/invite\]/);
     if (inviteMatch) {
@@ -1089,15 +1287,34 @@ const ChatRoom: React.FC = () => {
     return <MessageContent content={content} />;
   };
 
+  // 添加获取红包记录的函数
+  const fetchRedPacketRecords = async (redPacketId: string) => {
+    try {
+      const response = await getRedPacketRecordsUsingGet({ redPacketId });
+      if (response.data) {
+        setRedPacketRecords(response.data);
+      }
+    } catch (error) {
+      messageApi.error('获取红包记录失败！');
+    }
+  };
+
+  // 添加查看红包记录的处理函数
+  const handleViewRedPacketRecords = async (redPacketId: string) => {
+    setCurrentRedPacketId(redPacketId);
+    setIsRedPacketRecordsVisible(true);
+    await fetchRedPacketRecords(redPacketId);
+  };
+
   return (
-    <div className={`${styles.chatRoom} ${isUserListCollapsed ? styles.collapsed : ''}`}>
+    <div className={styles.chatRoom}>
       {contextHolder}
       {showAnnouncement && (
         <Alert
           message={
             <div className={styles.announcementContent}>
               <SoundOutlined className={styles.announcementIcon}/>
-              <span>{announcement}</span>
+              <span dangerouslySetInnerHTML={{ __html: announcement }} />
             </div>
           }
           type="info"
@@ -1202,46 +1419,42 @@ const ChatRoom: React.FC = () => {
       </div>
 
       <div className={styles.userList}>
-        <div
-          className={styles.collapseButton}
-          onClick={() => setIsUserListCollapsed(!isUserListCollapsed)}
-        >
-          {isUserListCollapsed ? <MenuUnfoldOutlined/> : <MenuFoldOutlined/>}
-        </div>
         <div className={styles.userListHeader}>
           在线成员 ({onlineUsers.length})
         </div>
-        {[...onlineUsers]
-          .sort((a, b) => (b.points || 0) - (a.points || 0))
-          .map(user => (
-            <div
-              key={user.id}
-              className={styles.userItem}
-              onClick={() => handleSelectMention(user)}
-              style={{cursor: 'pointer'}}
-            >
-              <div className={styles.avatarWrapper}>
-                <Popover
-                  content={<UserInfoCard user={user}/>}
-                  trigger="hover"
-                  placement="right"
-                >
-                  <div className={styles.avatarWithFrame}>
-                    <Avatar src={user.avatar} size={28}/>
-                  </div>
-                </Popover>
-              </div>
-              <div className={styles.userInfo}>
-                <div className={styles.userName}>
-                  {user.name}
+        <div className={styles.userListContent}>
+          {[...onlineUsers]
+            .sort((a, b) => (b.points || 0) - (a.points || 0))
+            .map(user => (
+              <div
+                key={user.id}
+                className={styles.userItem}
+                onClick={() => handleSelectMention(user)}
+                style={{cursor: 'pointer'}}
+              >
+                <div className={styles.avatarWrapper}>
+                  <Popover
+                    content={<UserInfoCard user={user}/>}
+                    trigger="hover"
+                    placement="right"
+                  >
+                    <div className={styles.avatarWithFrame}>
+                      <Avatar src={user.avatar} size={28}/>
+                    </div>
+                  </Popover>
                 </div>
-                <div className={styles.userStatus}>{user.status}</div>
+                <div className={styles.userInfo}>
+                  <div className={styles.userName}>
+                    {user.name}
+                  </div>
+                  <div className={styles.userStatus}>{user.status}</div>
+                </div>
+                <span className={styles.levelBadge}>
+                {getLevelEmoji(user.level)}
+              </span>
               </div>
-              <span className={styles.levelBadge}>
-              {getLevelEmoji(user.level)}
-            </span>
-            </div>
-          ))}
+            ))}
+        </div>
       </div>
 
       <div className={styles.inputArea}>
@@ -1339,6 +1552,13 @@ const ChatRoom: React.FC = () => {
               className={styles.emoticonButton}
             />
           </Popover>
+          {currentUser?.userRole === 'admin' && (
+            <Button
+              icon={<GiftOutlined />}
+              className={styles.redPacketButton}
+              onClick={() => setIsRedPacketModalVisible(true)}
+            />
+          )}
           <Input.TextArea
             ref={inputRef}
             value={inputValue}
@@ -1400,11 +1620,113 @@ const ChatRoom: React.FC = () => {
       </div>
 
       <Modal
+        title={
+          <div className={styles.redPacketModalTitle}>
+            <GiftOutlined className={styles.redPacketTitleIcon} />
+            <span>发送红包</span>
+          </div>
+        }
+        visible={isRedPacketModalVisible}
+        onOk={handleSendRedPacket}
+        onCancel={() => setIsRedPacketModalVisible(false)}
+        okText="发送"
+        cancelText="取消"
+        width={400}
+        className={styles.redPacketModal}
+      >
+        <div className={styles.redPacketForm}>
+          <div className={styles.formItem}>
+            <span className={styles.label}>红包类型：</span>
+            <Radio.Group
+              value={redPacketType}
+              onChange={(e) => setRedPacketType(e.target.value)}
+              className={styles.redPacketTypeGroup}
+            >
+              <Radio.Button value={1}>
+                <span className={styles.typeIcon}>🎲</span>
+                <span>随机红包</span>
+              </Radio.Button>
+              <Radio.Button value={2}>
+                <span className={styles.typeIcon}>📊</span>
+                <span>平均红包</span>
+              </Radio.Button>
+            </Radio.Group>
+          </div>
+          <div className={styles.formItem}>
+            <span className={styles.label}>红包金额：</span>
+            <Input
+              type="number"
+              value={redPacketAmount}
+              onChange={(e) => setRedPacketAmount(Number(e.target.value))}
+              min={1}
+              placeholder="请输入红包金额"
+              prefix="¥"
+              className={styles.amountInput}
+            />
+          </div>
+          <div className={styles.formItem}>
+            <span className={styles.label}>红包个数：</span>
+            <Input
+              type="number"
+              value={redPacketCount}
+              onChange={(e) => setRedPacketCount(Number(e.target.value))}
+              min={1}
+              placeholder="请输入红包个数"
+              className={styles.countInput}
+            />
+          </div>
+          <div className={styles.formItem}>
+            <span className={styles.label}>祝福语：</span>
+            <Input.TextArea
+              value={redPacketMessage}
+              onChange={(e) => setRedPacketMessage(e.target.value)}
+              placeholder="恭喜发财，大吉大利！"
+              maxLength={50}
+              showCount
+              className={styles.messageInput}
+            />
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
         visible={isPreviewVisible}
         footer={null}
         onCancel={() => setIsPreviewVisible(false)}
       >
         {previewImage && <img alt="预览" style={{width: '100%'}} src={previewImage}/>}
+      </Modal>
+
+      <Modal
+        title="红包记录"
+        visible={isRedPacketRecordsVisible}
+        onCancel={() => setIsRedPacketRecordsVisible(false)}
+        footer={null}
+        width={400}
+      >
+        <div className={styles.redPacketRecords}>
+          <div className={styles.recordsList}>
+            {redPacketRecords.length > 0 ? (
+              redPacketRecords.map(record => (
+                <div key={record.id} className={styles.recordItem}>
+                  <Avatar src={record.userAvatar} size={32} />
+                  <div className={styles.userInfo}>
+                    <div className={styles.userName}>{record.userName}</div>
+                    <div className={styles.grabTime}>
+                      {new Date(record.grabTime || '').toLocaleString()}
+                    </div>
+                  </div>
+                  <div className={styles.amount}>{record.amount} 积分</div>
+                </div>
+              ))
+            ) : (
+              <div className={styles.emptyRecords}>
+                <GiftOutlined className={styles.emptyIcon} />
+                <span>暂无人抢到红包</span>
+              </div>
+            )}
+          </div>
+        </div>
       </Modal>
     </div>
   );

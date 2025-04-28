@@ -12,4 +12,29 @@
   &::-webkit-scrollbar-track {
     background: transparent;
   }
+}
+
+// 自定义 Tab 样式
+:global {
+  .ant-tabs-tab {
+    &.ant-tabs-tab-active {
+      .ant-tabs-tab-btn {
+        color: inherit !important; // 保持文字颜色不变
+      }
+      background-color: #e6f7ff !important; // 使用主题色的浅色版本作为背景
+    }
+    
+    &:hover {
+      color: #1890ff !important;
+    }
+  }
+}
+
+.ant-card {
+  transition: all 0.3s ease;
+  
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+  }
 } 

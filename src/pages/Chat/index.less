@@ -195,6 +195,7 @@
     grid-template-areas:
       "messages"
       "input";
+    grid-template-rows: 1fr auto;
 
     .announcement {
       display: none;
@@ -209,26 +210,12 @@
     }
 
     .userList {
-      display: none;
+      display: none !important;
     }
 
     // 在移动端隐藏漂浮元素
     .floating-fish {
       display: none;
-    }
-  }
-
-  &.collapsed {
-    grid-template-columns: 1fr 0;
-
-    .userList {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-
-    .collapseButton {
-      transform: translate(-50%, -50%) rotate(180deg);
-      left: calc(100% - 16px);
     }
   }
 
@@ -519,56 +506,21 @@
     backdrop-filter: blur(10px);
     border-left: 1px solid rgba(238, 238, 238, 0.5);
     padding: 12px;
-    overflow-y: auto;
     margin: 12px 12px 12px 0;
     border-radius: 12px;
     transition: all 0.3s ease;
     box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05);
     position: relative;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 24px);
+
+    @media screen and (max-width: 768px) {
+      display: none !important;
+    }
 
     @media screen and (min-width: 769px) {
-      display: block;
-    }
-
-    &::-webkit-scrollbar {
-      width: 4px;
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background-color: rgba(0, 0, 0, 0.1);
-      border-radius: 2px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    .collapseButton {
-      position: absolute;
-      top: 50%;
-      left: -14px;
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      width: 24px;
-      height: 24px;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.3s ease;
-      border: none;
-      background: white;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      cursor: pointer;
-      z-index: 10;
-      font-size: 12px;
-
-      &:hover {
-        background: var(--ant-color-primary);
-        color: white;
-      }
     }
 
     .userListHeader {
@@ -581,6 +533,28 @@
       -webkit-background-clip: text;
       color: transparent;
       text-align: center;
+      flex-shrink: 0;
+    }
+
+    .userListContent {
+      overflow-y: auto;
+      flex: 1;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+
+      &::-webkit-scrollbar {
+        width: 4px;
+        background: transparent;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background-color: rgba(0, 0, 0, 0.1);
+        border-radius: 2px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: transparent;
+      }
     }
 
     .userItem {
@@ -1419,7 +1393,283 @@
 // 添加发送按钮样式
 .sendButton {
   @media screen and (max-width: 768px) {
-    display: none;
+    display: flex;
+  }
+}
+
+.redPacketButton {
+  margin-left: 2px;
+  color: #ff4d4f;
+  &:hover {
+    color: #ff7875;
+  }
+}
+
+.redPacketMessage {
+  .redPacketContent {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    background: #fff1f0;
+    border-radius: 8px;
+    border: 1px solid #ffccc7;
+  }
+
+  .redPacketInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .redPacketTitle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .redPacketText {
+    color: #ff4d4f;
+    font-weight: 500;
+    font-size: 16px;
+  }
+
+  .redPacketStatus {
+    color: #ff7875;
+    font-size: 12px;
+  }
+
+  .redPacketActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .redPacketIcon {
+    color: #ff4d4f;
+    font-size: 24px;
+    margin-top: 2px;
+  }
+
+  .grabRedPacketButton {
+    background: #ff4d4f;
+    border-color: #ff4d4f;
+    &:hover {
+      background: #ff7875;
+      border-color: #ff7875;
+    }
+    &:disabled {
+      background: #ffccc7;
+      border-color: #ffccc7;
+      color: #fff;
+    }
+  }
+
+  .viewRecordsButton {
+    color: #ff4d4f;
+    padding: 0;
+    height: auto;
+    &:hover {
+      color: #ff7875;
+    }
+  }
+}
+
+.redPacketForm {
+  .formItem {
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    
+    .label {
+      width: 80px;
+      text-align: right;
+      margin-right: 8px;
+    }
+  }
+}
+
+.redPacketRecords {
+  .recordItem {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .avatar {
+      margin-right: 12px;
+    }
+
+    .userInfo {
+      flex: 1;
+
+      .userName {
+        font-weight: 500;
+        margin-bottom: 4px;
+      }
+
+      .grabTime {
+        color: #999;
+        font-size: 12px;
+      }
+    }
+
+    .amount {
+      color: #ff4d4f;
+      font-weight: 500;
+    }
+  }
+
+  .emptyRecords {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 0;
+    color: #999;
+    font-size: 14px;
+    gap: 8px;
+
+    .emptyIcon {
+      font-size: 24px;
+      color: #ff4d4f;
+      opacity: 0.5;
+    }
+  }
+
+  .redPacketInfo {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f0f0f0;
+
+    .infoItem {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .label {
+        color: #666;
+      }
+
+      .value {
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+.redPacketModal {
+  :global {
+    .ant-modal-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .ant-modal-body {
+      padding: 24px;
+    }
+    
+    .ant-modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid #f0f0f0;
+    }
+  }
+}
+
+.redPacketModalTitle {
+  display: flex;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 500;
+  
+  .redPacketTitleIcon {
+    margin-right: 8px;
+    font-size: 20px;
+    color: #ff4d4f;
+  }
+}
+
+.redPacketForm {
+  .formItem {
+    margin-bottom: 20px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    .label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #333;
+    }
+  }
+  
+  .redPacketTypeGroup {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    
+    :global {
+      .ant-radio-button-wrapper {
+        flex: 1;
+        text-align: center;
+        height: 40px;
+        line-height: 40px;
+        padding: 0 16px;
+        
+        &:first-child {
+          border-radius: 4px 0 0 4px;
+        }
+        
+        &:last-child {
+          border-radius: 0 4px 4px 0;
+        }
+      }
+    }
+    
+    .typeIcon {
+      margin-right: 4px;
+      font-size: 16px;
+    }
+  }
+  
+  .amountInput {
+    width: 100%;
+    height: 40px;
+    
+    :global {
+      .ant-input-prefix {
+        color: #ff4d4f;
+        margin-right: 4px;
+      }
+    }
+  }
+  
+  .countInput {
+    width: 100%;
+    height: 40px;
+  }
+  
+  .messageInput {
+    width: 100%;
+    min-height: 80px;
+    resize: none;
+    
+    :global {
+      .ant-input {
+        padding: 8px 12px;
+      }
+    }
   }
 }
 

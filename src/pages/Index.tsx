@@ -1,4 +1,4 @@
-import {Col, Row, Card, Badge, Image, List, Typography, Tooltip, Tabs, Modal, Skeleton, Select, Button, Space} from 'antd';
+import {Col, Row, Card, Badge, Image, List, Typography, Tooltip, Tabs, Modal, Skeleton, Select, Button, Space, Switch} from 'antd';
 import React, {useState, useEffect} from 'react';
 import {getHotPostListUsingPost} from '@/services/backend/hotPostController';
 import dayjs from "dayjs";
@@ -7,6 +7,7 @@ import { SettingOutlined, AppstoreOutlined, GlobalOutlined, ThunderboltOutlined,
 import './Index.less';
 
 const STORAGE_KEY = 'selected_source_ids';
+const TAB_VISIBLE_KEY = 'tab_visible';
 
 // 添加移动端检测
 const isMobile = () => {
@@ -15,7 +16,7 @@ const isMobile = () => {
 
 // 添加自定义断点检测
 const isSmallScreen = () => {
-  return window.innerWidth < 1590;
+  return window.innerWidth < 1200;
 };
 
 const Index: React.FC = () => {
@@ -30,6 +31,11 @@ const Index: React.FC = () => {
   const [tempSelectedSourceIds, setTempSelectedSourceIds] = useState<number[]>([]);
   const [isMobileView, setIsMobileView] = useState(isMobile());
   const [isSmallScreenView, setIsSmallScreenView] = useState(isSmallScreen());
+  const [isTabVisible, setIsTabVisible] = useState(() => {
+    const stored = localStorage.getItem(TAB_VISIBLE_KEY);
+    return stored ? JSON.parse(stored) : false;
+  });
+  const [tempTabVisible, setTempTabVisible] = useState(isTabVisible);
 
   // 添加窗口大小变化监听
   useEffect(() => {
@@ -50,7 +56,7 @@ const Index: React.FC = () => {
         const uniqueCategories = Array.from(new Set(result.data.map((item: API.HotPostVO) => item.category || '')));
         // @ts-ignore
         setCategories(uniqueCategories.filter(Boolean));
-        
+
         // 从本地存储读取数据源设置
         const storedIds = localStorage.getItem(STORAGE_KEY);
         if (storedIds) {
@@ -71,7 +77,7 @@ const Index: React.FC = () => {
     if (hostPostVoList.length > 0 && !activeTab) {
       if (isMobileView) {
         // 移动端默认选中第一个数据源
-        const firstSource = hostPostVoList.find(item => 
+        const firstSource = hostPostVoList.find(item =>
           selectedSourceIds.length === 0 || selectedSourceIds.includes(item.id as number)
         );
         if (firstSource) {
@@ -105,8 +111,8 @@ const Index: React.FC = () => {
   // 过滤数据源
   const filteredList = activeTab === 'all'
     ? hostPostVoList.filter(item => selectedSourceIds.length === 0 || selectedSourceIds.includes(item.id as number))
-    : hostPostVoList.filter(item => 
-        (item.category as any === activeTab) && 
+    : hostPostVoList.filter(item =>
+        (item.category as any === activeTab) &&
         (selectedSourceIds.length === 0 || selectedSourceIds.includes(item.id as number))
       );
 
@@ -118,7 +124,7 @@ const Index: React.FC = () => {
     ...categories
       .filter(category => {
         if (selectedSourceIds.length === 0) return true;
-        return hostPostVoList.some(item => 
+        return hostPostVoList.some(item =>
           String(item.category) === String(category) && selectedSourceIds.includes(item.id as number)
         );
       })
@@ -130,7 +136,9 @@ const Index: React.FC = () => {
 
   const handleSettingsSave = () => {
     setSelectedSourceIds(tempSelectedSourceIds);
+    setIsTabVisible(tempTabVisible);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tempSelectedSourceIds));
+    localStorage.setItem(TAB_VISIBLE_KEY, JSON.stringify(tempTabVisible));
     setIsSettingsOpen(false);
   };
 
@@ -166,6 +174,7 @@ const Index: React.FC = () => {
         onCancel={() => {
           setIsSettingsOpen(false);
           setTempSelectedSourceIds(selectedSourceIds);
+          setTempTabVisible(isTabVisible);
         }}
         width={600}
       >
@@ -177,7 +186,7 @@ const Index: React.FC = () => {
         <Select
           mode="multiple"
           placeholder="选择数据源"
-          style={{ width: '100%' }}
+          style={{ width: '100%', marginBottom: 16 }}
           value={tempSelectedSourceIds}
           onChange={setTempSelectedSourceIds}
           options={hostPostVoList.map(item => ({
@@ -185,13 +194,25 @@ const Index: React.FC = () => {
             value: item.id
           }))}
         />
+        <div style={{ marginTop: 16 }}>
+          <Typography.Text type="secondary">
+            显示设置
+          </Typography.Text>
+          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Typography.Text>显示分类标签</Typography.Text>
+            <Switch
+              checked={tempTabVisible}
+              onChange={setTempTabVisible}
+            />
+          </div>
+        </div>
       </Modal>
 
       {isMobileView ? (
         // 移动端布局
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
           minHeight: '100vh',
           paddingBottom: '50px', // 为底部 tab-bar 留出空间
         }}>
@@ -242,7 +263,7 @@ const Index: React.FC = () => {
               <Typography.Text type="secondary">请选择一个数据源</Typography.Text>
             </div>
           )}
-          
+
           {/* 底部 tab-bar */}
           <div style={{
             position: 'fixed',
@@ -276,9 +297,9 @@ const Index: React.FC = () => {
                 <Image
                   src={item.iconUrl}
                   preview={false}
-                  style={{ 
-                    width: 28, 
-                    height: 28, 
+                  style={{
+                    width: 28,
+                    height: 28,
                     borderRadius: '50%',
                     border: activeTab === String(item.id) ? '2px solid #1890ff' : 'none'
                   }}
@@ -301,24 +322,23 @@ const Index: React.FC = () => {
           </div>
         </div>
       ) : (
-        // 桌面端布局（保持原有代码）
         <>
-          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Tabs
-              activeKey={activeTab}
-              onChange={setActiveTab}
-              items={items}
-              style={{ flex: 1 }}
-            />
-            <Space>
-              <Button 
-                type="text" 
-                icon={<SettingOutlined />} 
-                onClick={() => setIsSettingsOpen(true)}
-              >
-                设置
-              </Button>
-            </Space>
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+            {isTabVisible && (
+              <Tabs
+                activeKey={activeTab}
+                onChange={setActiveTab}
+                items={items}
+                style={{ flex: 1, marginRight: 16 }}
+              />
+            )}
+            <Button
+              type="text"
+              icon={<SettingOutlined />}
+              onClick={() => setIsSettingsOpen(true)}
+            >
+              设置
+            </Button>
           </div>
           <Row gutter={[16, 16]}>
             {loading ? (
@@ -346,14 +366,15 @@ const Index: React.FC = () => {
                           <Image
                             src={item.iconUrl}
                             preview={false}
-                            style={{width: 24, height: 24, marginRight: 8}}
+                            style={{width: 20, height: 20, marginRight: 8}}
                           />
-                          <Typography.Text>{item.name}</Typography.Text>
+                          <Typography.Text style={{ fontSize: '14px', color: '#495060', fontWeight: 400 }}>{item.name}</Typography.Text>
                           <Typography.Text style={{marginLeft: "10px", color: 'gray', fontSize: '12px'}}>
                             (更新时间：{dayjs(item.updateTime).fromNow()})
                           </Typography.Text>
                         </div>
                       }
+                      bodyStyle={{ padding: '12px' }}
                     >
                       <div
                         id="scrollableDiv"
@@ -368,7 +389,7 @@ const Index: React.FC = () => {
                         <List
                           dataSource={item.data}
                           renderItem={(data, index) => (
-                            <List.Item>
+                            <List.Item style={{ padding: '8px 0' }}>
                               <Tooltip title={data.title} mouseEnterDelay={0.2}>
                                 <Typography.Link
                                   target="_blank"
@@ -383,12 +404,23 @@ const Index: React.FC = () => {
                                   style={{
                                     display: 'flex',
                                     width: '100%',
-                                    color: 'black',
+                                    color: '#495060',
                                     justifyContent: 'space-between',
+                                    fontSize: '14px',
+                                    fontWeight: 400,
                                   }}
                                 >
                                   <span style={{flexGrow: 1, textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}}>
-                                    {index + 1}.{data?.title?.length && data?.title?.length > 25 ? data.title.slice(0, 25) + '...' : data.title}
+                                    <span style={{
+                                      display: 'inline-block',
+                                      width: '24px',
+                                      textAlign: 'center',
+                                      marginRight: '8px',
+                                      color: '#8c8c8c'
+                                    }}>
+                                      {index + 1}.
+                                    </span>
+                                    {data?.title?.length && data?.title?.length > 25 ? data.title.slice(0, 25) + '...' : data.title}
                                   </span>
                                   <span style={{flexShrink: 0, marginRight: '10px', fontSize: '12px'}}>
                                     🔥 {data.followerCount && data.followerCount >= 10000 ? (data.followerCount / 10000).toFixed(1) + "万" : data.followerCount === 0 ? "置顶🔝" : data.followerCount}
