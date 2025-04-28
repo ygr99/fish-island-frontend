@@ -74,7 +74,7 @@ const ChatRoom: React.FC = () => {
   // 添加已加载消息ID的集合
   const [loadedMessageIds] = useState<Set<string>>(new Set());
 
-  const [announcement, setAnnouncement] = useState<string>('欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢：感谢玄德大佬、yovvis大佬 赞助的对象存储服务🌟');
+  const [announcement, setAnnouncement] = useState<string>('欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢：感谢 yovvis 大佬赞助的服务器资源🌟，域名9月份过期，请移步新域名：<a href="https://yucoder.cn/" target="_blank" rel="noopener noreferrer">https://yucoder.cn/</a>。');
   const [showAnnouncement, setShowAnnouncement] = useState<boolean>(true);
 
   const [isComponentMounted, setIsComponentMounted] = useState(true);
@@ -1192,12 +1192,12 @@ const ChatRoom: React.FC = () => {
     if (redPacketMatch) {
       const redPacketId = redPacketMatch[1];
       const detail = redPacketDetailsMap.get(redPacketId);
-      
+
       // 如果没有缓存，则获取详情
       if (!detail) {
         fetchRedPacketDetail(redPacketId);
       }
-      
+
       return (
         <div className={styles.redPacketMessage}>
           <div className={styles.redPacketContent}>
@@ -1208,8 +1208,8 @@ const ChatRoom: React.FC = () => {
                   {detail?.name || '红包'}
                 </span>
                 <span className={styles.redPacketStatus}>
-                  {detail?.remainingCount === 0 ? '（已抢完）' : 
-                   detail?.status === 2 ? '（已过期）' : 
+                  {detail?.remainingCount === 0 ? '（已抢完）' :
+                   detail?.status === 2 ? '（已过期）' :
                    `（剩余${detail?.remainingCount || 0}个）`}
                 </span>
               </div>
@@ -1314,7 +1314,7 @@ const ChatRoom: React.FC = () => {
           message={
             <div className={styles.announcementContent}>
               <SoundOutlined className={styles.announcementIcon}/>
-              <span>{announcement}</span>
+              <span dangerouslySetInnerHTML={{ __html: announcement }} />
             </div>
           }
           type="info"
@@ -1637,8 +1637,8 @@ const ChatRoom: React.FC = () => {
         <div className={styles.redPacketForm}>
           <div className={styles.formItem}>
             <span className={styles.label}>红包类型：</span>
-            <Radio.Group 
-              value={redPacketType} 
+            <Radio.Group
+              value={redPacketType}
               onChange={(e) => setRedPacketType(e.target.value)}
               className={styles.redPacketTypeGroup}
             >

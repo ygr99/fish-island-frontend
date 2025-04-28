@@ -144,7 +144,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
       try {
         const savedBooks = localStorage.getItem('fish-reader-books');
         if (!savedBooks) return;
-  
+
         const books = JSON.parse(savedBooks);
         const updatedBooks = books.map((b: Book) =>
           b.id === updatedBook.id ? updatedBook : b
@@ -164,7 +164,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
           if (bookWithChapters && bookWithChapters.chapters && bookWithChapters.chapters.length > 0) {
             setBook(bookWithChapters);
             setChapters(bookWithChapters.chapters);
-  
+
             // 加载当前章节内容
             const chapter = bookWithChapters.chapters.find((c: Chapter) => c.index === chapterIdx);
             if (chapter) {
@@ -179,7 +179,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
         } else {
           // 已有章节列表
           setChapters(currentBook.chapters);
-  
+
           // 加载当前章节内容
           const chapter = currentBook.chapters.find((c: Chapter) => c.index === chapterIdx);
           if (chapter) {
@@ -658,7 +658,8 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
       const url = `${apiBaseUrl}/getChapterList?accessToken=${accessToken}&v=${timestamp}`;
 
       // 发送请求
-      const response = await axios.post(url, { url: book.url });
+      const response = await axios.post(url, { url: book.url,refresh: 0, // 不强制刷新
+        bookSourceUrl: book.sourceInfo?.url });
 
       if (!response.data || !response.data.data) {
         message.error('获取章节列表失败: 数据格式错误');

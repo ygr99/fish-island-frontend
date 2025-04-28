@@ -3,15 +3,10 @@ import {
   Form,
   Button,
   Slider,
-  Switch,
   Space,
-  Typography,
   Divider,
   Select,
-  ColorPicker,
   Tooltip,
-  Row,
-  Col,
   Input
 } from 'antd';
 import { QuestionCircleOutlined, UndoOutlined } from '@ant-design/icons';
@@ -83,6 +78,7 @@ interface ReaderSettingsProps {
   onSave: (settings: ReaderSettings) => void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 const ReaderSettings: React.FC<ReaderSettingsProps> = ({ settings, onSave }) => {
   const [form] = Form.useForm();
   const [localSettings, setLocalSettings] = useState<ReaderSettings>(settings);

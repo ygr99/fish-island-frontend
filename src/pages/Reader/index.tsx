@@ -122,7 +122,7 @@ const getDefaultReaderSettings = (): ReaderSettings => {
   return {
     fontColor: '#333333',
     backgroundColor: '#f5f5f5',
-    opacity: 0.75,
+    opacity: 1,
     allowWindowMove: true,
     fontSize: 12,
     fontFamily: 'Arial, sans-serif',

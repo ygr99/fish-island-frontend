@@ -890,12 +890,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         message.success('密码重置成功，请重新登录');
         setIsResetPasswordOpen(false);
         resetPasswordForm.resetFields();
-        // 退出登录
-        await userLogoutUsingPost();
-        setInitialState((s) => ({
-          ...s,
-          currentUser: undefined,
-        }));
       }
     } catch (error: any) {
       message.error(`密码重置失败：${error.message}`);
@@ -919,6 +913,10 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         <LoginRegister
           isModalOpen={isModalOpen}
           onCancel={() => setIsModalOpen(false)}
+          onForgotPassword={() => {
+            setIsModalOpen(false);
+            setIsResetPasswordOpen(true);
+          }}
         />
 
         <Button type="primary" shape="round" onClick={() => {
@@ -1056,6 +1054,86 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             </Tooltip>
           )}
         </div>
+
+        {/* 找回密码 Modal */}
+        <Modal
+          title="找回密码"
+          open={isResetPasswordOpen}
+          onCancel={() => {
+            setIsResetPasswordOpen(false);
+            resetPasswordForm.resetFields();
+          }}
+          footer={null}
+          width={400}
+        >
+          <Form
+            form={resetPasswordForm}
+            onFinish={handleResetPassword}
+          >
+            <Form.Item
+              name="email"
+              label="邮箱"
+              rules={[
+                {required: true, message: '请输入邮箱地址！'},
+                {type: 'email', message: '请输入正确的邮箱地址！'}
+              ]}
+            >
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <Input placeholder="请输入邮箱地址" style={{ flex: 1 }} />
+                <Button
+                  type="primary"
+                  onClick={handleSendResetPasswordCode}
+                  disabled={resetPasswordCountdown > 0}
+                >
+                  {resetPasswordCountdown > 0 ? `${resetPasswordCountdown}秒` : '获取验证码'}
+                </Button>
+              </div>
+            </Form.Item>
+
+            <Form.Item
+              name="code"
+              label="验证码"
+              rules={[{required: true, message: '请输入验证码！'}]}
+            >
+              <Input placeholder="请输入验证码" />
+            </Form.Item>
+
+            <Form.Item
+              name="userPassword"
+              label="新密码"
+              rules={[
+                {required: true, message: '请输入新密码！'},
+                {min: 8, message: '密码长度不能小于8位！'}
+              ]}
+            >
+              <Input.Password placeholder="请输入新密码" />
+            </Form.Item>
+
+            <Form.Item
+              name="checkPassword"
+              label="确认密码"
+              rules={[
+                {required: true, message: '请再次输入新密码！'},
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    if (!value || getFieldValue('userPassword') === value) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(new Error('两次输入的密码不一致！'));
+                  },
+                }),
+              ]}
+            >
+              <Input.Password placeholder="请再次输入新密码" />
+            </Form.Item>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit" block>
+                确认修改
+              </Button>
+            </Form.Item>
+          </Form>
+        </Modal>
       </>
     );
   }
@@ -1679,86 +1757,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 重置为默认样式
               </Button>
             </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* 添加找回密码的 Modal */}
-      <Modal
-        title="找回密码"
-        open={isResetPasswordOpen}
-        onCancel={() => {
-          setIsResetPasswordOpen(false);
-          resetPasswordForm.resetFields();
-        }}
-        footer={null}
-        width={400}
-      >
-        <Form
-          form={resetPasswordForm}
-          onFinish={handleResetPassword}
-        >
-          <Form.Item
-            name="email"
-            label="邮箱"
-            rules={[
-              {required: true, message: '请输入邮箱地址！'},
-              {type: 'email', message: '请输入正确的邮箱地址！'}
-            ]}
-          >
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <Input placeholder="请输入邮箱地址" style={{ flex: 1 }} />
-              <Button
-                type="primary"
-                onClick={handleSendResetPasswordCode}
-                disabled={resetPasswordCountdown > 0}
-              >
-                {resetPasswordCountdown > 0 ? `${resetPasswordCountdown}秒` : '获取验证码'}
-              </Button>
-            </div>
-          </Form.Item>
-
-          <Form.Item
-            name="code"
-            label="验证码"
-            rules={[{required: true, message: '请输入验证码！'}]}
-          >
-            <Input placeholder="请输入验证码" />
-          </Form.Item>
-
-          <Form.Item
-            name="userPassword"
-            label="新密码"
-            rules={[
-              {required: true, message: '请输入新密码！'},
-              {min: 8, message: '密码长度不能小于8位！'}
-            ]}
-          >
-            <Input.Password placeholder="请输入新密码" />
-          </Form.Item>
-
-          <Form.Item
-            name="checkPassword"
-            label="确认密码"
-            rules={[
-              {required: true, message: '请再次输入新密码！'},
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue('userPassword') === value) {
-                    return Promise.resolve();
-                  }
-                  return Promise.reject(new Error('两次输入的密码不一致！'));
-                },
-              }),
-            ]}
-          >
-            <Input.Password placeholder="请再次输入新密码" />
-          </Form.Item>
-
-          <Form.Item>
-            <Button type="primary" htmlType="submit" block>
-              确认修改
-            </Button>
           </Form.Item>
         </Form>
       </Modal>
