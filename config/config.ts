@@ -118,6 +118,41 @@ export default defineConfig({
       src: '/scripts/loading.js',
       async: true,
     },
+    // 新增：加载 Tailwind CDN
+    {
+      src: 'https://cdn.tailwindcss.com',
+      async: false, // 确保在后续脚本执行前加载
+    },
+    // 新增：添加 Tailwind 内联配置
+    {
+      content: `
+        tailwind.config = {
+          theme: {
+            extend: {
+              colors: {
+                primary: "#ff6b00",
+                secondary: "#4a1d96",
+              },
+              borderRadius: {
+                none: "0px",
+                sm: "2px",
+                DEFAULT: "4px",
+                md: "8px",
+                lg: "12px",
+                xl: "16px",
+                "2xl": "20px",
+                "3xl": "24px",
+                full: "9999px",
+                button: "4px",
+              },
+            },
+          },
+          corePlugins: {
+            preflight: false, // 禁用默认样式
+          },
+        };
+      `,
+    },
   ],
   //================ pro 插件配置 =================
   presets: ['umi-presets-pro'],
@@ -129,9 +164,9 @@ export default defineConfig({
   openAPI: [
     {
       requestLibPath: "import { request } from '@umijs/max'",
-      // schemaPath: 'https://fish.codebug.icu/fish/api/v2/api-docs',
+      schemaPath: 'https://api.yucoder.cn/api/v2/api-docs',
       // schemaPath: 'https://moyuapi.codebug.icu/fish/api/v2/api-docs',
-      schemaPath: 'http://localhost:8123/api/v2/api-docs',
+      // schemaPath: 'http://localhost:8123/api/v2/api-docs',
       projectName: 'backend',
     },
   ],
@@ -157,6 +192,16 @@ export default defineConfig({
     { rel: 'apple-touch-icon', sizes: '152x152', href: '/icons/icon-152x152.png' },
     { rel: 'apple-touch-icon', sizes: '192x192', href: '/icons/icon-192x192.png' },
     { rel: 'apple-touch-icon', sizes: '384x384', href: '/icons/icon-384x384.png' },
-    { rel: 'apple-touch-icon', sizes: '512x512', href: '/icons/icon-512x512.png' }
+    { rel: 'apple-touch-icon', sizes: '512x512', href: '/icons/icon-512x512.png' },
+    // 新增：Font Awesome all.min.css
+    {
+      rel: 'stylesheet',
+      href: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+    },
+    // 新增：Font Awesome brands.min.css
+    {
+      rel: 'stylesheet',
+      href: 'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/brands.min.css',
+    },
   ],
 });
