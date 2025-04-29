@@ -46,6 +46,7 @@ import {RcFile} from "antd/lib/upload";
 import COS from 'cos-js-sdk-v5';
 import LoginRegister from '../LoginRegister';
 import {getNotificationEnabled, setNotificationEnabled} from '@/utils/notification';
+import FoodRecommender from '@/components/FoodRecommender';
 lazy(() => import('@/components/MusicPlayer'));
 export type GlobalHeaderRightProps = {
   menu?: boolean;
@@ -908,6 +909,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     }
   }, []);
 
+  const [isFoodRecommenderOpen, setIsFoodRecommenderOpen] = useState(false);
+
   if (!currentUser) {
     return (
       <>
@@ -1038,9 +1041,14 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 className="money-button"
               >
                 <div className="money-button-content">
-                  <div className="money-button-emoji">
-                    {timeInfo.type === 'lunch' ? '🍱' : '🧑‍💻'}
-                  </div>
+                  <Tooltip title="点击查看今天吃什么" placement="top">
+                    <div className="money-button-emoji" onClick={(e) => {
+                      e.stopPropagation();
+                      setIsFoodRecommenderOpen(true);
+                    }}>
+                      {timeInfo.type === 'lunch' ? '🍱' : '🧑‍💻'}
+                    </div>
+                  </Tooltip>
                   <div className="money-button-time">
                     {timeInfo.type === 'lunch' ?
                       `午餐: ${timeInfo.timeRemaining}` :
@@ -1526,9 +1534,14 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               className="money-button"
             >
               <div className="money-button-content">
-                <div className="money-button-emoji">
-                  {timeInfo.type === 'lunch' ? '🍱' : '🧑‍💻'}
-                </div>
+                <Tooltip title="点击查看今天吃什么" placement="top">
+                  <div className="money-button-emoji" onClick={(e) => {
+                    e.stopPropagation();
+                    setIsFoodRecommenderOpen(true);
+                  }}>
+                    {timeInfo.type === 'lunch' ? '🍱' : '🧑‍💻'}
+                  </div>
+                </Tooltip>
                 <div className="money-button-time">
                   {timeInfo.type === 'lunch' ?
                     `午餐: ${timeInfo.timeRemaining}` :
@@ -1544,6 +1557,10 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             </Button>
           </Tooltip>
         )}
+        <FoodRecommender
+          isOpen={isFoodRecommenderOpen}
+          onClose={() => setIsFoodRecommenderOpen(false)}
+        />
       </div>
 
       {/* 添加老板键设置Modal */}
