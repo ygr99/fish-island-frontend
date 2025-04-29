@@ -2,6 +2,7 @@ import React, {useEffect, useRef, useState} from 'react';
 import {Alert, Avatar, Button, Input, message, Popover, Spin, Popconfirm, Modal, Radio} from 'antd';
 import COS from 'cos-js-sdk-v5';
 import data from '@emoji-mart/data';
+import zhData from '@/assets/emoji/zh.json';
 import Picker from '@emoji-mart/react';
 import {
   MenuFoldOutlined,
@@ -1022,6 +1023,7 @@ const ChatRoom: React.FC = () => {
     <div className={styles.emojiPicker}>
       <Picker
         data={data}
+        i18n={zhData}
         onEmojiSelect={handleEmojiClick}
         theme="light"
         locale="zh"
