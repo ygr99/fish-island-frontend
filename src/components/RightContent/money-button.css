@@ -1,0 +1,25 @@
+.money-button-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+}
+
+.money-button-time {
+  font-family: monospace;
+  min-width: 90px;
+  text-align: center;
+  display: inline-block;
+}
+
+.money-button-emoji {
+  font-size: 16px;
+  margin-bottom: 2px;
+}
+
+.money-button-amount {
+  font-family: monospace;
+  min-width: 90px;
+  text-align: center;
+} 

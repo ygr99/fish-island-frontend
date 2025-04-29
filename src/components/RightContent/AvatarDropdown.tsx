@@ -41,6 +41,7 @@ import HeaderDropdown from '../HeaderDropdown';
 import {useEmotionCss} from "@ant-design/use-emotion-css";
 import moment, {Moment} from "moment";
 import './app.css';
+import './money-button.css';
 import {RcFile} from "antd/lib/upload";
 import COS from 'cos-js-sdk-v5';
 import LoginRegister from '../LoginRegister';
@@ -1037,17 +1038,19 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 className="money-button"
               >
                 <div className="money-button-content">
-                  <div>
+                  <div className="money-button-emoji">
                     {timeInfo.type === 'lunch' ? '🍱' : '🧑‍💻'}
                   </div>
-                  <div>
+                  <div className="money-button-time">
                     {timeInfo.type === 'lunch' ?
                       `午餐: ${timeInfo.timeRemaining}` :
                       `下班: ${timeInfo.timeRemaining}`
-                  }
+                    }
                   </div>
                   {timeInfo.earnedAmount !== undefined && (
-                    <div>💰：{timeInfo.earnedAmount.toFixed(2)}</div>
+                    <div className="money-button-amount">
+                      💰：{timeInfo.earnedAmount.toFixed(2)}
+                    </div>
                   )}
                 </div>
               </Button>
@@ -1523,17 +1526,19 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               className="money-button"
             >
               <div className="money-button-content">
-                <div>
+                <div className="money-button-emoji">
                   {timeInfo.type === 'lunch' ? '🍱' : '🧑‍💻'}
                 </div>
-                <div>
+                <div className="money-button-time">
                   {timeInfo.type === 'lunch' ?
                     `午餐: ${timeInfo.timeRemaining}` :
                     `下班: ${timeInfo.timeRemaining}`
                   }
                 </div>
                 {timeInfo.earnedAmount !== undefined && (
-                  <div>💰：{timeInfo.earnedAmount.toFixed(2)}</div>
+                  <div className="money-button-amount">
+                    💰：{timeInfo.earnedAmount.toFixed(2)}
+                  </div>
                 )}
               </div>
             </Button>
