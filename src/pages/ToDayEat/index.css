@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary-color: #f26522;
+    --text-color: #333;
+    --card-color: #fff;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--background-color);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+}
+
+@layer components {
+  .food-recommender {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .title {
+    color: #b25c2c !important;
+    margin-bottom: 0.5rem !important;
+    font-weight: bold !important;
+  }
+
+  .subtitle {
+    color: #b25c2c;
+    font-size: 1rem;
+  }
+
+  .content {
+    width: 90%;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    background-color: #fff8f5;
+    padding: 3rem;
+    border-radius: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+
+  .meal-tabs {
+    display: inline-flex !important;
+    background: #fff !important;
+    padding: 4px !important;
+    border-radius: 100px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  .ant-radio-button-wrapper {
+    border: none !important;
+    background: transparent !important;
+    color: #666 !important;
+    font-size: 0.9rem !important;
+    padding: 4px 16px !important;
+    height: auto !important;
+    line-height: 1.5 !important;
+    box-shadow: none !important;
+    border-radius: 100px !important;
+    margin: 0 2px !important;
+    transition: all 0.3s ease !important;
+  }
+
+  .ant-radio-button-wrapper::before {
+    display: none !important;
+  }
+
+  .ant-radio-button-wrapper-checked {
+    background: var(--primary-color) !important;
+    color: white !important;
+    font-weight: normal !important;
+  }
+
+  .ant-radio-button-wrapper-checked::after {
+    display: none !important;
+  }
+
+  .ant-radio-button-wrapper:hover {
+    color: var(--primary-color) !important;
+  }
+
+  .ant-radio-button-wrapper-checked:hover {
+    color: white !important;
+  }
+
+  .recommendation-card {
+    width: 100%;
+    border-radius: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+
+  .question {
+    color: #999;
+    font-size: 1.1rem;
+  }
+
+  .instruction {
+    color: #b25c2c !important;
+    margin: 0 !important;
+  }
+
+  .result {
+    color: var(--primary-color) !important;
+    font-weight: bold !important;
+  }
+
+  .recommend-button {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    border-radius: 2rem;
+    padding: 0 2rem;
+    height: 3rem;
+    font-size: 1.1rem;
+  }
+}
