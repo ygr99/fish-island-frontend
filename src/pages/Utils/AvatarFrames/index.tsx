@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Avatar, Button, message, Pagination, Spin, Skeleton } from 'antd';
+import { Avatar, Button, message, Spin, Skeleton } from 'antd';
 import { getLoginUserUsingGet } from '@/services/backend/userController';
 import { listAvatarFrameVoByPageUsingPost, exchangeFrameUsingPost, setCurrentFrameUsingPost } from '@/services/backend/avatarFrameController';
 import styles from './index.module.less';
 import { useModel } from '@umijs/max';
+import InfiniteScroll from 'react-infinite-scroll-component';
 
 const AvatarFrames: React.FC = () => {
   const { initialState, setInitialState } = useModel('@@initialState');
@@ -13,7 +14,7 @@ const AvatarFrames: React.FC = () => {
   const [current, setCurrent] = useState<number>(1);
   const [total, setTotal] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
-  const [nextPageFrames, setNextPageFrames] = useState<API.AvatarFrameVO[]>([]);
+  const [hasMore, setHasMore] = useState<boolean>(true);
 
   // 获取当前登录用户
   useEffect(() => {
@@ -30,35 +31,16 @@ const AvatarFrames: React.FC = () => {
     fetchUser();
   }, []);
 
-  // 预加载下一页数据
-  useEffect(() => {
-    const preloadNextPage = async () => {
-      try {
-        const res = await listAvatarFrameVoByPageUsingPost({
-          current: current + 1,
-          pageSize: 10,
-        });
-        if (res.data) {
-          setNextPageFrames(res.data.records ?? []);
-        }
-      } catch (error) {
-        console.error('预加载失败:', error);
-      }
-    };
-    preloadNextPage();
-  }, [current]);
-
   // 获取头像框列表
-  useEffect(() => {
-    const fetchFrames = async () => {
-      setLoading(true);
-      try {
-        const res = await listAvatarFrameVoByPageUsingPost({
-          current,
-          pageSize: 10,
-        });
-        if (res.data) {
-          // 添加空头像框作为第一个选项
+  const fetchFrames = async (page: number) => {
+    try {
+      const res = await listAvatarFrameVoByPageUsingPost({
+        current: page,
+        pageSize: 10,
+      });
+      if (res?.data) {
+        // 添加空头像框作为第一个选项（仅在第一页）
+        if (page === 1) {
           const emptyFrame: API.AvatarFrameVO = {
             id: -1,
             name: '无头像框',
@@ -67,16 +49,31 @@ const AvatarFrames: React.FC = () => {
             hasOwned: true
           };
           setFrames([emptyFrame, ...(res.data.records ?? [])]);
-          setTotal((Number(res.data.total) ?? 0) + 1);
+        } else {
+          setFrames(prev => [...prev, ...(res.data.records ?? [])]);
         }
-      } catch (error) {
-        message.error('获取头像框列表失败');
-      } finally {
-        setLoading(false);
+        setTotal((Number(res.data.total) ?? 0) + (page === 1 ? 1 : 0));
+        setHasMore((res.data.records?.length ?? 0) > 0);
       }
-    };
-    fetchFrames();
-  }, [current]);
+    } catch (error) {
+      message.error('获取头像框列表失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 初始加载
+  useEffect(() => {
+    fetchFrames(1);
+  }, []);
+
+  const loadMoreData = () => {
+    if (loading) return;
+    setLoading(true);
+    const nextPage = current + 1;
+    setCurrent(nextPage);
+    fetchFrames(nextPage);
+  };
 
   const handlePurchase = async (frame: API.AvatarFrameVO) => {
     if (!currentUser) {
@@ -101,14 +98,9 @@ const AvatarFrames: React.FC = () => {
         if (userRes.data) {
           setCurrentUser(userRes.data);
         }
-        const framesRes = await listAvatarFrameVoByPageUsingPost({
-          current,
-          pageSize: 10,
-        });
-        if (framesRes.data) {
-          setFrames(framesRes.data.records ?? []);
-          setTotal(framesRes.data.total ?? 0);
-        }
+        // 重新加载第一页数据
+        setCurrent(1);
+        fetchFrames(1);
       }
     } catch (error) {
       message.error('购买失败，请重试');
@@ -138,28 +130,12 @@ const AvatarFrames: React.FC = () => {
     }
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrent(page);
-  };
-
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.title}>
           <h1>头像框商城</h1>
           <p className={styles.subtitle}>用积分兑换专属头像框，展示你的个性</p>
-          <div className={styles.pagination}>
-            <Pagination
-              current={current}
-              pageSize={10}
-              total={total}
-              onChange={handlePageChange}
-              showSizeChanger={false}
-              showQuickJumper={false}
-              showTotal={(total) => `共 ${total} 个头像框`}
-              size="small"
-            />
-          </div>
         </div>
         <div className={styles.userPreview}>
           <div className={styles.avatarWithFrame}>
@@ -181,16 +157,23 @@ const AvatarFrames: React.FC = () => {
         </div>
       </div>
 
-      <div className={styles.frameList}>
-        {loading ? (
-          // 加载状态展示
-          Array(5).fill(null).map((_, index) => (
-            <div key={index} className={styles.frameItem}>
-              <Skeleton active avatar paragraph={{ rows: 2 }} />
-            </div>
-          ))
-        ) : (
-          frames.map((frame) => (
+      <InfiniteScroll
+        dataLength={frames.length}
+        next={loadMoreData}
+        hasMore={hasMore}
+        loader={
+          <div style={{ textAlign: 'center', padding: '20px' }}>
+            <Spin />
+          </div>
+        }
+        endMessage={
+          <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
+            没有更多头像框了
+          </div>
+        }
+      >
+        <div className={styles.frameList}>
+          {frames.map((frame) => (
             <div
               key={frame.id}
               className={styles.frameItem}
@@ -210,7 +193,6 @@ const AvatarFrames: React.FC = () => {
                 </div>
               </div>
               <div className={styles.frameInfo}>
-                {/*<h3>{frame.name}</h3>*/}
                 <div className={styles.priceTag}>
                   {frame.points} 积分
                 </div>
@@ -234,9 +216,9 @@ const AvatarFrames: React.FC = () => {
                 )}
               </div>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      </InfiniteScroll>
     </div>
   );
 };
