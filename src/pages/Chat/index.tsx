@@ -13,7 +13,8 @@ import {
   SoundOutlined,
   DeleteOutlined,
   PaperClipOutlined,
-  GiftOutlined
+  GiftOutlined,
+  DownOutlined
 } from '@ant-design/icons';
 import styles from './index.less';
 import {useModel} from "@@/exports";
@@ -51,6 +52,7 @@ interface User {
   country?: string;
   avatarFramerUrl?: string;
   titleId?: number;
+  titleIdList?: string;
 }
 
 interface Title {
@@ -186,6 +188,7 @@ const ChatRoom: React.FC = () => {
           points: user.points || 0,
           avatarFramerUrl: user.avatarFramerUrl,
           titleId: user.titleId,
+          titleIdList: user.titleIdList,
         }));
 
         // 添加机器人用户
@@ -201,6 +204,7 @@ const ChatRoom: React.FC = () => {
           country: '摸鱼岛',
           avatarFramerUrl: '',
           titleId: 0,
+          titleIdList: '',
         };
         onlineUsersList.unshift(botUser);
 
@@ -216,6 +220,7 @@ const ChatRoom: React.FC = () => {
             points: currentUser.points || 0,
             avatarFramerUrl: currentUser.avatarFramerUrl,
             titleId: currentUser.titleId,
+            titleIdList: currentUser.titleIdList,
           });
         }
 
@@ -263,6 +268,7 @@ const ChatRoom: React.FC = () => {
               country: record.messageWrapper?.message?.sender?.country ,
               avatarFramerUrl: record.messageWrapper?.message?.sender?.avatarFramerUrl,
               titleId: record.messageWrapper?.message?.sender?.titleId,
+              titleIdList: record.messageWrapper?.message?.sender?.titleIdList,
             },
             timestamp: new Date(record.messageWrapper?.message?.timestamp || Date.now()),
             quotedMessage: record.messageWrapper?.message?.quotedMessage ? {
@@ -278,6 +284,7 @@ const ChatRoom: React.FC = () => {
                 region: record.messageWrapper?.message.quotedMessage?.sender?.region || '未知地区',
                 avatarFramerUrl: record.messageWrapper?.message.quotedMessage?.sender?.avatarFramerUrl,
                 titleId: record.messageWrapper?.message.quotedMessage?.sender?.titleId,
+                titleIdList: record.messageWrapper?.message.quotedMessage?.sender?.titleIdList,
               },
               timestamp: new Date(record.messageWrapper.message.quotedMessage.timestamp || Date.now())
             } : undefined,
@@ -733,6 +740,7 @@ const ChatRoom: React.FC = () => {
         country: userIpInfo?.country || '未知国家',
         avatarFramerUrl: currentUser.avatarFramerUrl,
         titleId: currentUser.titleId,
+        titleIdList: currentUser.titleIdList,
       },
       timestamp: new Date(),
       quotedMessage: quotedMessage || undefined,
@@ -873,8 +881,26 @@ const ChatRoom: React.FC = () => {
   };
 
   const UserInfoCard: React.FC<{ user: User }> = ({user}) => {
+    // 从 titleIdList 字符串解析称号 ID 数组
+    const userTitleIds: number[] = user.titleIdList ? JSON.parse(user.titleIdList) : [];
+    const [isTitlesExpanded, setIsTitlesExpanded] = useState(false);
+    
+    // 获取所有称号
+    const allTitles = [
+      getAdminTag(user.isAdmin, user.level, 0),
+      ...userTitleIds.map(titleId => getAdminTag(user.isAdmin, user.level, titleId))
+    ];
+    
+    // 默认显示的称号（第一个）
+    const defaultTitle = allTitles[0];
+    // 其他称号
+    const otherTitles = allTitles.slice(1);
+    
     return (
-      <div className={styles.userInfoCard}>
+      <div 
+        className={styles.userInfoCard}
+        onMouseLeave={() => setIsTitlesExpanded(false)}
+      >
         <div className={styles.userInfoCardHeader}>
           <div
             className={styles.avatarWrapper}
@@ -899,14 +925,41 @@ const ChatRoom: React.FC = () => {
             <div className={styles.userInfoCardNameRow}>
               <span className={styles.userInfoCardName}>{user.name}</span>
               <span className={styles.userInfoCardLevel}>
-                {/* eslint-disable-next-line @typescript-eslint/no-use-before-define */}
                 <span className={styles.levelEmoji}>{getLevelEmoji(user.level)}</span>
                 <span className={styles.levelText}>{user.level}</span>
               </span>
             </div>
-            <div className={styles.userInfoCardAdminTag}>
-              {/* eslint-disable-next-line @typescript-eslint/no-use-before-define */}
-              {getAdminTag(user.isAdmin, user.level, user.titleId)}
+            <div className={styles.titlesContainer}>
+              {defaultTitle}
+              {otherTitles.length > 0 && (
+                <Popover
+                  content={
+                    <div className={styles.expandedTitles}>
+                      {otherTitles.map((title, index) => (
+                        <div key={index} className={styles.expandedTitle}>
+                          {title}
+                        </div>
+                      ))}
+                    </div>
+                  }
+                  trigger="click"
+                  placement="bottom"
+                  overlayClassName={styles.titlesPopover}
+                  open={isTitlesExpanded}
+                  onOpenChange={setIsTitlesExpanded}
+                >
+                  <Button
+                    type="text"
+                    size="small"
+                    className={styles.expandButton}
+                    icon={<DownOutlined />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsTitlesExpanded(!isTitlesExpanded);
+                    }}
+                  />
+                </Popover>
+              )}
             </div>
             <div className={styles.userInfoCardPoints}>
               <span className={styles.pointsEmoji}>✨</span>
@@ -1110,6 +1163,7 @@ const ChatRoom: React.FC = () => {
         isAdmin: currentUser.userRole === 'admin',
         avatarFramerUrl: currentUser.avatarFramerUrl,
         titleId: currentUser.titleId,
+        titleIdList: currentUser.titleIdList,
       },
       timestamp: new Date(),
     };
@@ -1188,6 +1242,7 @@ const ChatRoom: React.FC = () => {
             country: userIpInfo?.country || '未知国家',
             avatarFramerUrl: currentUser.avatarFramerUrl,
             titleId: currentUser.titleId,
+            titleIdList: currentUser.titleIdList,
           },
           timestamp: new Date(),
         };
