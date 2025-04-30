@@ -49,6 +49,8 @@ interface Task {
   date: string;
   priority: 'high' | 'medium' | 'low';
   status: 'pending' | 'completed';
+  note?: string;
+  bgColor?: string;
 }
 
 // 添加自定义 hook 用于监听窗口大小
@@ -191,7 +193,8 @@ export default function TodoList() {
     title: string;
     description: string;
     date: { format: (arg0: string) => string };
-    priority: 'high' | 'medium' | 'low'
+    priority: 'high' | 'medium' | 'low';
+    note?: string;
   }) => {
     const newTask: Task = {
       id: Date.now(),
@@ -200,6 +203,8 @@ export default function TodoList() {
       date: values.date.format("YYYY-MM-DD"),
       priority: values.priority,
       status: "pending",
+      note: values.note,
+      bgColor: "rgb(255, 240, 240)"
     }
     setTasks([...tasks, newTask])
     setIsModalVisible(false)
@@ -212,10 +217,35 @@ export default function TodoList() {
     ))
   }
 
+  // 回滚任务状态
+  const rollbackTask = (taskId: number) => {
+    setTasks(tasks.map((task) =>
+      task.id === taskId ? {...task, status: "pending" as const} : task
+    ))
+  }
+
   // 删除任务
   const deleteTask = (taskId: any) => {
     setTasks(tasks.filter((task: { id: any }) => task.id !== taskId))
   }
+
+  // 更新任务备注
+  const updateTaskNote = (taskId: number, note: string) => {
+    setTasks(tasks.map((task) =>
+      task.id === taskId ? {...task, note} : task
+    ))
+  }
+
+  // 更新任务背景颜色
+  const updateTaskBgColor = (taskId: number, color: string) => {
+    setTasks(tasks.map((task) =>
+      task.id === taskId ? {...task, bgColor: color} : task
+    ))
+  }
+
+  // 编辑备注状态
+  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+  const [editingBgColorId, setEditingBgColorId] = useState<number | null>(null);
 
   // 按日期筛选任务
   const filteredTasks = tasks.filter((task: {
@@ -386,7 +416,27 @@ export default function TodoList() {
                         >
                           完成
                         </Button>
-                      ) : null,
+                      ) : (
+                        <Button
+                          style={{
+                            backgroundColor: "#1890ff",
+                            borderColor: "#1890ff",
+                            color: "#fff",
+                            boxShadow: "0 2px 4px rgba(24, 144, 255, 0.5)",
+                            borderRadius: "6px",
+                            padding: "4px 12px",
+                            height: "32px",
+                            marginBottom: isMobile ? "8px" : 0,
+                            width: isMobile ? "100%" : "auto"
+                          }}
+                          type="primary"
+                          icon={<CalendarOutlined/>}
+                          onClick={() => rollbackTask(task.id)}
+                          key="rollback"
+                        >
+                          回滚
+                        </Button>
+                      ),
                       <Button
                         type="text"
                         danger
@@ -429,7 +479,7 @@ export default function TodoList() {
                         <div style={{
                           display: "flex",
                           flexDirection: "column",
-                          gap: "4px",
+                          gap: "8px",
                           width: "100%"
                         }}>
                           <div style={{
@@ -491,17 +541,130 @@ export default function TodoList() {
                         </div>
                       }
                       description={
-                        task.description && (
+                        <div style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "12px",
+                          marginTop: "12px",
+                          alignItems: "flex-start"
+                        }}>
+                          {task.description && (
+                            <div style={{
+                              fontSize: isMobile ? "12px" : "14px",
+                              lineHeight: "1.6",
+                              color: task.status === "completed" ? "#8c8c8c" : "#666",
+                              wordBreak: "break-all",
+                              padding: "8px 12px",
+                              backgroundColor: task.bgColor || "rgb(255, 240, 240)",
+                              borderRadius: "4px",
+                              minHeight: "80px",
+                              whiteSpace: "pre-wrap",
+                              width: "80%",
+                              marginLeft: "26px",
+                              position: "relative"
+                            }}>
+                              {task.description}
+                              <div
+                                onClick={() => setEditingBgColorId(task.id)}
+                                style={{
+                                  position: "absolute",
+                                  right: "8px",
+                                  top: "8px",
+                                  cursor: "pointer",
+                                  padding: "4px",
+                                  borderRadius: "4px",
+                                  backgroundColor: "rgba(255, 255, 255, 0.8)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "4px"
+                                }}
+                              >
+                                <span>🎨</span>
+                                {editingBgColorId === task.id && (
+                                  <input
+                                    type="color"
+                                    value={task.bgColor || "rgb(255, 240, 240)"}
+                                    onChange={(e) => updateTaskBgColor(task.id, e.target.value)}
+                                    onBlur={() => setEditingBgColorId(null)}
+                                    style={{
+                                      width: "24px",
+                                      height: "24px",
+                                      border: "none",
+                                      padding: 0,
+                                      cursor: "pointer"
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          )}
                           <div style={{
-                            marginTop: "8px",
-                            fontSize: isMobile ? "12px" : "14px",
-                            lineHeight: "1.6",
-                            color: task.status === "completed" ? "#8c8c8c" : "#666",
-                            wordBreak: "break-all"
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            width: "100%"
                           }}>
-                            {task.description}
+                            <div style={{
+                              position: "relative",
+                              flex: 1,
+                              maxWidth: "80%",
+                              marginLeft: "26px"
+                            }}>
+                              {editingNoteId === task.id ? (
+                                <Input
+                                  placeholder="添加备注..."
+                                  value={task.note || ""}
+                                  onChange={(e) => updateTaskNote(task.id, e.target.value)}
+                                  onBlur={() => setEditingNoteId(null)}
+                                  autoFocus
+                                  style={{
+                                    width: "100%",
+                                    fontSize: isMobile ? "12px" : "14px",
+                                    border: "1px solid #d9d9d9",
+                                    borderRadius: "4px",
+                                    padding: "4px 8px",
+                                    transition: "all 0.3s ease",
+                                    backgroundColor: "#fff"
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  onClick={() => setEditingNoteId(task.id)}
+                                  style={{
+                                    width: "100%",
+                                    fontSize: isMobile ? "12px" : "14px",
+                                    padding: "4px 8px",
+                                    color: task.note ? "#8c8c8c" : "#d9d9d9",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    border: "1px solid transparent",
+                                    borderRadius: "4px",
+                                    transition: "all 0.3s ease"
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.border = "1px solid #d9d9d9";
+                                    e.currentTarget.style.backgroundColor = "#fafafa";
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.border = "1px solid transparent";
+                                    e.currentTarget.style.backgroundColor = "transparent";
+                                  }}
+                                >
+                                  {task.note ? (
+                                    <>
+                                      <span>📝</span>
+                                      <span>{task.note}</span>
+                                    </>
+                                  ) : (
+                                    <span>添加备注...</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )
+                        </div>
                       }
                     />
                     {isMobile && <div style={{ width: "100%", height: "1px" }} />}
@@ -580,6 +743,10 @@ export default function TodoList() {
                 </Space>
               </Option>
             </Select>
+          </Form.Item>
+
+          <Form.Item name="note" label="备注">
+            <Input placeholder="请输入备注（选填）" maxLength={100} />
           </Form.Item>
 
           <Form.Item style={{marginBottom: 0, textAlign: "right"}}>

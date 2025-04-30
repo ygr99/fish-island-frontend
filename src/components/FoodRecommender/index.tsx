@@ -12,10 +12,40 @@ interface FoodRecommenderProps {
 }
 
 const defaultFoodOptions = {
-  breakfast: ["豆浆油条", "包子", "煎饼果子", "粥", "三明治", "牛奶麦片"],
-  lunch: ["红烧肉盖饭", "兰州拉面", "麻辣香锅", "沙拉", "汉堡", "披萨", "寿司"],
-  dinner: ["火锅", "烤鱼", "炒菜", "烧烤", "西餐牛排", "意大利面"],
-  night: ["烤串", "炸鸡", "夜宵套餐", "小龙虾", "关东煮", "泡面"],
+  "breakfast": [
+    "豆浆油条", "包子", "煎饼果子", "粥", "三明治", "牛奶麦片",
+    "豆腐脑", "鸡蛋灌饼", "肠粉", "小笼包", "煎饺", "馄饨",
+    "汤面", "烧麦", "蛋饼", "锅贴", "糖油饼", "糯米鸡",
+    "咸豆花", "奶黄包", "叉烧包", "粢饭团", "牛肉粉", "热干面",
+    "油茶麻花", "南瓜粥", "法式吐司", "港式菠萝包",
+    "蒙古奶茶配炒米", "贝果三明治"
+  ],
+  "lunch": [
+    "红烧肉盖饭", "兰州拉面", "麻辣香锅", "沙拉", "汉堡", "披萨",
+    "寿司", "番茄鸡蛋面", "宫保鸡丁盖饭", "酸辣粉", "牛肉面",
+    "排骨饭", "扬州炒饭", "水饺", "咖喱饭", "肉夹馍", "台式卤肉饭",
+    "海南鸡饭", "韩式拌饭", "臊子面", "黄焖鸡米饭", "越南河粉",
+    "江西炒粉", "过桥米线", "驴肉火烧", "煲仔饭", "毛血旺套餐",
+    "新疆大盘鸡配皮带面", "西班牙海鲜饭", "荞麦冷面", "墨西哥卷饼"
+  ],
+  "dinner": [
+    "火锅", "烤鱼", "炒菜", "烧烤", "西餐牛排", "意大利面",
+    "东北乱炖", "砂锅粥", "红烧排骨", "清蒸鱼", "羊肉煲", "铁板烧",
+    "水煮鱼", "麻婆豆腐", "干锅牛蛙", "酱牛肉", "酸菜鱼火锅",
+    "佛跳墙", "北京烤鸭套餐", "顺德鱼生", "东坡肘子", "白灼海鲜拼盘",
+    "云南汽锅鸡", "淮扬狮子头", "福建姜母鸭", "贵州酸汤鱼",
+    "法式红酒炖牛肉", "泰式冬阴功海鲜锅", "日式寿喜烧", "西班牙烤乳猪",
+    "芝士焗龙虾"
+  ],
+  "night": [
+    "烤串", "炸鸡", "夜宵套餐", "小龙虾", "关东煮", "泡面",
+    "炒河粉", "砂锅米线", "生煎包", "皮蛋瘦肉粥", "卤味拼盘",
+    "烤冷面", "蒸饺", "牛肉面", "煎饼卷菜", "海鲜砂锅",
+    "锡纸花甲粉", "潮汕砂锅粥", "羊肉泡馍", "蚵仔煎", "蒜蓉粉丝扇贝",
+    "重庆小面", "云南烤豆腐", "东北烤冷面", "福建肉燕汤", "广式及第粥",
+    "韩式部队锅", "法式洋葱汤", "印度黄油鸡配烤饼", "日式大阪烧",
+    "马来西亚炒粿条"
+  ]
 }
 
 export default function FoodRecommender({ isOpen, onClose }: FoodRecommenderProps) {
@@ -65,7 +95,7 @@ export default function FoodRecommender({ isOpen, onClose }: FoodRecommenderProp
   const startRolling = () => {
     setIsRolling(true)
     setRecommendation("")
-    
+
     // 每 100ms 更新一次菜式
     rollInterval.current = setInterval(() => {
       setRecommendation(getRandomFood())
@@ -95,11 +125,11 @@ export default function FoodRecommender({ isOpen, onClose }: FoodRecommenderProp
         throw new Error('JSON 格式不正确，必须包含 breakfast、lunch、dinner、night 四个字段')
       }
       // 验证每个字段是否为数组
-      if (!Array.isArray(parsedOptions.breakfast) || !Array.isArray(parsedOptions.lunch) || 
+      if (!Array.isArray(parsedOptions.breakfast) || !Array.isArray(parsedOptions.lunch) ||
           !Array.isArray(parsedOptions.dinner) || !Array.isArray(parsedOptions.night)) {
         throw new Error('每个字段必须是一个数组')
       }
-      
+
       setFoodOptions(parsedOptions)
       localStorage.setItem('foodOptions', settingsJson)
       message.success('设置保存成功')
@@ -141,9 +171,9 @@ export default function FoodRecommender({ isOpen, onClose }: FoodRecommenderProp
                 onChange={(e) => setMealTime(e.target.value)}
                 buttonStyle="solid"
                 className="meal-tabs"
-                style={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
                   gap: '8px'
                 }}
               >
@@ -153,11 +183,11 @@ export default function FoodRecommender({ isOpen, onClose }: FoodRecommenderProp
                 <Radio.Button value="dinner">晚餐</Radio.Button>
                 <Radio.Button value="night">夜宵</Radio.Button>
               </Radio.Group>
-              <Button 
+              <Button
                 type="text"
-                icon={<SettingOutlined />} 
+                icon={<SettingOutlined />}
                 onClick={() => setIsSettingsOpen(true)}
-                style={{ 
+                style={{
                   position: 'absolute',
                   right: 0,
                   top: '50%',
@@ -167,9 +197,9 @@ export default function FoodRecommender({ isOpen, onClose }: FoodRecommenderProp
               />
             </div>
 
-            <Card 
+            <Card
               className="recommendation-card"
-              style={{ 
+              style={{
                 marginBottom: '24px',
                 borderRadius: '12px',
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
@@ -185,7 +215,7 @@ export default function FoodRecommender({ isOpen, onClose }: FoodRecommenderProp
                   {isRolling ? '点击停止' : '点击下方按钮开始'}
                 </Title>
                 {recommendation && (
-                  <Title level={2} className="result" style={{ 
+                  <Title level={2} className="result" style={{
                     color: '#f26522',
                     marginTop: '16px',
                     fontSize: '32px',
@@ -208,7 +238,7 @@ export default function FoodRecommender({ isOpen, onClose }: FoodRecommenderProp
                 height: '48px',
                 fontSize: '18px',
                 borderRadius: '24px',
-                background: isRolling 
+                background: isRolling
                   ? 'linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%)'
                   : 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)',
                 border: 'none',
