@@ -330,6 +330,7 @@ const Index: React.FC = () => {
                 onChange={setActiveTab}
                 items={items}
                 style={{ flex: 1, marginRight: 16 }}
+                className="custom-tabs"
               />
             )}
             <Button
