@@ -915,14 +915,14 @@
   display: inline-flex;
   align-items: center;
   border-radius: 6px;
-  padding: 2px 8px;
+  padding: 1px 6px;
   margin-left: 6px;
   font-size: 10px;
   color: #fff;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
   animation: slideInFromLeft 0.5s ease-out;
-  transform-origin: center;
-  transform: scale(0.9);
+  transform-origin: left center;
+  transform: scale(0.85);
   position: relative;
   overflow: hidden;
 
@@ -947,9 +947,9 @@
   }
 
   .adminText {
-    margin-left: 4px;
+    margin-left: 2px;
     font-weight: 500;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
   }
 
   // 为不同等级的标签添加不同的渐变色
@@ -1013,11 +1013,11 @@
 @keyframes slideInFromLeft {
   0% {
     opacity: 0;
-    transform: translateX(-10px) scale(0.9);
+    transform: translateX(-10px) scale(0.85);
   }
   100% {
     opacity: 1;
-    transform: translateX(0) scale(0.9);
+    transform: translateX(0) scale(0.85);
   }
 }
 
@@ -1122,6 +1122,7 @@
         align-items: center;
         gap: 8px;
         margin-bottom: 4px;
+        height: 24px;
 
         .userInfoCardName {
           font-size: 14px;
@@ -1130,6 +1131,7 @@
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          line-height: 24px;
         }
 
         .userInfoCardLevel {
@@ -1142,6 +1144,7 @@
           font-size: 12px;
           color: #4facfe;
           white-space: nowrap;
+          height: 20px;
 
           .levelEmoji {
             font-size: 12px;
@@ -1153,17 +1156,19 @@
         }
       }
 
-      .userInfoCardAdminTag {
-        transform: scale(0.85);
-        transform-origin: left;
-      }
-
       .titlesContainer {
         display: flex;
         align-items: center;
         gap: 4px;
         margin-top: 4px;
         margin-bottom: 4px;
+        min-height: 24px;
+        flex-wrap: nowrap;
+
+        .adminTag {
+          transform-origin: left center;
+          margin-left: 0;
+        }
 
         .expandButton {
           padding: 0 4px;
@@ -1171,6 +1176,7 @@
           font-size: 12px;
           color: #999;
           transition: all 0.3s;
+          margin-left: 4px;
 
           &:hover {
             color: #1890ff;
@@ -1744,7 +1750,7 @@
   overflow-y: auto;
 
   .expandedTitle {
-    transform: scale(0.9);
+    transform: scale(1);
     transform-origin: left;
   }
 }
