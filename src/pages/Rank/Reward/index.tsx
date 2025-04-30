@@ -35,8 +35,7 @@ export default function DonationLeaderboard() {
 
         if (isLoadMore) {
           setDonors(prev => [...prev, ...(records || [])])
-          // 累加总人数和总金额
-          setTotalDonors(prev => Number(prev) + Number(records?.length || 0))
+          setTotalDonors(Number(total || 0))
 
           // 累加总金额
           const newRecordsAmount = (records || []).reduce((sum, record) => sum + (record.amount || 0), 0)

@@ -1024,7 +1024,25 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                       color: '#fff',
                       textShadow: '0 1px 2px rgba(0,0,0,0.1)'
                     }}>
-                      还有 {moment(holidayInfo.date).diff(moment(), 'days')} 天 🎉
+                      {(() => {
+                        const now = moment();
+                        const holidayDate = moment(holidayInfo.date);
+                        const diffDays = holidayDate.diff(now, 'days');
+                        
+                        if (diffDays > 0) {
+                          return `还有 ${diffDays} 天 🎉`;
+                        } else {
+                          const diffHours = holidayDate.diff(now, 'hours') % 24;
+                          const diffMinutes = holidayDate.diff(now, 'minutes') % 60;
+                          const diffSeconds = holidayDate.diff(now, 'seconds') % 60;
+                          
+                          if (diffHours <= 0 && diffMinutes <= 0 && diffSeconds <= 0) {
+                            return '假期已到 🎉';
+                          }
+                          
+                          return `还有 ${String(diffHours).padStart(2, '0')}:${String(diffMinutes).padStart(2, '0')}:${String(diffSeconds).padStart(2, '0')} 🎉`;
+                        }
+                      })()}
                     </div>
                   </div>
                 ) : '加载中...'
@@ -1520,7 +1538,25 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                     color: '#fff',
                     textShadow: '0 1px 2px rgba(0,0,0,0.1)'
                   }}>
-                    还有 {moment(holidayInfo.date).diff(moment(), 'days')} 天 🎉
+                    {(() => {
+                      const now = moment();
+                      const holidayDate = moment(holidayInfo.date);
+                      const diffDays = holidayDate.diff(now, 'days');
+                      
+                      if (diffDays > 0) {
+                        return `还有 ${diffDays} 天 🎉`;
+                      } else {
+                        const diffHours = holidayDate.diff(now, 'hours') % 24;
+                        const diffMinutes = holidayDate.diff(now, 'minutes') % 60;
+                        const diffSeconds = holidayDate.diff(now, 'seconds') % 60;
+                        
+                        if (diffHours <= 0 && diffMinutes <= 0 && diffSeconds <= 0) {
+                          return '假期已到 🎉';
+                        }
+                        
+                        return `还有 ${String(diffHours).padStart(2, '0')}:${String(diffMinutes).padStart(2, '0')}:${String(diffSeconds).padStart(2, '0')} 🎉`;
+                      }
+                    })()}
                   </div>
                 </div>
               ) : '加载中...'
