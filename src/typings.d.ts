@@ -61,3 +61,10 @@ interface BaseResponse<T> {
 interface InitialState {
   currentUser?: API.LoginUserVO;
 }
+
+interface Title {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+}

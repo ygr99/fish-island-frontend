@@ -68,6 +68,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseListUserTitle_ = {
+    code?: number;
+    data?: UserTitle[];
+    message?: string;
+  };
+
   type BaseResponseListVO_ = {
     code?: number;
     data?: VO[];
@@ -425,6 +431,8 @@ declare namespace API {
     lastSignInDate?: string;
     level?: number;
     points?: number;
+    titleId?: number;
+    titleIdList?: string;
     updateTime?: string;
     usedPoints?: number;
     userAvatar?: string;
@@ -871,6 +879,17 @@ declare namespace API {
     name?: string;
     points?: number;
     region?: string;
+    /** 用户称号 ID */
+    titleId?: number;
+    /** 用户称号ID列表 */
+    titleIdList?: string;
+    /** 用户简介 */
+    userProfile?: string;
+  };
+
+  type setCurrentFrameUsingPOST1Params = {
+    /** titleId */
+    titleId: number;
   };
 
   type setCurrentFrameUsingPOSTParams = {
@@ -893,6 +912,8 @@ declare namespace API {
     level?: number;
     points?: number;
     saTokenInfo?: SaTokenInfo;
+    titleId?: number;
+    titleIdList?: string;
     updateTime?: string;
     usedPoints?: number;
     userAvatar?: string;
@@ -922,6 +943,8 @@ declare namespace API {
     id?: number;
     isDelete?: number;
     mpOpenId?: string;
+    titleId?: number;
+    titleIdList?: string;
     unionId?: string;
     updateTime?: string;
     userAccount?: string;
@@ -961,6 +984,12 @@ declare namespace API {
     points?: number;
     /** 用户状态 */
     status?: string;
+    /** 用户称号 ID */
+    titleId?: number;
+    /** 用户称号ID列表 */
+    titleIdList?: string;
+    /** 用户简介 */
+    userProfile?: string;
   };
 
   type UserEmailResetPasswordRequest = {
@@ -1010,6 +1039,14 @@ declare namespace API {
     email?: string;
     userAccount?: string;
     userPassword?: string;
+  };
+
+  type UserTitle = {
+    createTime?: string;
+    isDelete?: number;
+    name?: string;
+    titleId?: number;
+    updateTime?: string;
   };
 
   type UserUpdateMyRequest = {

@@ -16,6 +16,7 @@ import * as redPacketController from './redPacketController';
 import * as restAuthController from './restAuthController';
 import * as todoController from './todoController';
 import * as userController from './userController';
+import * as userTitleController from './userTitleController';
 import * as webParserController from './webParserController';
 export default {
   avatarFrameController,
@@ -33,4 +34,5 @@ export default {
   redPacketController,
   todoController,
   userController,
+  userTitleController,
 };

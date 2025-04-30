@@ -50,6 +50,13 @@ interface User {
   region?: string;
   country?: string;
   avatarFramerUrl?: string;
+  titleId?: number;
+}
+
+interface Title {
+  id: number;
+  name: string;
+  description: string;
 }
 
 const ChatRoom: React.FC = () => {
@@ -178,6 +185,7 @@ const ChatRoom: React.FC = () => {
           status: '在线',
           points: user.points || 0,
           avatarFramerUrl: user.avatarFramerUrl,
+          titleId: user.titleId,
         }));
 
         // 添加机器人用户
@@ -192,6 +200,7 @@ const ChatRoom: React.FC = () => {
           region: '鱼塘',
           country: '摸鱼岛',
           avatarFramerUrl: '',
+          titleId: 0,
         };
         onlineUsersList.unshift(botUser);
 
@@ -206,6 +215,7 @@ const ChatRoom: React.FC = () => {
             status: '在线',
             points: currentUser.points || 0,
             avatarFramerUrl: currentUser.avatarFramerUrl,
+            titleId: currentUser.titleId,
           });
         }
 
@@ -252,6 +262,7 @@ const ChatRoom: React.FC = () => {
               region: record.messageWrapper?.message?.sender?.region || '未知地区',
               country: record.messageWrapper?.message?.sender?.country ,
               avatarFramerUrl: record.messageWrapper?.message?.sender?.avatarFramerUrl,
+              titleId: record.messageWrapper?.message?.sender?.titleId,
             },
             timestamp: new Date(record.messageWrapper?.message?.timestamp || Date.now()),
             quotedMessage: record.messageWrapper?.message?.quotedMessage ? {
@@ -266,6 +277,7 @@ const ChatRoom: React.FC = () => {
                 isAdmin: record.messageWrapper.message.quotedMessage.sender?.isAdmin || false,
                 region: record.messageWrapper?.message.quotedMessage?.sender?.region || '未知地区',
                 avatarFramerUrl: record.messageWrapper?.message.quotedMessage?.sender?.avatarFramerUrl,
+                titleId: record.messageWrapper?.message.quotedMessage?.sender?.titleId,
               },
               timestamp: new Date(record.messageWrapper.message.quotedMessage.timestamp || Date.now())
             } : undefined,
@@ -720,6 +732,7 @@ const ChatRoom: React.FC = () => {
         region: userIpInfo?.region || '未知地区',
         country: userIpInfo?.country || '未知国家',
         avatarFramerUrl: currentUser.avatarFramerUrl,
+        titleId: currentUser.titleId,
       },
       timestamp: new Date(),
       quotedMessage: quotedMessage || undefined,
@@ -893,7 +906,7 @@ const ChatRoom: React.FC = () => {
             </div>
             <div className={styles.userInfoCardAdminTag}>
               {/* eslint-disable-next-line @typescript-eslint/no-use-before-define */}
-              {getAdminTag(user.isAdmin, user.level)}
+              {getAdminTag(user.isAdmin, user.level, user.titleId)}
             </div>
             <div className={styles.userInfoCardPoints}>
               <span className={styles.pointsEmoji}>✨</span>
@@ -947,19 +960,58 @@ const ChatRoom: React.FC = () => {
   };
 
   // 新增管理员标识函数
-  const getAdminTag = (isAdmin: boolean, level: number) => {
-    // if (isAdmin) {
-    //   // 随机选择一个摸鱼表情
-    //   const fishEmojis = ['🐟', '🐠', '🐡', '🎣'];
-    //   const randomFish = fishEmojis[Math.floor(Math.random() * fishEmojis.length)];
-    //   return (
-    //     <span className={styles.adminTag}>
-    //       {randomFish}
-    //       <span className={styles.adminText}>摸鱼官</span>
-    //     </span>
-    //   );
-    // } else {
-    // 根据等级返回不同的标签
+  const getAdminTag = (isAdmin: boolean, level: number, titleId?: number) => {
+    // 如果有特定的称号ID且不是0（0表示使用等级称号）
+    if (titleId !== undefined && titleId != 0) {
+      // 从 titles.json 中获取对应的称号
+      const titles: Title[] = require('@/config/titles.json').titles;
+      const title = titles.find((t: Title) => String(t.id) === String(titleId));
+
+      if (title) {
+        let tagEmoji = '';
+        let tagClass = '';
+
+        // 根据不同的称号ID设置不同的样式
+        switch (String(titleId)) {
+          case "-1": // 管理员
+            tagEmoji = '🚀';
+            tagClass = styles.titleTagAdmin;
+            break;
+          case "1": // 天使投资人
+            tagEmoji = '😇';
+            tagClass = styles.titleTagInvestor;
+            break;
+          case "2": // 首席摸鱼赞助官
+            tagEmoji = '🏆';
+            tagClass = styles.titleTagChief;
+            break;
+          case "3": // 白金摸鱼赞助官
+            tagEmoji = '💎';
+            tagClass = styles.titleTagPlatinum;
+            break;
+          case "4": // 黄金摸鱼赞助官
+            tagEmoji = '🌟';
+            tagClass = styles.titleTagGold;
+            break;
+          case "5": // 摸鱼共建者
+            tagEmoji = '🛠️';
+            tagClass = styles.titleTagBuilder;
+            break;
+          default:
+            tagEmoji = '🎯';
+            tagClass = styles.levelTagBeginner;
+        }
+
+        return (
+          <span className={`${styles.adminTag} ${tagClass}`}>
+            {tagEmoji}
+            <span className={styles.adminText}>{title.name}</span>
+          </span>
+        );
+      }
+    }
+
+    // 如果没有特定称号或称号ID为0，则使用原有的等级称号逻辑
     let tagText = '';
     let tagEmoji = '';
     let tagClass = '';
@@ -1003,11 +1055,10 @@ const ChatRoom: React.FC = () => {
 
     return (
       <span className={`${styles.adminTag} ${tagClass}`}>
-          {tagEmoji}
+        {tagEmoji}
         <span className={styles.adminText}>{tagText}</span>
-        </span>
+      </span>
     );
-    // }
   };
 
   const handleEmojiClick = (emoji: any) => {
@@ -1058,6 +1109,7 @@ const ChatRoom: React.FC = () => {
         level: currentUser.level || 1,
         isAdmin: currentUser.userRole === 'admin',
         avatarFramerUrl: currentUser.avatarFramerUrl,
+        titleId: currentUser.titleId,
       },
       timestamp: new Date(),
     };
@@ -1135,6 +1187,7 @@ const ChatRoom: React.FC = () => {
             region: userIpInfo?.region || '未知地区',
             country: userIpInfo?.country || '未知国家',
             avatarFramerUrl: currentUser.avatarFramerUrl,
+            titleId: currentUser.titleId,
           },
           timestamp: new Date(),
         };
@@ -1371,7 +1424,7 @@ const ChatRoom: React.FC = () => {
               <div className={styles.senderInfo}>
                 <span className={styles.senderName}>
                   {msg.sender.name}
-                  {getAdminTag(msg.sender.isAdmin, msg.sender.level)}
+                  {getAdminTag(msg.sender.isAdmin, msg.sender.level, msg.sender.titleId)}
                   <span className={styles.levelBadge}>
                     {getLevelEmoji(msg.sender.level)} {msg.sender.level}
                   </span>

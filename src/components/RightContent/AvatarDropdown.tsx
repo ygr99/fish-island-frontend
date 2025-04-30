@@ -7,6 +7,7 @@ import {
   userEmailSendUsingPost,
   userEmailResetPasswordUsingPost
 } from '@/services/backend/userController';
+import {listAvailableFramesUsingGet1, setCurrentFrameUsingPost1} from '@/services/backend/userTitleController';
 import {getCosCredentialUsingGet, uploadFileByMinioUsingPost} from '@/services/backend/fileController';
 import {
   LockOutlined,
@@ -207,6 +208,54 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   const [previewAvatar, setPreviewAvatar] = useState<string>('');
   const [emailCountdown, setEmailCountdown] = useState(0);
   const [emailCode, setEmailCode] = useState('');
+  const [availableTitles, setAvailableTitles] = useState<API.UserTitle[]>([]);
+
+  // 获取可用称号列表
+  const fetchAvailableTitles = async () => {
+    try {
+      const res = await listAvailableFramesUsingGet1();
+      if (res.data) {
+        // 添加默认等级称号
+        const defaultTitle = {
+          titleId: "0",
+          name: '等级称号',
+          description: '默认等级称号',
+          level: 1,
+          experience: 0,
+          createTime: new Date().toISOString(),
+          updateTime: new Date().toISOString(),
+        };
+        setAvailableTitles([defaultTitle, ...res.data]);
+      }
+    } catch (error) {
+      console.error('获取称号列表失败:', error);
+    }
+  };
+
+  // 在组件加载时获取称号列表
+  useEffect(() => {
+    fetchAvailableTitles();
+  }, []);
+
+  // 处理称号设置
+  const handleSetTitle = async (titleId: number) => {
+    try {
+      const res = await setCurrentFrameUsingPost1({titleId});
+      if (res.code === 0) {
+        message.success('称号设置成功');
+        // 更新用户信息
+        const userInfo = await getLoginUserUsingGet();
+        if (userInfo.data) {
+          setInitialState((s) => ({
+            ...s,
+            currentUser: userInfo.data,
+          }));
+        }
+      }
+    } catch (error: any) {
+      message.error(`设置称号失败：${error.message}`);
+    }
+  };
 
   // 默认头像列表
   const defaultAvatars = [
@@ -1247,7 +1296,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           setIsEditProfileOpen(false);
           setPreviewAvatar('');
           setSelectedAvatar('');
-          // 重置表单
           editProfileForm.resetFields();
         }}
         footer={null}
@@ -1260,6 +1308,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
             userName: currentUser?.userName,
             userProfile: currentUser?.userProfile,
             userAvatar: !defaultAvatars.includes(currentUser?.userAvatar || '') ? currentUser?.userAvatar : '',
+            titleId: currentUser?.titleId,
           }}
         >
           <Form.Item
@@ -1418,6 +1467,42 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               showCount
               placeholder="请输入不超过100个字符的个人简介"
             />
+          </Form.Item>
+
+          <Form.Item label="称号设置" name="titleId">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <Select
+                placeholder="请选择称号"
+                onChange={handleSetTitle}
+                allowClear
+                value={currentUser?.titleId}
+              >
+                {availableTitles.map((title) => (
+                  <Select.Option key={title.titleId} value={title.titleId}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px'
+                    }}>
+                      <span>{title.name}</span>
+                    </div>
+                  </Select.Option>
+                ))}
+              </Select>
+              {currentUser?.titleId && (
+                <div style={{ 
+                  fontSize: '12px', 
+                  color: '#52c41a',
+                  padding: '4px 8px',
+                  background: '#f6ffed',
+                  border: '1px solid #b7eb8f',
+                  borderRadius: '4px'
+                }}>
+                  当前称号：
+                  {currentUser.titleId == 0 ? '等级称号' : (availableTitles.find(t => t.titleId === currentUser.titleId)?.name || '未知称号')}
+                </div>
+              )}
+            </div>
           </Form.Item>
 
           <Form.Item>
