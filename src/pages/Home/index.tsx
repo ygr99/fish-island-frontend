@@ -164,7 +164,9 @@ const Home: React.FC = () => {
   };
 
   const handleSwitchToFishMode = () => {
-    window.location.href = '/index';
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirect = urlParams.get('redirect') || '/index';
+    window.location.href = redirect;
   };
 
   const handleAddCustomSite = (site: { title: string; url: string; icon: string }) => {
@@ -182,15 +184,17 @@ const Home: React.FC = () => {
         backgroundImage: `url(${wallpaper})`
       }}
     >
-      <Button
-        type="text"
-        icon={<SwapOutlined />}
-        onClick={handleSwitchToFishMode}
-        className={styles.themeSwitch}
-        style={{ color: '#ffffff', fontSize: '16px' }}
-      >
-        摸鱼模式
-      </Button>
+      <div className={styles.themeSwitchWrapper}>
+        <Button
+          type="text"
+          icon={<SwapOutlined />}
+          onClick={handleSwitchToFishMode}
+          className={styles.themeSwitch}
+          style={{ color: '#ffffff', fontSize: '16px' }}
+        >
+          摸鱼模式
+        </Button>
+      </div>
       <Dropdown
         overlay={<WallpaperMenu onWallpaperChange={setWallpaper} />}
         trigger={['contextMenu']}

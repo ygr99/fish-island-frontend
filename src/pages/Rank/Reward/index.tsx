@@ -9,7 +9,7 @@ const { Title, Text } = Typography
 export default function DonationLeaderboard() {
   const [donors, setDonors] = useState<API.DonationRecordsVO[]>([])
   const [totalAmount, setTotalAmount] = useState(0)
-  const [totalDonors, setTotalDonors] = useState(0)
+  const [totalDonors, setTotalDonors] = useState<number>(0)
   const [isModalVisible, setIsModalVisible] = useState(false)
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -36,14 +36,14 @@ export default function DonationLeaderboard() {
         if (isLoadMore) {
           setDonors(prev => [...prev, ...(records || [])])
           // 累加总人数和总金额
-          setTotalDonors(prev => prev + (records?.length || 0))
+          setTotalDonors(prev => Number(prev) + Number(records?.length || 0))
 
           // 累加总金额
           const newRecordsAmount = (records || []).reduce((sum, record) => sum + (record.amount || 0), 0)
           setTotalAmount(prev => Number((prev + newRecordsAmount).toFixed(2)))
         } else {
           setDonors(records || [])
-          setTotalDonors(total || 0)
+          setTotalDonors(Number(total || 0))
 
           // 计算总金额
           const totalAmount = (records || []).reduce((sum, record) => sum + (record.amount || 0), 0)

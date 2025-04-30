@@ -1155,7 +1155,10 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         <Button
           type="text"
           icon={<SwapOutlined />}
-          onClick={() => history.push('/home')}
+          onClick={() => {
+            const currentPath = window.location.pathname;
+            history.push(`/home?redirect=${encodeURIComponent(currentPath)}`);
+          }}
           className={tabModeButtonStyle}
           style={{
             background: '#ffa768',
