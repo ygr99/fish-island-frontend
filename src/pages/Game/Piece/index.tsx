@@ -46,7 +46,6 @@ function App() {
   const [gameStarted, setGameStarted] = useState<boolean>(initialState?.gameState?.gameStarted || false);
   const [messageApi, contextHolder] = message.useMessage();
   //原有单机模式
-  const [board, setBoard] = useState<Board>(initialState?.gameState?.board || createEmptyBoard());
   const [currentPlayer, setCurrentPlayer] = useState<Player>('black');
   const [winner, setWinner] = useState<Player | null>(initialState?.gameState?.winner || null);
   const [isThinking, setIsThinking] = useState(false);
@@ -55,6 +54,8 @@ function App() {
   const [opponentLastMove, setOpponentLastMove] = useState<Position | null>(initialState?.gameState?.opponentLastMove || null);
   const [winningLine, setWinningLine] = useState<WinningLine | null>(initialState?.gameState?.winningLine || null);
   const [showRestartModal, setShowRestartModal] = useState(false);
+  const [joinStatus, setJoinStatus] = useState(localStorage.getItem('piece_join_status') || "old");
+  const [board, setBoard] = useState<Board>(joinStatus === "old" ? initialState?.gameState?.board || createEmptyBoard() : createEmptyBoard());
   // 添加游戏结束弹框状态
   const [showGameEndModal, setShowGameEndModal] = useState(false);
   // 添加超时提示相关状态
@@ -206,17 +207,41 @@ function App() {
   };
 
   const handleJoinSuccess = (data: any) => {
+    localStorage.setItem('piece_join_status', 'old');
+    // 清除其他状态数据
+    setWinner(null);
+    setMoves([]);
+    setLastMove(null);
+    setOpponentLastMove(null);
+    setWinningLine(null);
+    setOpponentTimeout(false);
+    setPlayerTimeout(false);
+    setOpponentTimeoutModalVisible(false);
+    setPlayerTimeoutModalVisible(false);
+    setOpponentLastMoveTime(Date.now());
+    setPlayerLastMoveTime(Date.now());
+
+    if (opponentTimeoutRef.current) {
+      clearTimeout(opponentTimeoutRef.current);
+      opponentTimeoutRef.current = null;
+    }
+    if (playerTimeoutRef.current) {
+      clearTimeout(playerTimeoutRef.current);
+      playerTimeoutRef.current = null;
+    }
+
+    // 设置新的游戏状态
     setOpponentColor(data.data.opponentColor);
     setPlayerColor(data.data.yourColor);
     setOnlineStatus('playing');
     setGameStarted(true);
     setOpponentUserId(data.data.playerId);
     setOpponentInfo(data.data.playerInfo);
-    messageApi.open({
-      type: 'success',
-      content: '战斗开始！！！',
-    });
+
+    // 如果是创建房间的用户（执黑），保持棋盘状态不变
+    // 如果是加入房间的用户（执白），重置棋盘
     if (data.data.yourColor === 'white') {
+      setBoard(createEmptyBoard());
       setCurrentPlayer('black');
       // 设置对手超时计时器
       setOpponentLastMoveTime(Date.now());
@@ -238,6 +263,11 @@ function App() {
         setPlayerTimeoutModalVisible(true);
       }, TIMEOUT_DURATION);
     }
+
+    messageApi.open({
+      type: 'success',
+      content: '战斗开始！！！',
+    });
     saveGameState();
   };
 
@@ -347,7 +377,7 @@ function App() {
         clearTimeout(playerTimeoutRef.current);
         playerTimeoutRef.current = null;
       }
-      
+
       // 设置对手超时计时器
       setOpponentLastMoveTime(Date.now());
       if (opponentTimeoutRef.current) {
@@ -1203,7 +1233,7 @@ function App() {
       >
         <p>对手已经超过30秒没有下子，是否退出房间？</p>
       </Modal>
-      
+
       {/* 玩家超时提示弹窗 */}
       <Modal
         title="请下子"

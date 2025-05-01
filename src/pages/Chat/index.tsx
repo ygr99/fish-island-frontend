@@ -884,15 +884,15 @@ const ChatRoom: React.FC = () => {
     // 从 titleIdList 字符串解析称号 ID 数组
     const userTitleIds: number[] = user.titleIdList ? JSON.parse(user.titleIdList) : [];
     const [isTitlesExpanded, setIsTitlesExpanded] = useState(false);
-    
+
     // 获取所有称号
     const allTitles = [
       getAdminTag(user.isAdmin, user.level, 0),
       ...userTitleIds.map(titleId => getAdminTag(user.isAdmin, user.level, titleId))
     ];
-    
+
     // 优先显示用户选中的称号
-    const defaultTitle = user.titleId ? 
+    const defaultTitle = user.titleId ?
       allTitles.find(titleElement => {
         // 检查是否是管理员称号
         if (user.titleId === -1 && titleElement.props?.children?.[1]?.props?.children === '管理员') {
@@ -906,9 +906,9 @@ const ChatRoom: React.FC = () => {
       allTitles[0];
     // 其他称号
     const otherTitles = allTitles.filter(title => title !== defaultTitle);
-    
+
     return (
-      <div 
+      <div
         className={styles.userInfoCard}
         onMouseLeave={() => setIsTitlesExpanded(false)}
       >
@@ -1207,6 +1207,7 @@ const ChatRoom: React.FC = () => {
   const handleInviteClick = (roomId: string, gameType: string) => {
     switch (gameType) {
       case 'chess':
+        localStorage.setItem('piece_join_status', 'new');
         history.push(`/game/piece?roomId=${roomId}&mode=online`);
         break;
       case 'chineseChess':
