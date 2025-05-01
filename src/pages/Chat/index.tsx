@@ -1000,6 +1000,10 @@ const ChatRoom: React.FC = () => {
   // 在 return 语句之前添加引用消息的处理函数
   const handleQuoteMessage = (message: Message) => {
     setQuotedMessage(message);
+    // 让输入框获得焦点
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
   };
 
   const getLevelEmoji = (level: number) => {
