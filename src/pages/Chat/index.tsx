@@ -891,10 +891,21 @@ const ChatRoom: React.FC = () => {
       ...userTitleIds.map(titleId => getAdminTag(user.isAdmin, user.level, titleId))
     ];
     
-    // 默认显示的称号（第一个）
-    const defaultTitle = allTitles[0];
+    // 优先显示用户选中的称号
+    const defaultTitle = user.titleId ? 
+      allTitles.find(titleElement => {
+        // 检查是否是管理员称号
+        if (user.titleId === -1 && titleElement.props?.children?.[1]?.props?.children === '管理员') {
+          return true;
+        }
+        // 检查其他称号
+        const titles = require('@/config/titles.json').titles;
+        const titleConfig = titles.find((t: Title) => String(t.id) === String(user.titleId));
+        return titleConfig && titleConfig.name === titleElement.props?.children?.[1]?.props?.children;
+      }) || allTitles[0] :
+      allTitles[0];
     // 其他称号
-    const otherTitles = allTitles.slice(1);
+    const otherTitles = allTitles.filter(title => title !== defaultTitle);
     
     return (
       <div 
