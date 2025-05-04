@@ -691,8 +691,36 @@
       }
 
       .emojiButton,
-      .emoticonButton {
+      .emoticonButton,
+      .redPacketButton {
         margin-right: 4px;
+        @media screen and (max-width: 768px) {
+          display: none;
+        }
+      }
+
+      .emoticonButton {
+        @media screen and (max-width: 768px) {
+          display: flex !important;
+        }
+      }
+
+      .sendButton {
+        @media screen and (max-width: 768px) {
+          display: flex;
+        }
+      }
+
+      .inputCounter {
+        position: absolute;
+        right: 120px;
+        color: #999;
+        font-size: 12px;
+        pointer-events: none;
+        
+        @media screen and (max-width: 768px) {
+          display: none;
+        }
       }
 
       .emoticonPopover {
@@ -724,18 +752,6 @@
           font-size: 16px;
         }
       }
-
-      .inputCounter {
-        position: absolute;
-        right: 120px;
-        color: #999;
-        font-size: 12px;
-        pointer-events: none;
-        
-        @media screen and (max-width: 768px) {
-          display: none;
-        }
-      }
     }
 
     @media screen and (max-width: 768px) {
@@ -745,10 +761,6 @@
       .inputRow {
         .ant-btn {
           padding: 0 16px;
-        }
-
-        .inputCounter {
-          right: 100px;
         }
       }
     }
@@ -1171,12 +1183,14 @@
         }
 
         .expandButton {
-          padding: 0 4px;
+          padding: 0 2px;
           height: 20px;
           font-size: 12px;
           color: #999;
           transition: all 0.3s;
-          margin-left: 4px;
+          margin-left: 2px;
+          display: flex;
+          align-items: center;
 
           &:hover {
             color: #1890ff;
@@ -1752,6 +1766,26 @@
   .expandedTitle {
     transform: scale(1);
     transform-origin: left;
+  }
+}
+
+.hidePlaceholderOnMobile {
+  @media screen and (max-width: 768px) {
+    &::placeholder {
+      color: transparent !important;
+    }
+    &::-webkit-input-placeholder {
+      color: transparent !important;
+    }
+    &:-moz-placeholder {
+      color: transparent !important;
+    }
+    &::-moz-placeholder {
+      color: transparent !important;
+    }
+    &:-ms-input-placeholder {
+      color: transparent !important;
+    }
   }
 }
 

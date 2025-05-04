@@ -14,7 +14,7 @@ import {
   DeleteOutlined,
   PaperClipOutlined,
   GiftOutlined,
-  DownOutlined
+  RightOutlined
 } from '@ant-design/icons';
 import styles from './index.less';
 import {useModel} from "@@/exports";
@@ -954,7 +954,7 @@ const ChatRoom: React.FC = () => {
                     </div>
                   }
                   trigger="click"
-                  placement="bottom"
+                  placement="right"
                   overlayClassName={styles.titlesPopover}
                   open={isTitlesExpanded}
                   onOpenChange={setIsTitlesExpanded}
@@ -963,7 +963,7 @@ const ChatRoom: React.FC = () => {
                     type="text"
                     size="small"
                     className={styles.expandButton}
-                    icon={<DownOutlined />}
+                    icon={<RightOutlined />}
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsTitlesExpanded(!isTitlesExpanded);
@@ -1049,15 +1049,15 @@ const ChatRoom: React.FC = () => {
             tagEmoji = '😇';
             tagClass = styles.titleTagInvestor;
             break;
-          case "2": // 首席摸鱼赞助官
+          case "2": // 首席摸鱼官
             tagEmoji = '🏆';
             tagClass = styles.titleTagChief;
             break;
-          case "3": // 白金摸鱼赞助官
+          case "3": // 白金摸鱼官
             tagEmoji = '💎';
             tagClass = styles.titleTagPlatinum;
             break;
-          case "4": // 黄金摸鱼赞助官
+          case "4": // 黄金摸鱼官
             tagEmoji = '🌟';
             tagClass = styles.titleTagGold;
             break;
@@ -1705,7 +1705,7 @@ const ChatRoom: React.FC = () => {
             maxLength={200}
             disabled={uploading}
             autoSize={{ minRows: 1, maxRows: 4 }}
-            className={styles.chatTextArea}
+            className={`${styles.chatTextArea} ${styles.hidePlaceholderOnMobile}`}
           />
           {isMentionListVisible && filteredUsers.length > 0 && (
             <div
