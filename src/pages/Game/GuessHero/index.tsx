@@ -3,6 +3,7 @@ import {Card, Form, Button, Table, Space, message, Select} from 'antd';
 import {listSimpleHero, getRandomHero, getHeroById} from '@/services/backend/heroController';
 import "./index.css"
 import {ArrowDownOutlined, ArrowUpOutlined} from "@ant-design/icons";
+
 const GuessHero: React.FC = () => {
   const [form] = Form.useForm();
   const [heroList, setHeroList] = useState<API.SimpleHeroVO_[]>([]);
@@ -72,7 +73,7 @@ const GuessHero: React.FC = () => {
         resetGame();
       } else {
         // 未猜中逻辑
-        const response = await getHeroById({ id: values.heroId });
+        const response = await getHeroById({id: values.heroId});
         if (response.code === 0) {
           setGuessList(prev => [response.data, ...prev]); // 使用函数式更新
         }
@@ -112,11 +113,10 @@ const GuessHero: React.FC = () => {
 
   // 比较函数：返回 ↑ 或 ↓ 的图标
   const getArrow = (current: number, target: number) => {
-    if (current > target) return <ArrowDownOutlined style={{ color: 'red' }} />;
-    if (current < target) return <ArrowUpOutlined style={{ color: 'red' }} />;
+    if (current > target) return <ArrowDownOutlined style={{color: 'red'}}/>;
+    if (current < target) return <ArrowUpOutlined style={{color: 'red'}}/>;
     return '';
   };
-
 
 
   // 表格列配置
@@ -147,11 +147,14 @@ const GuessHero: React.FC = () => {
       key: 'releaseDate',
       render: (text, record) => {
         if (!randomHero) return text;
-        const arrow = getArrow(new Date(record.releaseDate).getTime(), new Date(randomHero.releaseDate).getTime());
-        return (
+        const current = new Date(record.releaseDate).getTime();
+        const target = new Date(randomHero.releaseDate).getTime();
+        const arrow = getArrow(current, target);
+        const same = isSame(current, target);
+        return same ? `${text} ✅` : (
           <span>
-          {text} {arrow}
-        </span>
+        {text} {arrow}
+      </span>
         );
       },
     },
@@ -271,15 +274,15 @@ const GuessHero: React.FC = () => {
         <Space
           direction="vertical"
           size="large"
-          style={{ width: '100%' }}
+          style={{width: '100%'}}
           align="center" // 新增属性
         >
           <Form.Item
             label="选择英雄"
             name="heroId"
-            rules={[{ required: true }]}
-            style={{ textAlign: 'center' }} // 新增样式
-            labelCol={{ style: { textAlign: 'left' } }} // 保持标签左对齐
+            rules={[{required: true}]}
+            style={{textAlign: 'center'}} // 新增样式
+            labelCol={{style: {textAlign: 'left'}}} // 保持标签左对齐
           >
             <Select
               showSearch={{
