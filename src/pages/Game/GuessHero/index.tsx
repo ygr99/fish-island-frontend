@@ -405,15 +405,20 @@ const GuessHero: React.FC = () => {
             </Button>
           </Space>
 
-          <Table
-            columns={columns}
-            dataSource={guessList}
-            rowKey="id"
-            rowClassName={(record) =>
-              record.id === correctHeroId ? 'highlight-row' : ''
-            }
-          />
-
+          {guessList.length > 0 ? (
+            <Table
+              columns={columns}
+              dataSource={guessList}
+              rowKey="id"
+              rowClassName={(record) =>
+                record.id === correctHeroId ? 'highlight-row' : ''
+              }
+            />
+          ) : (
+            <p style={{ textAlign: 'center', color: '#888' }}>
+              暂无猜测记录，请开始游戏并猜一下
+            </p>
+          )}
         </Space>
       </Form>
     </Card>
