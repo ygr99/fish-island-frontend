@@ -1,8 +1,8 @@
 import React, {useState, useEffect} from 'react';
-import {Card, Form, Button, Table, Space, message, Select, Modal} from 'antd';
+import {Card, Form, Button, Table, Space, message, Select, Modal, List, Collapse} from 'antd';
 import {listSimpleHero, getRandomHero, getHeroById, getNewHero} from '@/services/backend/heroController';
 import "./index.css"
-import {ArrowDownOutlined, ArrowUpOutlined, RocketOutlined} from "@ant-design/icons";
+import {ArrowDownOutlined, ArrowUpOutlined, CheckCircleOutlined, RocketOutlined} from "@ant-design/icons";
 
 const GuessHero: React.FC = () => {
   const [form] = Form.useForm();
@@ -132,13 +132,6 @@ const GuessHero: React.FC = () => {
     return match ? parseInt(match[0], 10) : 0;
   };
 
-  // 比较函数：返回 ↑ 或 ↓ 的图标
-  const getArrow = (current: number, target: number) => {
-    if (current > target) return <ArrowDownOutlined style={{color: 'red'}}/>;
-    if (current < target) return <ArrowUpOutlined style={{color: 'red'}}/>;
-    return '';
-  };
-
   const gameRules = (
     <Modal
       title="游戏规则"
@@ -146,195 +139,223 @@ const GuessHero: React.FC = () => {
       onOk={() => setIsRuleModalVisible(false)}
       onCancel={() => setIsRuleModalVisible(false)}
     >
-      <ol>
-        <li><strong>目标：</strong>通过每次猜测获取线索，最终猜中隐藏的英雄。</li>
-        <li><strong>流程：</strong>点击「开始」获取随机英雄 → 选择猜测 → 获取属性对比线索 → 直到猜中或点击「结束」。</li>
-        <li><strong>线索类型：</strong>上线时间、定位、身高、皮肤数量等属性对比（↑/↓），相同属性显示✅。</li>
-        <li><strong>限制：</strong>不可重复猜测同一英雄。</li>
-        <li><strong>提示功能：</strong>点击「提示」可查看正确英雄的台词（若存在）。</li>
-      </ol>
+      <div style={{ padding: '0 12px' }}>
+        <ol>
+          <li><strong>目标：</strong>通过每次猜测获取线索，最终猜中隐藏的英雄。</li>
+          <li><strong>流程：</strong>点击「开始」获取随机英雄 → 选择猜测 → 获取属性对比线索 → 直到猜中或点击「结束」。</li>
+          <li><strong>线索类型：</strong>上线时间、定位、身高、皮肤数量等属性对比（↑/↓），相同属性显示✅。</li>
+          <li><strong>限制：</strong>不可重复猜测同一英雄。</li>
+          <li><strong>提示功能：</strong>点击「提示」可查看正确英雄的台词（若存在）。</li>
+        </ol>
+
+        {/* 最新英雄信息区块 */}
+        <div style={{
+          marginTop: 24,
+          padding: '12px 16px',
+          backgroundColor: '#f8f9fa',
+          borderRadius: 8,
+          boxShadow: '0 1px 4px rgba(0,0,0,0.05)'
+        }}>
+          <h4 style={{ marginBottom: 12, fontSize: 14, fontWeight: 600 }}>
+            最新英雄信息
+          </h4>
+
+          {loadingNewHero ? (
+            <Space>
+              <RocketOutlined spin style={{ color: '#ffa768' }} />
+              <span>加载中...</span>
+            </Space>
+          ) : newHero ? (
+            <Space>
+              <img
+                src={`https://game.gtimg.cn/images/yxzj/img201606/heroimg/${newHero.ename}/${newHero.ename}.jpg`}
+                alt="最新英雄"
+                style={{ width: 40, height: 40, borderRadius: 4 }}
+              />
+              <div>
+                <div>名称：<strong>{newHero.cname}</strong></div>
+                <div>上线时间：<strong>{newHero.releaseDate}</strong></div>
+              </div>
+            </Space>
+          ) : (
+            <span style={{ color: '#888' }}>暂无最新英雄信息</span>
+          )}
+        </div>
+      </div>
     </Modal>
   );
 
-  // 表格列配置
-  const columns = [
-    {
-      title: '英雄图片',
-      dataIndex: 'ename',
-      key: 'ename',
-      render: (text, record) => {
-        const imageUrl = `https://game.gtimg.cn/images/yxzj/img201606/heroimg/${record.ename}/${record.ename}.jpg`;
-        return (
-          <img
-            src={imageUrl}
-            alt={record.cname}
-            style={{width: 60, height: 60, objectFit: 'contain'}}
-          />
-        );
-      },
-    },
-    {
-      title: '英雄名称',
-      dataIndex: 'cname',
-      key: 'cname',
-    },
-    {
-      title: '上线时间',
-      dataIndex: 'releaseDate',
-      key: 'releaseDate',
-      render: (text, record) => {
-        if (!randomHero) return text;
-        const current = new Date(record.releaseDate).getTime();
-        const target = new Date(randomHero.releaseDate).getTime();
-        const arrow = getArrow(current, target);
-        const same = isSame(current, target);
-        return same ? `${text} ✅` : (
-          <span>
-        {text} {arrow}
-      </span>
-        );
-      },
-    },
-    {
-      title: '主定位',
-      dataIndex: 'primaryType',
-      key: 'primaryType',
-      render: (text, record) => {
-        let label = typeof record.primaryType === 'number'
-          ? typeMap[record.primaryType as keyof typeof typeMap] || record.primaryType
-          : record.primaryType;
 
-        if (!randomHero) return label;
-        //label如果为null, 则返回空字符串
-        label = label || '无';
-        const same = isSame(record.primaryType, randomHero.primaryType);
-        return same ? `${label} ✅` : label;
-      },
-    },
+  // 比较图标渲染函数
+  const renderCompareIcon = (current: number, target: number) => {
+    if (!randomHero) return null;
+    if (current > target) return <ArrowDownOutlined style={{ color: '#ff4d4f', marginLeft: 4 }} />;
+    if (current < target) return <ArrowUpOutlined style={{ color: '#49aa19', marginLeft: 4 }} />;
+    return <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 4 }} />;
+  };
+  // 替换表格的移动端列表展示
+  const renderGuessList = () => (
+    <List
+      dataSource={guessList}
+      renderItem={(record) => (
+        <List.Item
+          className={record.id === correctHeroId ? 'highlight-row' : ''}
+          style={{
+            backgroundColor: '#fff',
+            marginBottom: 12,
+            borderRadius: 8,
+            padding: '12px 16px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+          }}
+        >
+          <div style={{ width: '100%' }}>
+            {/* 头部信息 */}
+            <div style={{ display: 'flex', marginBottom: 12 }}>
+              <img
+                src={`https://game.gtimg.cn/images/yxzj/img201606/heroimg/${record.ename}/${record.ename}.jpg`}
+                style={{ width: 50, height: 50, borderRadius: 4, marginRight: 12 }}
+              />
+              <div>
+                <div style={{fontWeight: 'bold', fontSize: 16}}>{record.cname}</div>
+                <div style={{
+                  fontSize: 12,
+                }}>
+                  {typeMap[record.primaryType as keyof typeof typeMap] || record.primaryType}
+                  {randomHero && isSame(record.primaryType, randomHero.primaryType) && (
+                    <CheckCircleOutlined style={{color: '#52c41a', marginLeft: 4}}/>
+                  )}
+                </div>
+              </div>
+            </div>
 
-    {
-      title: '副定位',
-      dataIndex: 'secondaryType',
-      key: 'secondaryType',
-      render: (text, record) => {
-        let label = typeof record.secondaryType === 'number'
-          ? typeMap[record.secondaryType as keyof typeof typeMap] || record.secondaryType
-          : record.secondaryType;
+            {/* 核心对比指标 */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 6,
+              marginBottom: 8,
+              fontSize: 12
+            }}>
+              <div style={{padding: 8, border: '1px solid #eee', borderRadius: 4}}>
+                上线时间：{record.releaseDate}
+                {renderCompareIcon(
+                  new Date(record.releaseDate).getTime(),
+                  randomHero?.releaseDate ? new Date(randomHero.releaseDate).getTime() : 0
+                )}
+              </div>
 
-        if (!randomHero) return label;
-        //label如果为null, 则返回空字符串
-        label = label || '无';
-        const same = isSame(record.secondaryType, randomHero.secondaryType);
-        return same ? `${label} ✅` : label;
-      },
-    },
-    {
-      title: '种族',
-      dataIndex: 'race',
-      key: 'race',
-      render: (text, record) => {
-        if (!randomHero) return text;
-        const same = isSame(record.race, randomHero.race);
-        return same ? `${text} ✅` : text;
-      },
-    },
-    {
-      title: '阵营',
-      dataIndex: 'faction',
-      key: 'faction',
-      render: (text, record) => {
-        if (!randomHero) return text;
-        const same = isSame(record.faction, randomHero.faction);
-        return same ? `${text} ✅` : text;
-      },
-    },
-    {
-      title: '区域',
-      dataIndex: 'region',
-      key: 'region',
-      render: (text, record) => {
-        if (!randomHero) return text;
-        const same = isSame(record.region, randomHero.region);
-        return same ? `${text} ✅` : text;
-      },
-    },
-    {
-      title: '能量',
-      dataIndex: 'ability',
-      key: 'ability',
-      render: (text, record) => {
-        if (!randomHero) return text;
-        const same = isSame(record.ability, randomHero.ability);
-        return same ? `${text} ✅` : text;
-      },
-    },
-    {
-      title: '身高',
-      dataIndex: 'height',
-      key: 'height',
-      render: (text, record) => {
-        if (!randomHero) return text;
-        const currentHeight = getHeightNumber(record.height);
-        const targetHeight = getHeightNumber(randomHero.height);
-        const arrow = getArrow(currentHeight, targetHeight);
-        const same = currentHeight === targetHeight;
-        return same ? `${text} ✅` : (
-          <span>
-          {text} {arrow}
-        </span>
-        );
-      },
-    },
-    {
-      title: '皮肤数量',
-      dataIndex: 'skinsNum',
-      key: 'skinsNum',
-      render: (text, record) => {
-        if (!randomHero) return text;
-        const currentNum = parseInt(record.skinsNum, 10);
-        const targetNum = parseInt(randomHero.skinsNum, 10);
-        const arrow = getArrow(currentNum, targetNum);
-        const same = currentNum === targetNum;
-        return same ? `${text} ✅` : (
-          <span>
-          {text} {arrow}
-        </span>
-        );
-      },
-    },
-  ];
+              <div style={{ padding: 8, border: '1px solid #eee', borderRadius: 4 }}>
+                皮肤数：{record.skinsNum}
+                {renderCompareIcon(
+                  parseInt(record.skinsNum),
+                  randomHero?.skinsNum ? parseInt(randomHero.skinsNum) : 0
+                )}
+              </div>
 
+              <div style={{ padding: 8, border: '1px solid #eee', borderRadius: 4 }}>
+                身高：{getHeightNumber(record.height)}cm
+                {renderCompareIcon(
+                  getHeightNumber(record.height),
+                  randomHero?.height ? getHeightNumber(randomHero.height) : 0
+                )}
+              </div>
+            </div>
 
+            {/* 可展开详情 */}
+            <Collapse size="small" bordered={false}>
+              <Collapse.Panel header="查看详情" key="1">
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: 6,
+                  fontSize: 12
+                }}>
+                  <div style={{
+                    padding: 6,
+                  }}>
+                    阵营：{record.faction || '无'}
+                    {randomHero && isSame(record.faction, randomHero.faction) && (
+                      <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 4 }} />
+                    )}
+                  </div>
+
+                  <div style={{
+                    padding: 6,
+                  }}>
+                    区域：{record.region || '无'}
+                    {randomHero && isSame(record.region, randomHero.region) && (
+                      <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 4 }} />
+                    )}
+                  </div>
+
+                  <div style={{
+                    padding: 6,
+                  }}>
+                    副定位：
+                    {record.secondaryType
+                      ? typeMap[record.secondaryType as keyof typeof typeMap] || record.secondaryType
+                      : '无'}
+                    {randomHero && isSame(record.secondaryType, randomHero.secondaryType) && (
+                      <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 4 }} />
+                    )}
+                  </div>
+
+                  <div style={{
+                    padding: 6,
+                  }}>
+                    种族：{record.race || '无'}
+                    {randomHero && isSame(record.race, randomHero.race) && (
+                      <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 4 }} />
+                    )}
+                  </div>
+
+                  <div style={{
+                    padding: 6,
+                  }}>
+                    能量：{record.ability || '无'}
+                    {randomHero && isSame(record.ability, randomHero.ability) && (
+                      <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 4 }} />
+                    )}
+                  </div>
+                </div>
+              </Collapse.Panel>
+            </Collapse>
+          </div>
+        </List.Item>
+      )}
+    />
+  );
   return (
     <>
       {gameRules} {}
     <Card
-      title="王者猜英雄"
-      extra={
-        <>
-          {/* 游戏规则链接 */}
+      title={
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 16 }}>英雄猜猜乐</span>
           <a
             onClick={() => setIsRuleModalVisible(true)}
-            style={{ color: '#1890ff', textDecoration: 'underline', cursor: 'pointer', marginRight: 12 }}
           >
-            游戏规则
+            规则
           </a>
-
-          {/* 最新英雄信息 */}
-          {loadingNewHero ? (
-            <span>加载中...</span>
-          ) : newHero ? (
-            <Space>
-              <RocketOutlined style={{ color: '#ffa768' }} />
-              <span style={{ color: '#ffa768' }}>
-            最新英雄：<strong>{newHero.cname}</strong>，上线时间：<strong>{newHero.releaseDate}</strong>
-          </span>
-            </Space>
-          ) : (
-            <span>暂无最新英雄信息</span>
-          )}
-        </>
+        </div>
       }
+      // extra={
+      //   <>
+      //     {/* 最新英雄信息 */}
+      //     {loadingNewHero ? (
+      //       <span>加载中...</span>
+      //     ) : newHero ? (
+      //       <Space>
+      //         <RocketOutlined style={{ color: '#ffa768' }} />
+      //         <span style={{ color: '#ffa768' }}>
+      //       最新英雄：<strong>{newHero.cname}</strong>，上线时间：<strong>{newHero.releaseDate}</strong>
+      //     </span>
+      //       </Space>
+      //     ) : (
+      //       <span>暂无最新英雄信息</span>
+      //     )}
+      //   </>
+      // }
     >
       <Form form={form} onFinish={handleGuess}>
         <Space
@@ -406,14 +427,7 @@ const GuessHero: React.FC = () => {
           </Space>
 
           {guessList.length > 0 ? (
-            <Table
-              columns={columns}
-              dataSource={guessList}
-              rowKey="id"
-              rowClassName={(record) =>
-                record.id === correctHeroId ? 'highlight-row' : ''
-              }
-            />
+            renderGuessList()
           ) : (
             <p style={{ textAlign: 'center', color: '#888' }}>
               暂无猜测记录，请开始游戏并猜一下
