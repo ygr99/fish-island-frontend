@@ -27,6 +27,7 @@ export default [
         requireAuth: true
       },
       {icon: 'DesktopOutlined', path: '/game/2048', component: './Game/2048', name: '2048', requireAuth: false},
+      {icon: 'DesktopOutlined', path: '/game/guessHero', component: './Game/GuessHero', name: '王者猜英雄', requireAuth: false},
       {icon: 'DesktopOutlined', path: '/game/car', component: './Game/Car', name: '模拟赛车', requireAuth: false},
       {icon: 'DesktopOutlined', path: '/game/jump', component: './Game/Jump', name: '跳一跳   ', requireAuth: false},
       {

@@ -1061,4 +1061,42 @@ declare namespace API {
     favicon?: string;
     title?: string;
   };
+
+  type BaseResponseHeroVO_ = {
+    code?: number;
+    data?: HeroVO;
+    message?: string;
+  };
+
+  type HeroVO = {
+    id?: number;
+    ename?: string;
+    cname?: string;
+    title?: string;
+    releaseDate?: string;
+    newType?: number;
+    primaryType?: number;
+    secondaryType?: number;
+    skins?: string;
+    officialLink?: string;
+    mossId?: number;
+    race?: string;
+    faction?: string;
+    identity?: string;
+    region?: string;
+    ability?: string;
+    height?: string;
+    quote?: string;
+    skinsNum?: number;
+  };
+
+  type BaseResponseListSimpleHeroVO_ = {
+    code?: number;
+    data?: SimpleHeroVO[];
+    message?: string;
+  };
+  type SimpleHeroVO = {
+    id?: number;
+    cname?: string;
+  };
 }
