@@ -1,8 +1,8 @@
 import React, {useState, useEffect} from 'react';
-import {Card, Form, Button, Table, Space, message, Select} from 'antd';
-import {listSimpleHero, getRandomHero, getHeroById} from '@/services/backend/heroController';
+import {Card, Form, Button, Table, Space, message, Select, Modal} from 'antd';
+import {listSimpleHero, getRandomHero, getHeroById, getNewHero} from '@/services/backend/heroController';
 import "./index.css"
-import {ArrowDownOutlined, ArrowUpOutlined} from "@ant-design/icons";
+import {ArrowDownOutlined, ArrowUpOutlined, RocketOutlined} from "@ant-design/icons";
 
 const GuessHero: React.FC = () => {
   const [form] = Form.useForm();
@@ -14,6 +14,9 @@ const GuessHero: React.FC = () => {
   const [gameStarted, setGameStarted] = useState(false);
   // 在现有状态声明区域添加
   const [correctHeroId, setCorrectHeroId] = useState<number | null>(null);
+  const [newHero, setNewHero] = useState<API.HeroVO | null>(null);
+  const [loadingNewHero, setLoadingNewHero] = useState(false);
+  const [isRuleModalVisible, setIsRuleModalVisible] = useState(false);
 
   // 加载英雄列表
   useEffect(() => {
@@ -27,6 +30,24 @@ const GuessHero: React.FC = () => {
         message.error('加载英雄列表失败');
       }
     };
+
+    const fetchNewHero = async () => {
+      setLoadingNewHero(true);
+      try {
+        const response = await getNewHero();
+        if (response.code === 0) {
+          setNewHero(response.data);
+        } else {
+          message.error('获取最新英雄失败');
+        }
+      } catch (error) {
+        message.error('获取最新英雄失败');
+      } finally {
+        setLoadingNewHero(false);
+      }
+    };
+
+    fetchNewHero();
     fetchHeroes();
   }, []);
 
@@ -118,6 +139,22 @@ const GuessHero: React.FC = () => {
     return '';
   };
 
+  const gameRules = (
+    <Modal
+      title="游戏规则"
+      visible={isRuleModalVisible}
+      onOk={() => setIsRuleModalVisible(false)}
+      onCancel={() => setIsRuleModalVisible(false)}
+    >
+      <ol>
+        <li><strong>目标：</strong>通过每次猜测获取线索，最终猜中隐藏的英雄。</li>
+        <li><strong>流程：</strong>点击「开始」获取随机英雄 → 选择猜测 → 获取属性对比线索 → 直到猜中或点击「结束」。</li>
+        <li><strong>线索类型：</strong>上线时间、定位、身高、皮肤数量等属性对比（↑/↓），相同属性显示✅。</li>
+        <li><strong>限制：</strong>不可重复猜测同一英雄。</li>
+        <li><strong>提示功能：</strong>点击「提示」可查看正确英雄的台词（若存在）。</li>
+      </ol>
+    </Modal>
+  );
 
   // 表格列配置
   const columns = [
@@ -269,7 +306,36 @@ const GuessHero: React.FC = () => {
 
 
   return (
-    <Card title="王者猜英雄">
+    <>
+      {gameRules} {}
+    <Card
+      title="王者猜英雄"
+      extra={
+        <>
+          {/* 游戏规则链接 */}
+          <a
+            onClick={() => setIsRuleModalVisible(true)}
+            style={{ color: '#1890ff', textDecoration: 'underline', cursor: 'pointer', marginRight: 12 }}
+          >
+            游戏规则
+          </a>
+
+          {/* 最新英雄信息 */}
+          {loadingNewHero ? (
+            <span>加载中...</span>
+          ) : newHero ? (
+            <Space>
+              <RocketOutlined style={{ color: '#ffa768' }} />
+              <span style={{ color: '#ffa768' }}>
+            最新英雄：<strong>{newHero.cname}</strong>，上线时间：<strong>{newHero.releaseDate}</strong>
+          </span>
+            </Space>
+          ) : (
+            <span>暂无最新英雄信息</span>
+          )}
+        </>
+      }
+    >
       <Form form={form} onFinish={handleGuess}>
         <Space
           direction="vertical"
@@ -351,6 +417,7 @@ const GuessHero: React.FC = () => {
         </Space>
       </Form>
     </Card>
+    </>
   );
 };
 
