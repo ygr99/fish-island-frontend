@@ -1,6 +1,6 @@
-import React, {useState, useEffect} from 'react';
-import {Card, Form, Button, Table, Space, message, Select, Modal, List, Collapse} from 'antd';
-import {listSimpleHero, getRandomHero, getHeroById, getNewHero} from '@/services/backend/heroController';
+import React, {useEffect, useState} from 'react';
+import {Button, Card, Collapse, Form, List, message, Modal, Select, Space} from 'antd';
+import {getHeroById, getNewHero, getRandomHero, listSimpleHero} from '@/services/backend/heroController';
 import "./index.css"
 import {ArrowDownOutlined, ArrowUpOutlined, CheckCircleOutlined, RocketOutlined} from "@ant-design/icons";
 
@@ -333,29 +333,13 @@ const GuessHero: React.FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: 16 }}>英雄猜猜乐</span>
           <a
+            style={{ color: '#ffa768'}}
             onClick={() => setIsRuleModalVisible(true)}
           >
             规则
           </a>
         </div>
       }
-      // extra={
-      //   <>
-      //     {/* 最新英雄信息 */}
-      //     {loadingNewHero ? (
-      //       <span>加载中...</span>
-      //     ) : newHero ? (
-      //       <Space>
-      //         <RocketOutlined style={{ color: '#ffa768' }} />
-      //         <span style={{ color: '#ffa768' }}>
-      //       最新英雄：<strong>{newHero.cname}</strong>，上线时间：<strong>{newHero.releaseDate}</strong>
-      //     </span>
-      //       </Space>
-      //     ) : (
-      //       <span>暂无最新英雄信息</span>
-      //     )}
-      //   </>
-      // }
     >
       <Form form={form} onFinish={handleGuess}>
         <Space
@@ -367,7 +351,12 @@ const GuessHero: React.FC = () => {
           <Form.Item
             label="选择英雄"
             name="heroId"
-            rules={[{required: true}]}
+            rules={[
+              {
+                required: true,
+                message: <span className="mobile-validation">请选择英雄</span>, // 使用自定义样式容器
+              }
+            ]}
             style={{textAlign: 'center'}} // 新增样式
             labelCol={{style: {textAlign: 'left'}}} // 保持标签左对齐
           >
@@ -383,7 +372,7 @@ const GuessHero: React.FC = () => {
               filterOption={(input, option) =>
                 (option?.label as string).toLowerCase().includes(input.toLowerCase())
               }
-              style={{width: 200}}
+              style={{minWidth: 200}}
             />
           </Form.Item>
 
