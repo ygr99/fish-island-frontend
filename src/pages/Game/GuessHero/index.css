@@ -114,3 +114,19 @@
   margin-bottom: 12px;
 }
 
+/* 移动端验证提示样式 */
+.mobile-validation {
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+@media (max-width: 576px) {
+  .ant-form-item-explain-error {
+    position: absolute;
+    bottom: -22px;
+    left: 0;
+    width: 100%;
+  }
+}
+
+
