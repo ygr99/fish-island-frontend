@@ -1,21 +1,28 @@
-import React, {useState, useEffect, useRef} from 'react';
-import {Card, Image, Button, message} from 'antd';
-import {BilibiliOutlined, LinkOutlined, FileOutlined, DownloadOutlined, StarOutlined, StarFilled} from '@ant-design/icons';
-import ReactMarkdown, { Components } from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
-import rehypePrism from 'rehype-prism-plus';
-import 'prismjs/themes/prism-tomorrow.css';
-import styles from './index.less';
-import {parseWebPageUsingGet} from '@/services/backend/webParserController';
-import DOMPurify from 'dompurify';
-import { 
-  addEmoticonFavourUsingPost, 
-  deleteEmoticonFavourUsingPost, 
-  listEmoticonFavourByPageUsingPost 
+import {
+  addEmoticonFavourUsingPost,
+  deleteEmoticonFavourUsingPost,
+  listEmoticonFavourByPageUsingPost,
 } from '@/services/backend/emoticonFavourController';
+import { parseWebPageUsingGet } from '@/services/backend/webParserController';
 import eventBus from '@/utils/eventBus';
+import {
+  BilibiliOutlined,
+  DownloadOutlined,
+  FileOutlined,
+  LinkOutlined,
+  StarFilled,
+  StarOutlined,
+} from '@ant-design/icons';
 import { useModel } from '@umijs/max';
+import { Button, Card, Image, message } from 'antd';
+import DOMPurify from 'dompurify';
+import 'prismjs/themes/prism-tomorrow.css';
+import React, { useEffect, useRef, useState } from 'react';
+import ReactMarkdown, { Components } from 'react-markdown';
+import rehypePrism from 'rehype-prism-plus';
+import rehypeRaw from 'rehype-raw';
+import remarkGfm from 'remark-gfm';
+import styles from './index.less';
 
 // 定义事件名称常量
 export const EMOTICON_FAVORITE_CHANGED = 'emoticon_favorite_changed';
@@ -26,6 +33,7 @@ const STORAGE_KEY = 'favorite_emoticons';
 
 interface MessageContentProps {
   content: string;
+  onImageLoad?: () => void;
 }
 
 interface WebPageInfo {
@@ -41,7 +49,7 @@ interface Emoticon {
   isError?: boolean;
 }
 
-const MessageContent: React.FC<MessageContentProps> = ({content}) => {
+const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad }) => {
   const { initialState } = useModel('@@initialState');
   const { currentUser } = initialState || {};
   const [webPages, setWebPages] = useState<Record<any, WebPageInfo>>({});
@@ -75,7 +83,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
         current: 1,
         pageSize: 100, // 获取足够多的收藏表情
       });
-      
+
       if (response.code === 0 && response.data) {
         setFavoriteEmoticons(response.data.records || []);
         hasFetchedFavorites.current = true;
@@ -127,14 +135,12 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
 
   // 检查是否是收藏的表情
   const isFavorite = (url: string) => {
-    return favoriteEmoticons.some(
-      (fav) => fav.emoticonSrc === url
-    );
+    return favoriteEmoticons.some((fav) => fav.emoticonSrc === url);
   };
 
   // 切换收藏状态
   const toggleFavorite = (url: string) => {
-    const favorite = favoriteEmoticons.find(fav => fav.emoticonSrc === url);
+    const favorite = favoriteEmoticons.find((fav) => fav.emoticonSrc === url);
     if (favorite) {
       removeFavorite(favorite.id!);
     } else {
@@ -148,9 +154,9 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
       hasFetchedFavorites.current = false; // 重置标志，允许重新获取
       fetchFavoriteEmoticons();
     };
-    
+
     eventBus.on(EMOTICON_FAVORITE_CHANGED, handleFavoriteChanged);
-    
+
     return () => {
       eventBus.off(EMOTICON_FAVORITE_CHANGED, handleFavoriteChanged);
     };
@@ -164,31 +170,31 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
 
   // 获取网页信息
   const fetchWebPageInfo = async (url: string) => {
-    setLoading(prev => ({...prev, [url]: true}));
+    setLoading((prev) => ({ ...prev, [url]: true }));
     try {
-      const response = await parseWebPageUsingGet({url});
+      const response = await parseWebPageUsingGet({ url });
       if (response.code === 0 && response.data) {
-        setWebPages(prev => ({
+        setWebPages((prev) => ({
           ...prev,
           [url]: {
             title: response.data?.title || '未知标题',
             description: response.data?.description || '暂无描述',
             favicon: response.data?.favicon,
-          }
+          },
         }));
       }
     } catch (error) {
       console.error('获取网页信息失败:', error);
-      setWebPages(prev => ({
+      setWebPages((prev) => ({
         ...prev,
         [url]: {
           title: '未知网页',
           description: '获取网页信息失败',
           favicon: undefined,
-        }
+        },
       }));
     } finally {
-      setLoading(prev => ({...prev, [url]: false}));
+      setLoading((prev) => ({ ...prev, [url]: false }));
     }
   };
 
@@ -215,7 +221,10 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
           alt="图片"
           className={styles.messageImage}
           preview={{
-            mask: false
+            mask: false,
+          }}
+          onLoad={() => {
+            onImageLoad?.();
           }}
         />
         <Button
@@ -256,9 +265,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
       <div key={key} className={styles.fileContainer}>
         <Card className={styles.fileCard} size="small">
           <div className={styles.fileInfo}>
-            <span className={styles.fileIcon}>
-              {getFileIcon(fileExt)}
-            </span>
+            <span className={styles.fileIcon}>{getFileIcon(fileExt)}</span>
             <span className={styles.fileName} title={fileName}>
               {fileName}
             </span>
@@ -284,26 +291,24 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
       }
 
       return (
-        <Card
-          key={key}
-          className={styles.linkCard}
-          size="small"
-          hoverable
-        >
+        <Card key={key} className={styles.linkCard} size="small" hoverable>
           <div className={styles.linkContent}>
-            <BilibiliOutlined className={styles.linkIcon}/>
+            <BilibiliOutlined className={styles.linkIcon} />
             <div className={styles.linkInfo}>
               {webPages[url] ? (
                 <>
-                  <div className={styles.videoTitle}>
-                    {webPages[url].title}
-                  </div>
+                  <div className={styles.videoTitle}>{webPages[url].title}</div>
                   {webPages[url].description && (
                     <div className={styles.videoDescription}>
                       {truncateText(webPages[url].description, 50)}
                     </div>
                   )}
-                  <a href={url} target="_blank" rel="noopener noreferrer" className={styles.linkText}>
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.linkText}
+                  >
                     {truncateText(url, 30)}
                   </a>
                 </>
@@ -325,26 +330,29 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
       }
 
       return (
-        <Card
-          key={key}
-          className={styles.linkCard}
-          size="small"
-          hoverable
-        >
+        <Card key={key} className={styles.linkCard} size="small" hoverable>
           <div className={styles.linkContent}>
-            <img src={DOUYIN_ICON} alt="抖音" className={styles.linkIcon} style={{width: '16px', height: '16px'}}/>
+            <img
+              src={DOUYIN_ICON}
+              alt="抖音"
+              className={styles.linkIcon}
+              style={{ width: '16px', height: '16px' }}
+            />
             <div className={styles.linkInfo}>
               {webPages[url] ? (
                 <>
-                  <div className={styles.videoTitle}>
-                    {webPages[url].title}
-                  </div>
+                  <div className={styles.videoTitle}>{webPages[url].title}</div>
                   {webPages[url].description && (
                     <div className={styles.videoDescription}>
                       {truncateText(webPages[url].description, 50)}
                     </div>
                   )}
-                  <a href={url} target="_blank" rel="noopener noreferrer" className={styles.linkText}>
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.linkText}
+                  >
                     {truncateText(url, 30)}
                   </a>
                 </>
@@ -366,15 +374,14 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
       }
 
       return (
-        <Card
-          key={key}
-          className={styles.linkCard}
-          size="small"
-          hoverable
-        >
+        <Card key={key} className={styles.linkCard} size="small" hoverable>
           <div className={styles.linkContent}>
-            <img src={CODEFATHER_ICON} alt="编程导航" className={styles.linkIcon}
-                 style={{width: '16px', height: '16px'}}/>
+            <img
+              src={CODEFATHER_ICON}
+              alt="编程导航"
+              className={styles.linkIcon}
+              style={{ width: '16px', height: '16px' }}
+            />
             <div className={styles.linkInfo}>
               {webPages[url] ? (
                 <>
@@ -384,7 +391,12 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
                       {truncateText(webPages[url].description, 50)}
                     </div>
                   )}
-                  <a href={url} target="_blank" rel="noopener noreferrer" className={styles.linkText}>
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.linkText}
+                  >
                     {truncateText(url, 30)}
                   </a>
                 </>
@@ -406,17 +418,17 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
 
     // @ts-ignore
     return (
-      <Card
-        key={key}
-        className={styles.linkCard}
-        size="small"
-        hoverable
-      >
+      <Card key={key} className={styles.linkCard} size="small" hoverable>
         <div className={styles.linkContent}>
           {webPages[url]?.favicon ? (
-            <img src={webPages[url].favicon} alt="网站图标" className={styles.linkIcon} style={{width: '16px', height: '16px'}}/>
+            <img
+              src={webPages[url].favicon}
+              alt="网站图标"
+              className={styles.linkIcon}
+              style={{ width: '16px', height: '16px' }}
+            />
           ) : (
-            <LinkOutlined className={styles.linkIcon}/>
+            <LinkOutlined className={styles.linkIcon} />
           )}
           <div className={styles.linkInfo}>
             {webPages[url] ? (
@@ -445,10 +457,172 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
   // 添加安全的 HTML 渲染函数
   const sanitizeHtml = (html: string) => {
     return DOMPurify.sanitize(html, {
-      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'code', 'pre', 'blockquote', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+      ALLOWED_TAGS: [
+        'p',
+        'br',
+        'strong',
+        'em',
+        'code',
+        'pre',
+        'blockquote',
+        'ul',
+        'ol',
+        'li',
+        'h1',
+        'h2',
+        'h3',
+        'h4',
+        'h5',
+        'h6',
+        'a',
+        'img',
+        'table',
+        'thead',
+        'tbody',
+        'tr',
+        'th',
+        'td',
+      ],
       ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'target', 'rel', 'class'],
-      FORBID_TAGS: ['iframe', 'script', 'style', 'form', 'input', 'button', 'textarea', 'select', 'option', 'object', 'embed', 'param', 'meta', 'link'],
-      FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onmouseout', 'onmouseenter', 'onmouseleave', 'onblur', 'onfocus', 'onchange', 'onsubmit', 'onreset', 'onkeydown', 'onkeypress', 'onkeyup', 'onmousedown', 'onmouseup', 'onmousemove', 'onmousewheel', 'onwheel', 'onresize', 'onscroll', 'onabort', 'oncanplay', 'oncanplaythrough', 'oncuechange', 'ondurationchange', 'onemptied', 'onended', 'onerror', 'onloadeddata', 'onloadedmetadata', 'onloadstart', 'onpause', 'onplay', 'onplaying', 'onprogress', 'onratechange', 'onseeked', 'onseeking', 'onstalled', 'onsuspend', 'ontimeupdate', 'onvolumechange', 'onwaiting', 'onbeforecopy', 'onbeforecut', 'onbeforepaste', 'oncopy', 'oncut', 'onpaste', 'onselect', 'onselectionchange', 'onselectstart', 'oncontextmenu', 'ondrag', 'ondragend', 'ondragenter', 'ondragleave', 'ondragover', 'ondragstart', 'ondrop', 'onblur', 'onfocus', 'onfocusin', 'onfocusout', 'onkeydown', 'onkeypress', 'onkeyup', 'onclick', 'ondblclick', 'onmousedown', 'onmouseenter', 'onmouseleave', 'onmousemove', 'onmouseout', 'onmouseover', 'onmouseup', 'onwheel', 'onresize', 'onscroll', 'onabort', 'oncanplay', 'oncanplaythrough', 'oncuechange', 'ondurationchange', 'onemptied', 'onended', 'onerror', 'onloadeddata', 'onloadedmetadata', 'onloadstart', 'onpause', 'onplay', 'onplaying', 'onprogress', 'onratechange', 'onseeked', 'onseeking', 'onstalled', 'onsuspend', 'ontimeupdate', 'onvolumechange', 'onwaiting', 'onbeforecopy', 'onbeforecut', 'onbeforepaste', 'oncopy', 'oncut', 'onpaste', 'onselect', 'onselectionchange', 'onselectstart', 'oncontextmenu', 'ondrag', 'ondragend', 'ondragenter', 'ondragleave', 'ondragover', 'ondragstart', 'ondrop'],
+      FORBID_TAGS: [
+        'iframe',
+        'script',
+        'style',
+        'form',
+        'input',
+        'button',
+        'textarea',
+        'select',
+        'option',
+        'object',
+        'embed',
+        'param',
+        'meta',
+        'link',
+      ],
+      FORBID_ATTR: [
+        'onerror',
+        'onload',
+        'onclick',
+        'onmouseover',
+        'onmouseout',
+        'onmouseenter',
+        'onmouseleave',
+        'onblur',
+        'onfocus',
+        'onchange',
+        'onsubmit',
+        'onreset',
+        'onkeydown',
+        'onkeypress',
+        'onkeyup',
+        'onmousedown',
+        'onmouseup',
+        'onmousemove',
+        'onmousewheel',
+        'onwheel',
+        'onresize',
+        'onscroll',
+        'onabort',
+        'oncanplay',
+        'oncanplaythrough',
+        'oncuechange',
+        'ondurationchange',
+        'onemptied',
+        'onended',
+        'onerror',
+        'onloadeddata',
+        'onloadedmetadata',
+        'onloadstart',
+        'onpause',
+        'onplay',
+        'onplaying',
+        'onprogress',
+        'onratechange',
+        'onseeked',
+        'onseeking',
+        'onstalled',
+        'onsuspend',
+        'ontimeupdate',
+        'onvolumechange',
+        'onwaiting',
+        'onbeforecopy',
+        'onbeforecut',
+        'onbeforepaste',
+        'oncopy',
+        'oncut',
+        'onpaste',
+        'onselect',
+        'onselectionchange',
+        'onselectstart',
+        'oncontextmenu',
+        'ondrag',
+        'ondragend',
+        'ondragenter',
+        'ondragleave',
+        'ondragover',
+        'ondragstart',
+        'ondrop',
+        'onblur',
+        'onfocus',
+        'onfocusin',
+        'onfocusout',
+        'onkeydown',
+        'onkeypress',
+        'onkeyup',
+        'onclick',
+        'ondblclick',
+        'onmousedown',
+        'onmouseenter',
+        'onmouseleave',
+        'onmousemove',
+        'onmouseout',
+        'onmouseover',
+        'onmouseup',
+        'onwheel',
+        'onresize',
+        'onscroll',
+        'onabort',
+        'oncanplay',
+        'oncanplaythrough',
+        'oncuechange',
+        'ondurationchange',
+        'onemptied',
+        'onended',
+        'onerror',
+        'onloadeddata',
+        'onloadedmetadata',
+        'onloadstart',
+        'onpause',
+        'onplay',
+        'onplaying',
+        'onprogress',
+        'onratechange',
+        'onseeked',
+        'onseeking',
+        'onstalled',
+        'onsuspend',
+        'ontimeupdate',
+        'onvolumechange',
+        'onwaiting',
+        'onbeforecopy',
+        'onbeforecut',
+        'onbeforepaste',
+        'oncopy',
+        'oncut',
+        'onpaste',
+        'onselect',
+        'onselectionchange',
+        'onselectstart',
+        'oncontextmenu',
+        'ondrag',
+        'ondragend',
+        'ondragenter',
+        'ondragleave',
+        'ondragover',
+        'ondragstart',
+        'ondrop',
+      ],
     });
   };
 
@@ -461,7 +635,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
   // 修改 ReactMarkdown 组件的配置
   const markdownComponents: Components = {
     // 自定义链接渲染，避免与我们的URL渲染冲突
-    a: ({node, ...props}: { node?: any; [key: string]: any }) => {
+    a: ({ node, ...props }: { node?: any; [key: string]: any }) => {
       const href = props.href || '';
       if (href.match(urlRegex)) {
         return renderUrl(href, `markdown-url-${Date.now()}`);
@@ -469,7 +643,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
       return <a {...props} target="_blank" rel="noopener noreferrer" />;
     },
     // 自定义图片渲染，避免与我们的图片标签冲突
-    img: ({node, ...props}: { node?: any; [key: string]: any }) => {
+    img: ({ node, ...props }: { node?: any; [key: string]: any }) => {
       const src = props.src || '';
       if (src.match(/^https?:\/\//)) {
         return renderImage(src, `img-${Date.now()}`);
@@ -514,12 +688,12 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
                 components={markdownComponents}
               >
                 {sanitizeHtml(urlPart)}
-              </ReactMarkdown>
+              </ReactMarkdown>,
             );
           }
         });
       }
-      // 添加图片组件
+      // 添加图片组件,传入 onImageLoad 回调
       parts.push(renderImage(match[1], `img-${match.index}`));
       lastIndex = match.index + match[0].length;
     }
@@ -547,7 +721,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
                 components={markdownComponents}
               >
                 {sanitizeHtml(urlPart)}
-              </ReactMarkdown>
+              </ReactMarkdown>,
             );
           }
         });
@@ -573,7 +747,7 @@ const MessageContent: React.FC<MessageContentProps> = ({content}) => {
               components={markdownComponents}
             >
               {sanitizeHtml(urlPart)}
-            </ReactMarkdown>
+            </ReactMarkdown>,
           );
         }
       });

@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useRef, useState, useCallback } from 'react';
 import {Alert, Avatar, Button, Input, message, Popover, Spin, Popconfirm, Modal, Radio} from 'antd';
 import COS from 'cos-js-sdk-v5';
 import data from '@emoji-mart/data';
@@ -27,7 +27,7 @@ import { wsService } from '@/services/websocket';
 import { history } from '@umijs/max';
 import { createRedPacketUsingPost, grabRedPacketUsingPost } from '@/services/backend/redPacketController';
 import { getRedPacketRecordsUsingGet, getRedPacketDetailUsingGet } from '@/services/backend/redPacketController';
-
+import { FixedSizeList as List } from 'react-window';
 interface Message {
   id: string;
   content: string;
@@ -124,6 +124,70 @@ const ChatRoom: React.FC = () => {
   // 添加防止重复发送的状态
   const [lastSendContent, setLastSendContent] = useState<string>('');
   const [lastSendContentTime, setLastSendContentTime] = useState<number>(0);
+  // 添加用户列表项高度常量
+  const USER_ITEM_HEIGHT = 46;
+  // 添加 ref 和状态来存储列表容器高度
+  const userListRef = useRef<HTMLDivElement>(null);
+  const [listHeight, setListHeight] = useState(400); // 默认高度
+  // 添加计算高度的函数
+  const updateListHeight = useCallback(() => {
+    if (userListRef.current) {
+      const containerHeight = userListRef.current.clientHeight;
+      const headerHeight = 40;
+      const newHeight = containerHeight - headerHeight;
+      setListHeight(newHeight);
+    }
+  }, []);
+
+  // 在组件挂载和窗口大小改变时更新高度
+  useEffect(() => {
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === userListRef.current) {
+          updateListHeight();
+        }
+      }
+    });
+
+    if (userListRef.current) {
+      resizeObserver.observe(userListRef.current);
+    }
+
+    // 同时保留窗口大小变化的监听
+    window.addEventListener('resize', updateListHeight);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateListHeight);
+    };
+  }, [updateListHeight]);
+
+  const UserItem = ({ index, style }: { index: number; style: React.CSSProperties }) => {
+    const sortedUsers = [...onlineUsers].sort((a, b) => (b.points || 0) - (a.points || 0));
+    const user = sortedUsers[index];
+
+    return (
+      <div
+        key={user.id}
+        className={styles.userItem}
+        onClick={() => handleSelectMention(user)}
+        style={{ ...style, cursor: 'pointer' }}
+      >
+        <div className={styles.avatarWrapper}>
+          <Popover content={<UserInfoCard user={user} />} trigger="hover" placement="right">
+            <div className={styles.avatarWithFrame}>
+              <Avatar src={user.avatar} size={28} />
+            </div>
+          </Popover>
+        </div>
+        <div className={styles.userInfo}>
+          <div className={styles.userName}>{user.name}</div>
+          <div className={styles.userStatus}>{user.status}</div>
+        </div>
+        <span className={styles.levelBadge}>{getLevelEmoji(user.level)}</span>
+      </div>
+    );
+  };
 
   // 修改 getIpInfo 函数
   const getIpInfo = async () => {
@@ -216,14 +280,58 @@ const ChatRoom: React.FC = () => {
       messageApi.error('获取在线用户列表失败');
     }
   };
+// 修改 useEffect 来监听消息变化并自动滚动
+useEffect(() => {
+  // 只有在以下情况才自动滚动到底部：
+  // 1. 是当前用户发送的消息
+  // 2. 用户已经在查看最新消息（在底部附近）
+  const lastMessage = messages[messages.length - 1];
+  const isUserMessage = lastMessage?.sender.id === String(currentUser?.id);
 
+  if (isUserMessage || isNearBottom) {
+    setTimeout(() => {
+      scrollToBottom();
+    }, 100);
+  }
+
+  // 如果有新消息但没有自动滚动，显示"新消息"提示
+  if (!isUserMessage && !isNearBottom) {
+    messageApi.info({
+      content: (
+        <div onClick={scrollToBottom} style={{ cursor: 'pointer' }}>
+          收到新消息，点击查看
+        </div>
+      ),
+      duration: 3,
+    });
+  }
+}, [messages]); // 监听消息数组变化
   // 初始化时获取在线用户列表
   useEffect(() => {
     fetchOnlineUsers();
   }, []);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({behavior: 'smooth'});
+    const container = messageContainerRef.current;
+    if (!container) return;
+  
+    // 使用 requestAnimationFrame 确保在下一帧执行滚动
+    requestAnimationFrame(() => {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth'
+      });
+  
+      // 添加二次检查，处理可能的延迟加载情况
+      setTimeout(() => {
+        if (container.scrollTop + container.clientHeight < container.scrollHeight) {
+          container.scrollTo({
+            top: container.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      }, 100);
+    });
   };
   const loadHistoryMessages = async (page: number, isFirstLoad = false) => {
     if (!hasMore || loading) return;
@@ -319,10 +427,12 @@ const ChatRoom: React.FC = () => {
   const checkIfNearBottom = () => {
     const container = messageContainerRef.current;
     if (!container) return;
-
-    // 只有完全在底部时才返回true
-    const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight === 0;
-    setIsNearBottom(isAtBottom);
+  
+    const threshold = 100; // 距离底部100px以内都认为是在底部
+    const distanceFromBottom = 
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    
+    setIsNearBottom(distanceFromBottom <= threshold);
   };
 
   // 监听滚动事件
@@ -1189,6 +1299,8 @@ const ChatRoom: React.FC = () => {
 
   // 修改 renderMessageContent 函数，添加红包消息的渲染
   const renderMessageContent = (content: string) => {
+    
+
     // 检查是否是红包消息
     const redPacketMatch = content.match(/\[redpacket\](.*?)\[\/redpacket\]/);
     if (redPacketMatch) {
@@ -1284,6 +1396,22 @@ const ChatRoom: React.FC = () => {
             </Button>
           </div>
         </div>
+      );
+    }
+    const imgMatch = content.match(/\[img\](.*?)\[\/img\]/);
+    if (imgMatch) {
+      return (
+        <MessageContent 
+          content={content} 
+          onImageLoad={() => {
+            // 图片加载完成后,如果是最新消息则滚动到底部
+            const lastMessage = messages[messages.length - 1];
+            const isLatestMessage = lastMessage?.content === content;
+            if (isLatestMessage && (isNearBottom || lastMessage?.sender.id === String(currentUser?.id))) {
+              scrollToBottom();
+            }
+          }}
+        />
       );
     }
     return <MessageContent content={content} />;
@@ -1425,37 +1553,14 @@ const ChatRoom: React.FC = () => {
           在线成员 ({onlineUsers.length})
         </div>
         <div className={styles.userListContent}>
-          {[...onlineUsers]
-            .sort((a, b) => (b.points || 0) - (a.points || 0))
-            .map(user => (
-              <div
-                key={user.id}
-                className={styles.userItem}
-                onClick={() => handleSelectMention(user)}
-                style={{cursor: 'pointer'}}
-              >
-                <div className={styles.avatarWrapper}>
-                  <Popover
-                    content={<UserInfoCard user={user}/>}
-                    trigger="hover"
-                    placement="right"
-                  >
-                    <div className={styles.avatarWithFrame}>
-                      <Avatar src={user.avatar} size={28}/>
-                    </div>
-                  </Popover>
-                </div>
-                <div className={styles.userInfo}>
-                  <div className={styles.userName}>
-                    {user.name}
-                  </div>
-                  <div className={styles.userStatus}>{user.status}</div>
-                </div>
-                <span className={styles.levelBadge}>
-                {getLevelEmoji(user.level)}
-              </span>
-              </div>
-            ))}
+          <List
+            height={listHeight}
+            itemCount={onlineUsers.length}
+            itemSize={USER_ITEM_HEIGHT}
+            width="100%"
+          >
+            {UserItem}
+          </List>
         </div>
       </div>
 
