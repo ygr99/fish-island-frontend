@@ -335,7 +335,7 @@ const ChatRoom: React.FC = () => {
     const lastMessage = messages[messages.length - 1];
     const isUserMessage = lastMessage?.sender.id === String(currentUser?.id);
 
-    if (isUserMessage || isNearBottom) {
+    if (isNearBottom) {
       setTimeout(() => {
         scrollToBottom();
       }, 100);
