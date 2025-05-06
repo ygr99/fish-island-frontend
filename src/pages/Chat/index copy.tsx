@@ -156,9 +156,6 @@ const ChatRoom: React.FC = () => {
   const userListRef = useRef<HTMLDivElement>(null);
   const [listHeight, setListHeight] = useState(0); // 初始值设为0
 
-  // 添加一个状态来记录最新消息的时间戳
-  const [lastMessageTimestamp, setLastMessageTimestamp] = useState<number>(Date.now());
-
   // 修改计算高度的函数
   const updateListHeight = useCallback(() => {
     if (userListRef.current) {
@@ -334,11 +331,25 @@ const ChatRoom: React.FC = () => {
     // 只有在以下情况才自动滚动到底部：
     // 1. 是当前用户发送的消息
     // 2. 用户已经在查看最新消息（在底部附近）
+    const lastMessage = messages[messages.length - 1];
+    const isUserMessage = lastMessage?.sender.id === String(currentUser?.id);
 
     if (isNearBottom) {
       setTimeout(() => {
         scrollToBottom();
       }, 100);
+    }
+
+    // 如果有新消息但没有自动滚动，显示"新消息"提示
+    if (!isUserMessage && !isNearBottom) {
+      messageApi.info({
+        content: (
+          <div onClick={scrollToBottom} style={{ cursor: 'pointer' }}>
+            收到新消息，点击查看
+          </div>
+        ),
+        duration: 3,
+      });
     }
   }, [messages]); // 监听消息数组变化
   // 初始化时获取在线用户列表
@@ -432,12 +443,6 @@ const ChatRoom: React.FC = () => {
 
         // 将新消息的ID添加到已加载集合中
         historyMessages.forEach((msg) => loadedMessageIds.add(msg.id));
-
-        // 更新最新消息的时间戳（如果是首次加载）
-        if (isFirstLoad && historyMessages.length > 0) {
-          const latestMessage = historyMessages[historyMessages.length - 1];
-          setLastMessageTimestamp(new Date(latestMessage.timestamp).getTime());
-        }
 
         // 处理历史消息，确保正确的时间顺序（旧消息在上，新消息在下）
         if (isFirstLoad) {
@@ -730,16 +735,10 @@ const ChatRoom: React.FC = () => {
     }
   };
 
-  // 修改 handleChatMessage 函数
+  // 添加 WebSocket 消息处理函数
   const handleChatMessage = (data: any) => {
     const otherUserMessage = data.data.message;
-    const messageTimestamp = new Date(otherUserMessage.timestamp).getTime();
-
-    // 只处理其他用户的消息
     if (otherUserMessage.sender.id !== String(currentUser?.id)) {
-      // 判断是否是真正的新消息（时间戳大于当前最新消息的时间戳）
-      const isNewMessage = messageTimestamp > lastMessageTimestamp;
-
       setMessages((prev) => {
         // 添加新消息
         const newMessages = [...prev, { ...otherUserMessage }];
@@ -752,18 +751,6 @@ const ChatRoom: React.FC = () => {
             container.scrollHeight - container.scrollTop - container.clientHeight;
           const isNearBottom = distanceFromBottom <= threshold;
 
-          // 只有在不在底部且是真正的新消息时，才显示新消息提示
-          if (!isNearBottom && isNewMessage) {
-            messageApi.info({
-              content: (
-                <div onClick={scrollToBottom} style={{ cursor: 'pointer' }}>
-                  收到新消息，点击查看
-                </div>
-              ),
-              duration: 3,
-            });
-          }
-
           // 只有在底部时才限制消息数量
           if (isNearBottom && newMessages.length > 25) {
             return newMessages.slice(-25);
@@ -772,16 +759,12 @@ const ChatRoom: React.FC = () => {
         return newMessages;
       });
 
-      // 如果是新消息，更新最新消息时间戳
-      if (isNewMessage) {
-        setLastMessageTimestamp(messageTimestamp);
-        handleMentionNotification(otherUserMessage);
-      }
+      handleMentionNotification(otherUserMessage);
 
       // 实时检查是否在底部
       const container = messageContainerRef.current;
       if (container) {
-        const threshold = 30;
+        const threshold = 30; // 30px的阈值，在底部附近就会自动滚动
         const distanceFromBottom =
           container.scrollHeight - container.scrollTop - container.clientHeight;
         if (distanceFromBottom <= threshold) {
