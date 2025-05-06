@@ -199,7 +199,7 @@ const GuessHero: React.FC = () => {
       dataSource={guessList}
       renderItem={(record) => (
         <List.Item
-          className={record.id === correctHeroId ? 'highlight-row' : ''}
+          className={`guess-hero-list-item ${record.id === correctHeroId ? 'highlight-row' : ''}`}
           style={{
             backgroundColor: '#fff',
             marginBottom: 12,
