@@ -1,0 +1,36 @@
+.game-chicken-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: rgb(141, 172, 133);
+  color: white;
+  border-radius: 25px;
+}
+
+.chicken-game-main-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 100px);
+  width: 100%;
+  padding: 0;
+  margin: 0 auto;
+}
+
+.chicken-game-main-wrapper .game-chicken-container {
+  width: 100%;
+  height: 100%;
+  max-width: 800px;
+}
+
+@media (max-width: 768px) {
+  .chicken-game-main-wrapper {
+    min-height: calc(100vh - 80px);
+    padding: 10px;
+  }
+
+  .chicken-game-main-wrapper .game-chicken-container {
+    padding: 10px;
+  }
+}

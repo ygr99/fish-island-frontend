@@ -28,6 +28,7 @@ export default [
       },
       {icon: 'DesktopOutlined', path: '/game/2048', component: './Game/2048', name: '2048', requireAuth: false},
       {icon: 'DesktopOutlined', path: '/game/guessHero', component: './Game/GuessHero', name: '英雄猜猜乐', requireAuth: false},
+      {icon: 'DesktopOutlined', path: '/game/chicken', component: './Game/Chicken', name: '🐔鸡了个鸡🐔', requireAuth: false},
       {icon: 'DesktopOutlined', path: '/game/car', component: './Game/Car', name: '模拟赛车', requireAuth: false},
       {icon: 'DesktopOutlined', path: '/game/jump', component: './Game/Jump', name: '跳一跳   ', requireAuth: false},
       {
