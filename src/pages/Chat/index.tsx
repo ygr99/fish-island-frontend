@@ -23,6 +23,7 @@ import {
   SendOutlined,
   SmileOutlined,
   SoundOutlined,
+  CloseOutlined
 } from '@ant-design/icons';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -158,6 +159,50 @@ const ChatRoom: React.FC = () => {
 
   // 添加一个状态来记录最新消息的时间戳
   const [lastMessageTimestamp, setLastMessageTimestamp] = useState<number>(Date.now());
+
+  // 添加防抖相关的状态和引用
+  const [newMessageCount, setNewMessageCount] = useState<number>(0);
+  const newMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 修改显示新消息提示的函数
+  const showNewMessageNotification = (count: number) => {
+    // 先清除之前的消息提示
+    messageApi.destroy('newMessage');
+    
+    messageApi.info({
+      content: (
+        <div 
+          onClick={() => {
+            // 点击时关闭消息提示
+            messageApi.destroy('newMessage');
+            scrollToBottom();
+          }} 
+          style={{ 
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}
+        >
+          <span>收到 {count} 条新消息，点击查看</span>
+          <CloseOutlined 
+            onClick={(e) => {
+              e.stopPropagation(); // 阻止事件冒泡
+              messageApi.destroy('newMessage');
+            }}
+            style={{ 
+              marginLeft: '10px', 
+              cursor: 'pointer',
+              color: '#999',
+              fontSize: '12px'
+            }}
+          />
+        </div>
+      ),
+      duration: 3,
+      key: 'newMessage',
+    });
+  };
 
   // 修改计算高度的函数
   const updateListHeight = useCallback(() => {
@@ -752,16 +797,20 @@ const ChatRoom: React.FC = () => {
             container.scrollHeight - container.scrollTop - container.clientHeight;
           const isNearBottom = distanceFromBottom <= threshold;
 
-          // 只有在不在底部且是真正的新消息时，才显示新消息提示
+          // 只有在不在底部且是真正的新消息时，才累计新消息数量
           if (!isNearBottom && isNewMessage) {
-            messageApi.info({
-              content: (
-                <div onClick={scrollToBottom} style={{ cursor: 'pointer' }}>
-                  收到新消息，点击查看
-                </div>
-              ),
-              duration: 3,
-            });
+            setNewMessageCount((prev) => prev + 1);
+
+            // 清除之前的定时器
+            if (newMessageTimerRef.current) {
+              clearTimeout(newMessageTimerRef.current);
+            }
+
+            // 设置新的定时器，1秒后显示合并的提示
+            newMessageTimerRef.current = setTimeout(() => {
+              showNewMessageNotification(newMessageCount + 1);
+              setNewMessageCount(0);
+            }, 1000);
           }
 
           // 只有在底部时才限制消息数量
@@ -786,6 +835,12 @@ const ChatRoom: React.FC = () => {
           container.scrollHeight - container.scrollTop - container.clientHeight;
         if (distanceFromBottom <= threshold) {
           setTimeout(scrollToBottom, 100);
+          // 如果滚动到底部，清除新消息计数和定时器
+          setNewMessageCount(0);
+          if (newMessageTimerRef.current) {
+            clearTimeout(newMessageTimerRef.current);
+            newMessageTimerRef.current = null;
+          }
         }
       }
     }
@@ -1629,6 +1684,15 @@ const ChatRoom: React.FC = () => {
     setIsRedPacketRecordsVisible(true);
     await fetchRedPacketRecords(redPacketId);
   };
+
+  // 在组件卸载时清理定时器
+  useEffect(() => {
+    return () => {
+      if (newMessageTimerRef.current) {
+        clearTimeout(newMessageTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className={styles.chatRoom}>
