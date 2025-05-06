@@ -1,34 +1,47 @@
-import React, {useEffect, useRef, useState, useCallback } from 'react';
-import {Alert, Avatar, Button, Input, message, Popover, Spin, Popconfirm, Modal, Radio} from 'antd';
-import COS from 'cos-js-sdk-v5';
-import data from '@emoji-mart/data';
 import zhData from '@/assets/emoji/zh.json';
-import Picker from '@emoji-mart/react';
+import EmoticonPicker from '@/components/EmoticonPicker';
+import MessageContent from '@/components/MessageContent';
 import {
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
+  getOnlineUserListUsingGet,
+  listMessageVoByPageUsingPost,
+} from '@/services/backend/chatController';
+import { uploadFileByMinioUsingPost } from '@/services/backend/fileController';
+import {
+  createRedPacketUsingPost,
+  getRedPacketDetailUsingGet,
+  getRedPacketRecordsUsingGet,
+  grabRedPacketUsingPost,
+} from '@/services/backend/redPacketController';
+import { wsService } from '@/services/websocket';
+import { useModel } from '@@/exports';
+import {
+  DeleteOutlined,
+  GiftOutlined,
+  PaperClipOutlined,
   PictureOutlined,
+  RightOutlined,
   SendOutlined,
   SmileOutlined,
   SoundOutlined,
-  DeleteOutlined,
-  PaperClipOutlined,
-  GiftOutlined,
-  RightOutlined
 } from '@ant-design/icons';
-import styles from './index.less';
-import {useModel} from "@@/exports";
-import {BACKEND_HOST_WS} from "@/constants";
-import {getOnlineUserListUsingGet, listMessageVoByPageUsingPost} from "@/services/backend/chatController";
-import MessageContent from '@/components/MessageContent';
-import EmoticonPicker from '@/components/EmoticonPicker';
-import {getCosCredentialUsingGet, uploadTo111666UsingPost} from "@/services/backend/fileController";
-import {uploadFileByMinioUsingPost} from "@/services/backend/fileController";
-import { wsService } from '@/services/websocket';
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
 import { history } from '@umijs/max';
-import { createRedPacketUsingPost, grabRedPacketUsingPost } from '@/services/backend/redPacketController';
-import { getRedPacketRecordsUsingGet, getRedPacketDetailUsingGet } from '@/services/backend/redPacketController';
+import {
+  Alert,
+  Avatar,
+  Button,
+  Input,
+  message,
+  Modal,
+  Popconfirm,
+  Popover,
+  Radio,
+  Spin,
+} from 'antd';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FixedSizeList as List } from 'react-window';
+import styles from './index.less';
 interface Message {
   id: string;
   content: string;
@@ -68,8 +81,8 @@ const ChatRoom: React.FC = () => {
   const [isEmoticonPickerVisible, setIsEmoticonPickerVisible] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
-  const {initialState} = useModel('@@initialState');
-  const {currentUser} = initialState || {};
+  const { initialState } = useModel('@@initialState');
+  const { currentUser } = initialState || {};
   const [messageApi, contextHolder] = message.useMessage();
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
   const [isNearBottom, setIsNearBottom] = useState(true);
@@ -84,7 +97,9 @@ const ChatRoom: React.FC = () => {
   // 添加已加载消息ID的集合
   const [loadedMessageIds] = useState<Set<string>>(new Set());
 
-  const [announcement, setAnnouncement] = useState<string>('欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢：感谢 yovvis 大佬赞助的服务器资源🌟，域名9月份过期，请移步新域名：<a href="https://yucoder.cn/" target="_blank" rel="noopener noreferrer">https://yucoder.cn/</a>。');
+  const [announcement, setAnnouncement] = useState<string>(
+    '欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢：感谢 yovvis 大佬赞助的服务器资源🌟，域名9月份过期，请移步新域名：<a href="https://yucoder.cn/" target="_blank" rel="noopener noreferrer">https://yucoder.cn/</a>。',
+  );
   const [showAnnouncement, setShowAnnouncement] = useState<boolean>(true);
 
   const [isComponentMounted, setIsComponentMounted] = useState(true);
@@ -104,7 +119,7 @@ const ChatRoom: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [userIpInfo, setUserIpInfo] = useState<{ region: string; country: string } | null>(null);
 
-  const inputRef = useRef<any>(null);  // 添加输入框的ref
+  const inputRef = useRef<any>(null); // 添加输入框的ref
 
   const [isMentionListVisible, setIsMentionListVisible] = useState(false);
   const [mentionListPosition, setMentionListPosition] = useState({ top: 0, left: 0 });
@@ -123,7 +138,9 @@ const ChatRoom: React.FC = () => {
   const [redPacketRecords, setRedPacketRecords] = useState<API.VO[]>([]);
   const [currentRedPacketId, setCurrentRedPacketId] = useState<string>('');
   const [redPacketDetail, setRedPacketDetail] = useState<API.RedPacket | null>(null);
-  const [redPacketDetailsMap, setRedPacketDetailsMap] = useState<Map<string, API.RedPacket | null>>(new Map());
+  const [redPacketDetailsMap, setRedPacketDetailsMap] = useState<Map<string, API.RedPacket | null>>(
+    new Map(),
+  );
 
   // 添加发送频率限制相关的状态
   const [lastSendTime, setLastSendTime] = useState<number>(0);
@@ -137,30 +154,38 @@ const ChatRoom: React.FC = () => {
   const USER_ITEM_HEIGHT = 46;
   // 添加 ref 和状态来存储列表容器高度
   const userListRef = useRef<HTMLDivElement>(null);
-  const [listHeight, setListHeight] = useState(400); // 默认高度
-  // 添加计算高度的函数
+  const [listHeight, setListHeight] = useState(0); // 初始值设为0
+
+  // 修改计算高度的函数
   const updateListHeight = useCallback(() => {
+
     if (userListRef.current) {
-      const containerHeight = userListRef.current.clientHeight;
+      const containerHeight = userListRef.current.parentElement?.clientHeight || 0;
       const headerHeight = 40;
-      const newHeight = containerHeight - headerHeight;
+      const padding = 20;
+      const newHeight = Math.max(containerHeight - headerHeight - padding, 200);
       setListHeight(newHeight);
     }
   }, []);
 
-  // 在组件挂载和窗口大小改变时更新高度
+  // 修改监听逻辑
   useEffect(() => {
+    // 创建 ResizeObserver 监听父容器大小变化
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        if (entry.target === userListRef.current) {
+        if (entry.target === userListRef.current?.parentElement) {
           updateListHeight();
         }
       }
     });
 
-    if (userListRef.current) {
-      resizeObserver.observe(userListRef.current);
+    // 监听父容器
+    if (userListRef.current?.parentElement) {
+      resizeObserver.observe(userListRef.current.parentElement);
     }
+
+    // 初始计算
+    updateListHeight();
 
     // 同时保留窗口大小变化的监听
     window.addEventListener('resize', updateListHeight);
@@ -207,24 +232,26 @@ const ChatRoom: React.FC = () => {
       const userIp = ipData.clientIP;
 
       // 使用 allorigins.win 作为代理访问 ip-api.com
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`http://ip-api.com/json/${userIp}?lang=zh-CN`)}`;
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(
+        `http://ip-api.com/json/${userIp}?lang=zh-CN`,
+      )}`;
       const response = await fetch(proxyUrl);
       const data = await response.json();
 
       if (data.status === 'success') {
         console.log('IP信息:', {
           IP: data.query,
-          '国家': data.country,
-          '省份': data.regionName,
-          '城市': data.city,
-          '运营商': data.isp,
-          '经纬度': `${data.lat}, ${data.lon}`
+          国家: data.country,
+          省份: data.regionName,
+          城市: data.city,
+          运营商: data.isp,
+          经纬度: `${data.lat}, ${data.lon}`,
         });
 
         // 保存省份和国家信息
         setUserIpInfo({
           region: data.regionName,
-          country: data.country
+          country: data.country,
         });
       }
     } catch (error) {
@@ -242,7 +269,7 @@ const ChatRoom: React.FC = () => {
     try {
       const response = await getOnlineUserListUsingGet();
       if (response.data) {
-        const onlineUsersList = response.data.map(user => ({
+        const onlineUsersList = response.data.map((user) => ({
           id: String(user.id),
           name: user.name || '未知用户',
           avatar: user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
@@ -259,7 +286,8 @@ const ChatRoom: React.FC = () => {
         const botUser = {
           id: '-1',
           name: '摸鱼助手',
-          avatar: 'https://codebug-1309318075.cos.ap-shanghai.myqcloud.com/fishMessage/34eaba5c-3809-45ef-a3bd-dd01cf97881b_478ce06b6d869a5a11148cf3ee119bac.gif',
+          avatar:
+            'https://codebug-1309318075.cos.ap-shanghai.myqcloud.com/fishMessage/34eaba5c-3809-45ef-a3bd-dd01cf97881b_478ce06b6d869a5a11148cf3ee119bac.gif',
           level: 1,
           isAdmin: false,
           status: '在线',
@@ -273,11 +301,15 @@ const ChatRoom: React.FC = () => {
         onlineUsersList.unshift(botUser);
 
         // 如果当前用户已登录且不在列表中，将其添加到列表
-        if (currentUser?.id && !onlineUsersList.some(user => user.id === String(currentUser.id))) {
+        if (
+          currentUser?.id &&
+          !onlineUsersList.some((user) => user.id === String(currentUser.id))
+        ) {
           onlineUsersList.push({
             id: String(currentUser.id),
             name: currentUser.userName || '未知用户',
-            avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+            avatar:
+              currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
             level: currentUser.level || 1,
             isAdmin: currentUser.userRole === 'admin',
             status: '在线',
@@ -295,32 +327,32 @@ const ChatRoom: React.FC = () => {
       messageApi.error('获取在线用户列表失败');
     }
   };
-// 修改 useEffect 来监听消息变化并自动滚动
-useEffect(() => {
-  // 只有在以下情况才自动滚动到底部：
-  // 1. 是当前用户发送的消息
-  // 2. 用户已经在查看最新消息（在底部附近）
-  const lastMessage = messages[messages.length - 1];
-  const isUserMessage = lastMessage?.sender.id === String(currentUser?.id);
+  // 修改 useEffect 来监听消息变化并自动滚动
+  useEffect(() => {
+    // 只有在以下情况才自动滚动到底部：
+    // 1. 是当前用户发送的消息
+    // 2. 用户已经在查看最新消息（在底部附近）
+    const lastMessage = messages[messages.length - 1];
+    const isUserMessage = lastMessage?.sender.id === String(currentUser?.id);
 
-  if (isUserMessage || isNearBottom) {
-    setTimeout(() => {
-      scrollToBottom();
-    }, 100);
-  }
+    if (isUserMessage || isNearBottom) {
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    }
 
-  // 如果有新消息但没有自动滚动，显示"新消息"提示
-  if (!isUserMessage && !isNearBottom) {
-    messageApi.info({
-      content: (
-        <div onClick={scrollToBottom} style={{ cursor: 'pointer' }}>
-          收到新消息，点击查看
-        </div>
-      ),
-      duration: 3,
-    });
-  }
-}, [messages]); // 监听消息数组变化
+    // 如果有新消息但没有自动滚动，显示"新消息"提示
+    if (!isUserMessage && !isNearBottom) {
+      messageApi.info({
+        content: (
+          <div onClick={scrollToBottom} style={{ cursor: 'pointer' }}>
+            收到新消息，点击查看
+          </div>
+        ),
+        duration: 3,
+      });
+    }
+  }, [messages]); // 监听消息数组变化
   // 初始化时获取在线用户列表
   useEffect(() => {
     fetchOnlineUsers();
@@ -329,20 +361,20 @@ useEffect(() => {
   const scrollToBottom = () => {
     const container = messageContainerRef.current;
     if (!container) return;
-  
+
     // 使用 requestAnimationFrame 确保在下一帧执行滚动
     requestAnimationFrame(() => {
       container.scrollTo({
         top: container.scrollHeight,
-        behavior: 'smooth'
+        behavior: 'smooth',
       });
-  
+
       // 添加二次检查，处理可能的延迟加载情况
       setTimeout(() => {
         if (container.scrollTop + container.clientHeight < container.scrollHeight) {
           container.scrollTo({
             top: container.scrollHeight,
-            behavior: 'smooth'
+            behavior: 'smooth',
           });
         }
       }, 100);
@@ -358,50 +390,60 @@ useEffect(() => {
         pageSize,
         roomId: -1,
         sortField: 'createTime',
-        sortOrder: 'desc'
+        sortOrder: 'desc',
       });
       if (response.data?.records) {
         const historyMessages = response.data.records
-          .map(record => ({
+          .map((record) => ({
             id: String(record.messageWrapper?.message?.id),
             content: record.messageWrapper?.message?.content || '',
             sender: {
               id: String(record.userId),
               name: record.messageWrapper?.message?.sender?.name || '未知用户',
-              avatar: record.messageWrapper?.message?.sender?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+              avatar:
+                record.messageWrapper?.message?.sender?.avatar ||
+                'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
               level: record.messageWrapper?.message?.sender?.level || 1,
               points: record.messageWrapper?.message?.sender?.points || 0,
               isAdmin: record.messageWrapper?.message?.sender?.isAdmin || false,
               region: record.messageWrapper?.message?.sender?.region || '未知地区',
-              country: record.messageWrapper?.message?.sender?.country ,
+              country: record.messageWrapper?.message?.sender?.country,
               avatarFramerUrl: record.messageWrapper?.message?.sender?.avatarFramerUrl,
               titleId: record.messageWrapper?.message?.sender?.titleId,
               titleIdList: record.messageWrapper?.message?.sender?.titleIdList,
             },
             timestamp: new Date(record.messageWrapper?.message?.timestamp || Date.now()),
-            quotedMessage: record.messageWrapper?.message?.quotedMessage ? {
-              id: String(record.messageWrapper.message.quotedMessage.id),
-              content: record.messageWrapper.message.quotedMessage.content || '',
-              sender: {
-                id: String(record.messageWrapper.message.quotedMessage.sender?.id),
-                name: record.messageWrapper.message.quotedMessage.sender?.name || '未知用户',
-                avatar: record.messageWrapper.message.quotedMessage.sender?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-                level: record.messageWrapper.message.quotedMessage.sender?.level || 1,
-                points: record.messageWrapper.message.quotedMessage.sender?.points || 0,
-                isAdmin: record.messageWrapper.message.quotedMessage.sender?.isAdmin || false,
-                region: record.messageWrapper?.message.quotedMessage?.sender?.region || '未知地区',
-                avatarFramerUrl: record.messageWrapper?.message.quotedMessage?.sender?.avatarFramerUrl,
-                titleId: record.messageWrapper?.message.quotedMessage?.sender?.titleId,
-                titleIdList: record.messageWrapper?.message.quotedMessage?.sender?.titleIdList,
-              },
-              timestamp: new Date(record.messageWrapper.message.quotedMessage.timestamp || Date.now())
-            } : undefined,
-            region: userIpInfo?.region || '未知地区'
+            quotedMessage: record.messageWrapper?.message?.quotedMessage
+              ? {
+                  id: String(record.messageWrapper.message.quotedMessage.id),
+                  content: record.messageWrapper.message.quotedMessage.content || '',
+                  sender: {
+                    id: String(record.messageWrapper.message.quotedMessage.sender?.id),
+                    name: record.messageWrapper.message.quotedMessage.sender?.name || '未知用户',
+                    avatar:
+                      record.messageWrapper.message.quotedMessage.sender?.avatar ||
+                      'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+                    level: record.messageWrapper.message.quotedMessage.sender?.level || 1,
+                    points: record.messageWrapper.message.quotedMessage.sender?.points || 0,
+                    isAdmin: record.messageWrapper.message.quotedMessage.sender?.isAdmin || false,
+                    region:
+                      record.messageWrapper?.message.quotedMessage?.sender?.region || '未知地区',
+                    avatarFramerUrl:
+                      record.messageWrapper?.message.quotedMessage?.sender?.avatarFramerUrl,
+                    titleId: record.messageWrapper?.message.quotedMessage?.sender?.titleId,
+                    titleIdList: record.messageWrapper?.message.quotedMessage?.sender?.titleIdList,
+                  },
+                  timestamp: new Date(
+                    record.messageWrapper.message.quotedMessage.timestamp || Date.now(),
+                  ),
+                }
+              : undefined,
+            region: userIpInfo?.region || '未知地区',
           }))
-          .filter(msg => !loadedMessageIds.has(msg.id));
+          .filter((msg) => !loadedMessageIds.has(msg.id));
 
         // 将新消息的ID添加到已加载集合中
-        historyMessages.forEach(msg => loadedMessageIds.add(msg.id));
+        historyMessages.forEach((msg) => loadedMessageIds.add(msg.id));
 
         // 处理历史消息，确保正确的时间顺序（旧消息在上，新消息在下）
         if (isFirstLoad) {
@@ -411,7 +453,7 @@ useEffect(() => {
           // 加载更多历史消息时，新的历史消息应该在当前消息的上面
           // 只有在有新消息时才更新状态
           if (historyMessages.length > 0) {
-            setMessages(prev => [...historyMessages.reverse(), ...prev]);
+            setMessages((prev) => [...historyMessages.reverse(), ...prev]);
           }
         }
 
@@ -446,11 +488,11 @@ useEffect(() => {
   const checkIfNearBottom = () => {
     const container = messageContainerRef.current;
     if (!container) return;
-  
+
     const threshold = 100; // 距离底部100px以内都认为是在底部
-    const distanceFromBottom = 
+    const distanceFromBottom =
       container.scrollHeight - container.scrollTop - container.clientHeight;
-    
+
     setIsNearBottom(distanceFromBottom <= threshold);
   };
 
@@ -510,29 +552,29 @@ useEffect(() => {
       // );
 
       // if (!res.data || res.data === 'https://i.111666.bestnull') {
-        // 如果上传失败或返回的是兜底URL，使用备用上传逻辑
-        const fallbackRes = await uploadFileByMinioUsingPost(
-          { biz: 'user_file' },  // 业务标识参数
-          {},               // body 参数
-          file,            // 文件参数
-          {                // 其他选项
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          }
-        );
+      // 如果上传失败或返回的是兜底URL，使用备用上传逻辑
+      const fallbackRes = await uploadFileByMinioUsingPost(
+        { biz: 'user_file' }, // 业务标识参数
+        {}, // body 参数
+        file, // 文件参数
+        {
+          // 其他选项
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        },
+      );
 
-        if (!fallbackRes.data) {
-          throw new Error('图片上传失败');
-        }
+      if (!fallbackRes.data) {
+        throw new Error('图片上传失败');
+      }
 
-        // 设置预览图片
-        setPendingImageUrl(fallbackRes.data);
+      // 设置预览图片
+      setPendingImageUrl(fallbackRes.data);
       // } else {
       //   // 设置预览图片
       //   setPendingImageUrl(res.data);
       // }
-
     } catch (error) {
       messageApi.error(`上传失败：${error}`);
     } finally {
@@ -632,14 +674,15 @@ useEffect(() => {
 
       // 调用后端上传接口
       const res = await uploadFileByMinioUsingPost(
-        { biz: 'user_file' },  // 业务标识参数
-        {},               // body 参数
-        file,            // 文件参数
-        {                // 其他选项
+        { biz: 'user_file' }, // 业务标识参数
+        {}, // body 参数
+        file, // 文件参数
+        {
+          // 其他选项
           headers: {
             'Content-Type': 'multipart/form-data',
           },
-        }
+        },
       );
 
       if (!res.data) {
@@ -668,7 +711,7 @@ useEffect(() => {
   const scrollToMessage = (messageId: string) => {
     const messageElement = document.getElementById(`message-${messageId}`);
     if (messageElement) {
-      messageElement.scrollIntoView({behavior: 'smooth', block: 'center'});
+      messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
       // 添加高亮效果
       messageElement.classList.add(styles.highlighted);
       setTimeout(() => {
@@ -679,7 +722,7 @@ useEffect(() => {
 
   // 添加处理@消息的函数
   const handleMentionNotification = (message: Message) => {
-    if (message.mentionedUsers?.some(user => user.id === String(currentUser?.id))) {
+    if (message.mentionedUsers?.some((user) => user.id === String(currentUser?.id))) {
       messageApi.info({
         content: (
           <div onClick={() => scrollToMessage(message.id)}>
@@ -689,7 +732,7 @@ useEffect(() => {
         duration: 5,
         key: message.id,
       });
-      setNotifications(prev => [...prev, message]);
+      setNotifications((prev) => [...prev, message]);
     }
   };
 
@@ -697,15 +740,16 @@ useEffect(() => {
   const handleChatMessage = (data: any) => {
     const otherUserMessage = data.data.message;
     if (otherUserMessage.sender.id !== String(currentUser?.id)) {
-      setMessages(prev => {
+      setMessages((prev) => {
         // 添加新消息
-        const newMessages = [...prev, {...otherUserMessage}];
+        const newMessages = [...prev, { ...otherUserMessage }];
 
         // 检查是否在底部
         const container = messageContainerRef.current;
         if (container) {
           const threshold = 30; // 30px的阈值
-          const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+          const distanceFromBottom =
+            container.scrollHeight - container.scrollTop - container.clientHeight;
           const isNearBottom = distanceFromBottom <= threshold;
 
           // 只有在底部时才限制消息数量
@@ -722,7 +766,8 @@ useEffect(() => {
       const container = messageContainerRef.current;
       if (container) {
         const threshold = 30; // 30px的阈值，在底部附近就会自动滚动
-        const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+        const distanceFromBottom =
+          container.scrollHeight - container.scrollTop - container.clientHeight;
         if (distanceFromBottom <= threshold) {
           setTimeout(scrollToBottom, 100);
         }
@@ -731,19 +776,21 @@ useEffect(() => {
   };
 
   const handleUserMessageRevoke = (data: any) => {
-    setMessages(prev => prev.filter(msg => msg.id !== data.data));
-    setTotal(prev => Math.max(0, prev - 1));
+    setMessages((prev) => prev.filter((msg) => msg.id !== data.data));
+    setTotal((prev) => Math.max(0, prev - 1));
   };
 
   const handleUserOnline = (data: any) => {
-    setOnlineUsers(prev => [
+    setOnlineUsers((prev) => [
       ...prev,
-      ...data.data.filter((newUser: { id: string; }) => !prev.some(user => user.id === newUser.id))
+      ...data.data.filter(
+        (newUser: { id: string }) => !prev.some((user) => user.id === newUser.id),
+      ),
     ]);
   };
 
   const handleUserOffline = (data: any) => {
-    setOnlineUsers(prev => prev.filter(user => user.id !== data.data));
+    setOnlineUsers((prev) => prev.filter((user) => user.id !== data.data));
   };
 
   // 修改 WebSocket 连接逻辑
@@ -784,7 +831,8 @@ useEffect(() => {
   const handleSend = (customContent?: string) => {
     // 检查发送冷却时间
     const now = Date.now();
-    if (now - lastSendTime < 1000) { // 限制每秒最多发送一条消息
+    if (now - lastSendTime < 1000) {
+      // 限制每秒最多发送一条消息
       messageApi.warning('发送太快了，请稍后再试');
       return;
     }
@@ -814,7 +862,8 @@ useEffect(() => {
     }
 
     // 检查是否重复发送相同内容
-    if (content === lastSendContent && now - lastSendContentTime < 10000) { // 10秒内不能发送相同内容
+    if (content === lastSendContent && now - lastSendContentTime < 10000) {
+      // 10秒内不能发送相同内容
       messageApi.warning('请勿重复发送相同内容，请稍后再试');
       return;
     }
@@ -830,7 +879,7 @@ useEffect(() => {
     let match;
     while ((match = mentionRegex.exec(content)) !== null) {
       const mentionedName = match[1];
-      const mentionedUser = onlineUsers.find(user => user.name === mentionedName);
+      const mentionedUser = onlineUsers.find((user) => user.name === mentionedName);
       if (mentionedUser) {
         mentionedUsers.push(mentionedUser);
       }
@@ -856,7 +905,7 @@ useEffect(() => {
       quotedMessage: quotedMessage || undefined,
       mentionedUsers: mentionedUsers.length > 0 ? mentionedUsers : undefined,
       region: userIpInfo?.region || '未知地区',
-      country: userIpInfo?.country || '未知国家'
+      country: userIpInfo?.country || '未知国家',
     };
 
     // 使用全局 WebSocket 服务发送消息
@@ -866,14 +915,14 @@ useEffect(() => {
       data: {
         type: 'chat',
         content: {
-          message: newMessage
-        }
-      }
+          message: newMessage,
+        },
+      },
     });
 
     // 更新消息列表
-    setMessages(prev => [...prev, newMessage]);
-    setTotal(prev => prev + 1);
+    setMessages((prev) => [...prev, newMessage]);
+    setTotal((prev) => prev + 1);
     setHasMore(true);
 
     // 清空输入框、预览图片、文件和引用消息
@@ -903,8 +952,8 @@ useEffect(() => {
       userId: -1,
       data: {
         type: 'userMessageRevoke',
-        content: messageId
-      }
+        content: messageId,
+      },
     });
 
     messageApi.info('消息已撤回');
@@ -922,7 +971,7 @@ useEffect(() => {
       setMentionSearchText(searchText);
 
       // 过滤在线用户，添加安全检查
-      const filtered = onlineUsers.filter(user => {
+      const filtered = onlineUsers.filter((user) => {
         if (!user || !user.name) return false;
         return user.name.toLowerCase().includes(searchText.toLowerCase());
       });
@@ -945,7 +994,7 @@ useEffect(() => {
 
       setMentionListPosition({
         top: rect.top + topOffset,
-        left: rect.left + (currentLinePos * 8) // 8是字符的近似宽度
+        left: rect.left + currentLinePos * 8, // 8是字符的近似宽度
       });
 
       setIsMentionListVisible(true);
@@ -974,7 +1023,10 @@ useEffect(() => {
     const lastAtPos = value.lastIndexOf('@');
     if (lastAtPos !== -1) {
       // 如果已经输入了@，则替换当前@后面的内容
-      const newValue = value.slice(0, lastAtPos) + `@${user.name} ` + value.slice(lastAtPos + mentionSearchText.length + 1);
+      const newValue =
+        value.slice(0, lastAtPos) +
+        `@${user.name} ` +
+        value.slice(lastAtPos + mentionSearchText.length + 1);
       setInputValue(newValue);
     } else {
       // 如果没有输入@，则在当前光标位置插入@用户名
@@ -990,7 +1042,7 @@ useEffect(() => {
     }, 0);
   };
 
-  const UserInfoCard: React.FC<{ user: User }> = ({user}) => {
+  const UserInfoCard: React.FC<{ user: User }> = ({ user }) => {
     // 从 titleIdList 字符串解析称号 ID 数组
     const userTitleIds: number[] = user.titleIdList ? JSON.parse(user.titleIdList) : [];
     const [isTitlesExpanded, setIsTitlesExpanded] = useState(false);
@@ -998,30 +1050,32 @@ useEffect(() => {
     // 获取所有称号
     const allTitles = [
       getAdminTag(user.isAdmin, user.level, 0),
-      ...userTitleIds.map(titleId => getAdminTag(user.isAdmin, user.level, titleId))
+      ...userTitleIds.map((titleId) => getAdminTag(user.isAdmin, user.level, titleId)),
     ];
 
     // 优先显示用户选中的称号
-    const defaultTitle = user.titleId ?
-      allTitles.find(titleElement => {
-        // 检查是否是管理员称号
-        if (user.titleId === -1 && titleElement.props?.children?.[1]?.props?.children === '管理员') {
-          return true;
-        }
-        // 检查其他称号
-        const titles = require('@/config/titles.json').titles;
-        const titleConfig = titles.find((t: Title) => String(t.id) === String(user.titleId));
-        return titleConfig && titleConfig.name === titleElement.props?.children?.[1]?.props?.children;
-      }) || allTitles[0] :
-      allTitles[0];
+    const defaultTitle = user.titleId
+      ? allTitles.find((titleElement) => {
+          // 检查是否是管理员称号
+          if (
+            user.titleId === -1 &&
+            titleElement.props?.children?.[1]?.props?.children === '管理员'
+          ) {
+            return true;
+          }
+          // 检查其他称号
+          const titles = require('@/config/titles.json').titles;
+          const titleConfig = titles.find((t: Title) => String(t.id) === String(user.titleId));
+          return (
+            titleConfig && titleConfig.name === titleElement.props?.children?.[1]?.props?.children
+          );
+        }) || allTitles[0]
+      : allTitles[0];
     // 其他称号
-    const otherTitles = allTitles.filter(title => title !== defaultTitle);
+    const otherTitles = allTitles.filter((title) => title !== defaultTitle);
 
     return (
-      <div
-        className={styles.userInfoCard}
-        onMouseLeave={() => setIsTitlesExpanded(false)}
-      >
+      <div className={styles.userInfoCard} onMouseLeave={() => setIsTitlesExpanded(false)}>
         <div className={styles.userInfoCardHeader}>
           <div
             className={styles.avatarWrapper}
@@ -1031,13 +1085,9 @@ useEffect(() => {
             }}
           >
             <div className={styles.avatarWithFrame}>
-              <Avatar src={user.avatar} size={48}/>
+              <Avatar src={user.avatar} size={48} />
               {user.avatarFramerUrl && (
-                <img
-                  src={user.avatarFramerUrl}
-                  className={styles.avatarFrame}
-                  alt="avatar-frame"
-                />
+                <img src={user.avatarFramerUrl} className={styles.avatarFrame} alt="avatar-frame" />
               )}
             </div>
             <div className={styles.floatingFish}>🐟</div>
@@ -1086,21 +1136,23 @@ useEffect(() => {
               <span className={styles.pointsEmoji}>✨</span>
               <span className={styles.pointsText}>积分: {user.points || 0}</span>
             </div>
-            {user.id === String(currentUser?.id) ? (
-              userIpInfo && (
-                <div className={styles.userInfoCardLocation}>
-                  <span className={styles.locationEmoji}>📍</span>
-                  <span className={styles.locationText}>{userIpInfo.country} · {userIpInfo.region}</span>
-                </div>
-              )
-            ) : (
-              user.region && (
-                <div className={styles.userInfoCardLocation}>
-                  <span className={styles.locationEmoji}>📍</span>
-                  <span className={styles.locationText}>{user.country ? `${user.country} · ${user.region}` : user.region}</span>
-                </div>
-              )
-            )}
+            {user.id === String(currentUser?.id)
+              ? userIpInfo && (
+                  <div className={styles.userInfoCardLocation}>
+                    <span className={styles.locationEmoji}>📍</span>
+                    <span className={styles.locationText}>
+                      {userIpInfo.country} · {userIpInfo.region}
+                    </span>
+                  </div>
+                )
+              : user.region && (
+                  <div className={styles.userInfoCardLocation}>
+                    <span className={styles.locationEmoji}>📍</span>
+                    <span className={styles.locationText}>
+                      {user.country ? `${user.country} · ${user.region}` : user.region}
+                    </span>
+                  </div>
+                )}
           </div>
         </div>
       </div>
@@ -1119,7 +1171,7 @@ useEffect(() => {
   const getLevelEmoji = (level: number) => {
     switch (level) {
       case 7:
-        return '👑';  // 最高级
+        return '👑'; // 最高级
       case 6:
         return '🛏';
       case 5:
@@ -1133,7 +1185,7 @@ useEffect(() => {
       case 1:
         return '💦';
       default:
-        return '💦';  // 默认显示
+        return '💦'; // 默认显示
     }
   };
 
@@ -1151,27 +1203,27 @@ useEffect(() => {
 
         // 根据不同的称号ID设置不同的样式
         switch (String(titleId)) {
-          case "-1": // 管理员
+          case '-1': // 管理员
             tagEmoji = '🚀';
             tagClass = styles.titleTagAdmin;
             break;
-          case "1": // 天使投资人
+          case '1': // 天使投资人
             tagEmoji = '😇';
             tagClass = styles.titleTagInvestor;
             break;
-          case "2": // 首席摸鱼官
+          case '2': // 首席摸鱼官
             tagEmoji = '🏆';
             tagClass = styles.titleTagChief;
             break;
-          case "3": // 白金摸鱼官
+          case '3': // 白金摸鱼官
             tagEmoji = '💎';
             tagClass = styles.titleTagPlatinum;
             break;
-          case "4": // 黄金摸鱼官
+          case '4': // 黄金摸鱼官
             tagEmoji = '🌟';
             tagClass = styles.titleTagGold;
             break;
-          case "5": // 摸鱼共建者
+          case '5': // 摸鱼共建者
             tagEmoji = '🛠️';
             tagClass = styles.titleTagBuilder;
             break;
@@ -1240,7 +1292,7 @@ useEffect(() => {
   };
 
   const handleEmojiClick = (emoji: any) => {
-    setInputValue(prev => prev + emoji.native);
+    setInputValue((prev) => prev + emoji.native);
     setIsEmojiPickerVisible(false);
     // 让输入框获得焦点
     setTimeout(() => {
@@ -1294,9 +1346,9 @@ useEffect(() => {
     };
 
     // 新发送的消息添加到列表末尾
-    setMessages(prev => [...prev, newMessage]);
+    setMessages((prev) => [...prev, newMessage]);
     // 更新总消息数和分页状态
-    setTotal(prev => prev + 1);
+    setTotal((prev) => prev + 1);
     setHasMore(true);
 
     // 发送消息到服务器
@@ -1306,9 +1358,9 @@ useEffect(() => {
       data: {
         type: 'chat',
         content: {
-          message: newMessage
-        }
-      }
+          message: newMessage,
+        },
+      },
     });
 
     setInputValue('');
@@ -1349,7 +1401,7 @@ useEffect(() => {
         totalAmount: redPacketAmount,
         count: redPacketCount,
         type: redPacketType, // 使用选择的红包类型
-        name: redPacketMessage
+        name: redPacketMessage,
       });
 
       if (response.data) {
@@ -1360,7 +1412,8 @@ useEffect(() => {
           sender: {
             id: String(currentUser.id),
             name: currentUser.userName || '游客',
-            avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+            avatar:
+              currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
             level: currentUser.level || 1,
             points: currentUser.points || 0,
             isAdmin: currentUser.userRole === 'admin',
@@ -1379,13 +1432,13 @@ useEffect(() => {
           data: {
             type: 'chat',
             content: {
-              message: newMessage
-            }
-          }
+              message: newMessage,
+            },
+          },
         });
 
-        setMessages(prev => [...prev, newMessage]);
-        setTotal(prev => prev + 1);
+        setMessages((prev) => [...prev, newMessage]);
+        setTotal((prev) => prev + 1);
         setHasMore(true);
 
         messageApi.success('红包发送成功！');
@@ -1412,7 +1465,7 @@ useEffect(() => {
       if (response.data) {
         // 更新缓存
         const detail = response.data as API.RedPacket;
-        setRedPacketDetailsMap(prev => new Map(prev).set(redPacketId, detail));
+        setRedPacketDetailsMap((prev) => new Map(prev).set(redPacketId, detail));
         return detail;
       }
     } catch (error) {
@@ -1423,8 +1476,6 @@ useEffect(() => {
 
   // 修改 renderMessageContent 函数，添加红包消息的渲染
   const renderMessageContent = (content: string) => {
-    
-
     // 检查是否是红包消息
     const redPacketMatch = content.match(/\[redpacket\](.*?)\[\/redpacket\]/);
     if (redPacketMatch) {
@@ -1442,13 +1493,13 @@ useEffect(() => {
             <GiftOutlined className={styles.redPacketIcon} />
             <div className={styles.redPacketInfo}>
               <div className={styles.redPacketTitle}>
-                <span className={styles.redPacketText}>
-                  {detail?.name || '红包'}
-                </span>
+                <span className={styles.redPacketText}>{detail?.name || '红包'}</span>
                 <span className={styles.redPacketStatus}>
-                  {detail?.remainingCount === 0 ? '（已抢完）' :
-                   detail?.status === 2 ? '（已过期）' :
-                   `（剩余${detail?.remainingCount || 0}个）`}
+                  {detail?.remainingCount === 0
+                    ? '（已抢完）'
+                    : detail?.status === 2
+                    ? '（已过期）'
+                    : `（剩余${detail?.remainingCount || 0}个）`}
                 </span>
               </div>
               <div className={styles.redPacketActions}>
@@ -1458,14 +1509,14 @@ useEffect(() => {
                   onClick={async () => {
                     try {
                       const response = await grabRedPacketUsingPost({
-                        redPacketId: redPacketId
+                        redPacketId: redPacketId,
                       });
                       if (response.data) {
                         messageApi.success(`恭喜你抢到 ${response.data} 积分！`);
                         // 刷新红包记录和详情
                         await Promise.all([
                           fetchRedPacketRecords(redPacketId),
-                          fetchRedPacketDetail(redPacketId)
+                          fetchRedPacketDetail(redPacketId),
                         ]);
                       }
                     } catch (error) {
@@ -1497,7 +1548,7 @@ useEffect(() => {
     if (inviteMatch) {
       const roomId = inviteMatch[2];
       const gameType = inviteMatch[1];
-      let game = ''
+      let game = '';
       switch (gameType) {
         case 'chess':
           game = '五子棋';
@@ -1525,13 +1576,16 @@ useEffect(() => {
     const imgMatch = content.match(/\[img\](.*?)\[\/img\]/);
     if (imgMatch) {
       return (
-        <MessageContent 
-          content={content} 
+        <MessageContent
+          content={content}
           onImageLoad={() => {
             // 图片加载完成后,如果是最新消息则滚动到底部
             const lastMessage = messages[messages.length - 1];
             const isLatestMessage = lastMessage?.content === content;
-            if (isLatestMessage && (isNearBottom || lastMessage?.sender.id === String(currentUser?.id))) {
+            if (
+              isLatestMessage &&
+              (isNearBottom || lastMessage?.sender.id === String(currentUser?.id))
+            ) {
               scrollToBottom();
             }
           }}
@@ -1567,7 +1621,7 @@ useEffect(() => {
         <Alert
           message={
             <div className={styles.announcementContent}>
-              <SoundOutlined className={styles.announcementIcon}/>
+              <SoundOutlined className={styles.announcementIcon} />
               <span dangerouslySetInnerHTML={{ __html: announcement }} />
             </div>
           }
@@ -1583,33 +1637,33 @@ useEffect(() => {
       <div className={styles['floating-fish'] + ' ' + styles.fish3}>🐡</div>
       <div className={styles['floating-fish'] + ' ' + styles.bubble1}>💭</div>
       <div className={styles['floating-fish'] + ' ' + styles.bubble2}>💭</div>
-      <div
-        className={styles.messageContainer}
-        ref={messageContainerRef}
-        onScroll={handleScroll}
-      >
-        {loading && <div className={styles.loadingWrapper}><Spin/></div>}
+      <div className={styles.messageContainer} ref={messageContainerRef} onScroll={handleScroll}>
+        {loading && (
+          <div className={styles.loadingWrapper}>
+            <Spin />
+          </div>
+        )}
         {messages.map((msg) => (
           <div
             key={msg.id}
             id={`message-${msg.id}`}
             className={`${styles.messageItem} ${
               currentUser?.id && String(msg.sender.id) === String(currentUser.id) ? styles.self : ''
-            } ${notifications.some(n => n.id === msg.id) ? styles.mentioned : ''}`}
+            } ${notifications.some((n) => n.id === msg.id) ? styles.mentioned : ''}`}
           >
             <div className={styles.messageHeader}>
               <div
                 className={styles.avatar}
                 onClick={() => handleSelectMention(msg.sender)}
-                style={{cursor: 'pointer'}}
+                style={{ cursor: 'pointer' }}
               >
                 <Popover
-                  content={<UserInfoCard user={msg.sender}/>}
+                  content={<UserInfoCard user={msg.sender} />}
                   trigger="hover"
                   placement="top"
                 >
                   <div className={styles.avatarWithFrame}>
-                    <Avatar src={msg.sender.avatar} size={32}/>
+                    <Avatar src={msg.sender.avatar} size={32} />
                     {msg.sender.avatarFramerUrl && (
                       <img
                         src={msg.sender.avatarFramerUrl}
@@ -1634,7 +1688,9 @@ useEffect(() => {
               {msg.quotedMessage && (
                 <div className={styles.quotedMessage}>
                   <div className={styles.quotedMessageHeader}>
-                    <span className={styles.quotedMessageSender}>{msg.quotedMessage.sender.name}</span>
+                    <span className={styles.quotedMessageSender}>
+                      {msg.quotedMessage.sender.name}
+                    </span>
                     <span className={styles.quotedMessageTime}>
                       {new Date(msg.quotedMessage.timestamp).toLocaleTimeString()}
                     </span>
@@ -1650,7 +1706,8 @@ useEffect(() => {
               <span className={styles.timestamp}>
                 {new Date(msg.timestamp).toLocaleTimeString()}
               </span>
-              {(currentUser?.id && String(msg.sender.id) === String(currentUser.id)) || currentUser?.userRole === 'admin' ? (
+              {(currentUser?.id && String(msg.sender.id) === String(currentUser.id)) ||
+              currentUser?.userRole === 'admin' ? (
                 <Popconfirm
                   title="确定要撤回这条消息吗？"
                   onConfirm={() => handleRevokeMessage(msg.id)}
@@ -1660,23 +1717,18 @@ useEffect(() => {
                   <span className={styles.revokeText}>撤回</span>
                 </Popconfirm>
               ) : null}
-              <span
-                className={styles.quoteText}
-                onClick={() => handleQuoteMessage(msg)}
-              >
+              <span className={styles.quoteText} onClick={() => handleQuoteMessage(msg)}>
                 引用
               </span>
             </div>
           </div>
         ))}
-        <div ref={messagesEndRef}/>
+        <div ref={messagesEndRef} />
       </div>
 
       <div className={styles.userList}>
-        <div className={styles.userListHeader}>
-          在线成员 ({onlineUsers.length})
-        </div>
-        <div className={styles.userListContent}>
+        <div className={styles.userListHeader}>在线成员 ({onlineUsers.length})</div>
+        <div className={styles.userListContent} ref={userListRef}>
           <List
             height={listHeight}
             itemCount={onlineUsers.length}
@@ -1699,7 +1751,7 @@ useEffect(() => {
             </div>
             <Button
               type="text"
-              icon={<DeleteOutlined/>}
+              icon={<DeleteOutlined />}
               className={styles.removeQuote}
               onClick={handleCancelQuote}
             />
@@ -1719,7 +1771,7 @@ useEffect(() => {
               />
               <Button
                 type="text"
-                icon={<DeleteOutlined/>}
+                icon={<DeleteOutlined />}
                 className={styles.removeImage}
                 onClick={handleRemoveImage}
               />
@@ -1730,14 +1782,12 @@ useEffect(() => {
           <div className={styles.filePreview}>
             <div className={styles.previewWrapper}>
               <div className={styles.fileInfo}>
-                <PaperClipOutlined className={styles.fileIcon}/>
-                <span className={styles.fileName}>
-                  {pendingFileUrl.split('/').pop()}
-                </span>
+                <PaperClipOutlined className={styles.fileIcon} />
+                <span className={styles.fileName}>{pendingFileUrl.split('/').pop()}</span>
               </div>
               <Button
                 type="text"
-                icon={<DeleteOutlined/>}
+                icon={<DeleteOutlined />}
                 className={styles.removeFile}
                 onClick={handleRemoveFile}
               />
@@ -1748,7 +1798,7 @@ useEffect(() => {
           <input
             type="file"
             ref={fileInputRef}
-            style={{display: 'none'}}
+            style={{ display: 'none' }}
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) {
@@ -1765,23 +1815,17 @@ useEffect(() => {
             placement="topLeft"
             overlayClassName={styles.emojiPopover}
           >
-            <Button
-              icon={<SmileOutlined/>}
-              className={styles.emojiButton}
-            />
+            <Button icon={<SmileOutlined />} className={styles.emojiButton} />
           </Popover>
           <Popover
-            content={<EmoticonPicker onSelect={handleEmoticonSelect}/>}
+            content={<EmoticonPicker onSelect={handleEmoticonSelect} />}
             trigger="click"
             visible={isEmoticonPickerVisible}
             onVisibleChange={setIsEmoticonPickerVisible}
             placement="topLeft"
             overlayClassName={styles.emoticonPopover}
           >
-            <Button
-              icon={<PictureOutlined/>}
-              className={styles.emoticonButton}
-            />
+            <Button icon={<PictureOutlined />} className={styles.emoticonButton} />
           </Popover>
           {currentUser?.userRole === 'admin' && (
             <Button
@@ -1806,7 +1850,7 @@ useEffect(() => {
               }
             }}
             onPaste={handlePaste}
-            placeholder={uploading ? "正在上传图片..." : "输入消息或粘贴图片..."}
+            placeholder={uploading ? '正在上传图片...' : '输入消息或粘贴图片...'}
             maxLength={200}
             disabled={uploading}
             autoSize={{ minRows: 1, maxRows: 4 }}
@@ -1820,10 +1864,10 @@ useEffect(() => {
                 position: 'fixed',
                 top: mentionListPosition.top,
                 left: mentionListPosition.left,
-                zIndex: 1000
+                zIndex: 1000,
               }}
             >
-              {filteredUsers.map(user => (
+              {filteredUsers.map((user) => (
                 <div
                   key={user.id}
                   className={styles.mentionItem}
@@ -1835,12 +1879,10 @@ useEffect(() => {
               ))}
             </div>
           )}
-          <span className={styles.inputCounter}>
-            {inputValue.length}/200
-          </span>
+          <span className={styles.inputCounter}>{inputValue.length}/200</span>
           <Button
             type="text"
-            icon={<SendOutlined/>}
+            icon={<SendOutlined />}
             onClick={() => handleSend()}
             disabled={uploading}
             className={styles.sendButton}
@@ -1920,12 +1962,8 @@ useEffect(() => {
         </div>
       </Modal>
 
-      <Modal
-        visible={isPreviewVisible}
-        footer={null}
-        onCancel={() => setIsPreviewVisible(false)}
-      >
-        {previewImage && <img alt="预览" style={{width: '100%'}} src={previewImage}/>}
+      <Modal visible={isPreviewVisible} footer={null} onCancel={() => setIsPreviewVisible(false)}>
+        {previewImage && <img alt="预览" style={{ width: '100%' }} src={previewImage} />}
       </Modal>
 
       <Modal
@@ -1938,7 +1976,7 @@ useEffect(() => {
         <div className={styles.redPacketRecords}>
           <div className={styles.recordsList}>
             {redPacketRecords.length > 0 ? (
-              redPacketRecords.map(record => (
+              redPacketRecords.map((record) => (
                 <div key={record.id} className={styles.recordItem}>
                   <Avatar src={record.userAvatar} size={32} />
                   <div className={styles.userInfo}>
@@ -1964,4 +2002,3 @@ useEffect(() => {
 };
 
 export default ChatRoom;
-
