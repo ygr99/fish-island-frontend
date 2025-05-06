@@ -427,7 +427,11 @@
         margin-left: 40px;
         white-space: pre-wrap;
         overflow-wrap: break-word;
-
+        .messageImage {
+          max-width: 200px;
+          border-radius: 4px;
+          transition: transform .3s ease;
+        }
         .quotedMessage {
           margin-bottom: 8px;
           padding: 8px;
@@ -537,22 +541,24 @@
     }
 
     .userListContent {
-      overflow-y: auto;
+      overflow-y: hidden;
       flex: 1;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
-
-      &::-webkit-scrollbar {
+      padding-bottom: 20px;
+      > div {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+      }
+      > div::-webkit-scrollbar {
         width: 4px;
         background: transparent;
       }
 
-      &::-webkit-scrollbar-thumb {
+      > div::-webkit-scrollbar-thumb {
         background-color: rgba(0, 0, 0, 0.1);
         border-radius: 2px;
       }
 
-      &::-webkit-scrollbar-track {
+      > div::-webkit-scrollbar-track {
         background: transparent;
       }
     }
@@ -601,6 +607,9 @@
         flex-shrink: 0;
         color: #999;
       }
+    }
+    .userItem:last-of-type {
+      padding-bottom: 22px;
     }
   }
 
@@ -1670,6 +1679,73 @@
         padding: 8px 12px;
       }
     }
+  }
+}
+
+.userItemPlaceholder {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  gap: 12px;
+  animation: shimmer 1.5s infinite linear;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
+.avatarPlaceholder {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.infoPlaceholder {
+  flex: 1;
+}
+
+.namePlaceholder {
+  width: 60%;
+  height: 16px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.statusPlaceholder {
+  width: 40%;
+  height: 12px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+.virtualList {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
   }
 }
 
