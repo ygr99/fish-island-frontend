@@ -162,6 +162,8 @@ const ChatRoom: React.FC = () => {
   const [newMessageCount, setNewMessageCount] = useState<number>(0);
   const newMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const [isLoadingMoyu, setIsLoadingMoyu] = useState(false);
+
   const scrollToBottom = () => {
     const container = messageContainerRef.current;
     if (!container) return;
@@ -1035,6 +1037,12 @@ const ChatRoom: React.FC = () => {
     const value = e.target.value;
     setInputValue(value);
 
+    // 检查是否输入了摸鱼日历
+    if (value === '摸鱼日历') {
+      fetchMoyuCalendar();
+      return;
+    }
+
     // 检查是否输入了@
     const lastAtPos = value.lastIndexOf('@');
     if (lastAtPos !== -1) {
@@ -1693,6 +1701,24 @@ const ChatRoom: React.FC = () => {
       }
     };
   }, []);
+
+  // 修改获取摸鱼日历的函数
+  const fetchMoyuCalendar = async () => {
+    try {
+      setIsLoadingMoyu(true);
+      const response = await fetch('https://api.vvhan.com/api/moyu?type=json');
+      const data = await response.json();
+      if (data.success) {
+        setPendingImageUrl(data.url);
+      } else {
+        messageApi.error('获取摸鱼日历失败');
+      }
+    } catch (error) {
+      messageApi.error('获取摸鱼日历失败');
+    } finally {
+      setIsLoadingMoyu(false);
+    }
+  };
 
   return (
     <div className={styles.chatRoom}>
