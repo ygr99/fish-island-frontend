@@ -1037,9 +1037,10 @@ const ChatRoom: React.FC = () => {
     const value = e.target.value;
     setInputValue(value);
 
-    // 检查是否输入了摸鱼日历
-    if (value === '摸鱼日历') {
+    // 检查是否输入了#摸鱼日历
+    if (value === '#摸鱼日历') {
       fetchMoyuCalendar();
+      setInputValue(''); // 清空输入框，因为这是触发词
       return;
     }
 
