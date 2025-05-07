@@ -145,8 +145,6 @@ const ChatRoom: React.FC = () => {
 
   // 添加发送频率限制相关的状态
   const [lastSendTime, setLastSendTime] = useState<number>(0);
-  const [sendCooldown, setSendCooldown] = useState<number>(0);
-  const sendCooldownRef = useRef<NodeJS.Timeout | null>(null);
 
   // 添加防止重复发送的状态
   const [lastSendContent, setLastSendContent] = useState<string>('');
@@ -164,20 +162,44 @@ const ChatRoom: React.FC = () => {
   const [newMessageCount, setNewMessageCount] = useState<number>(0);
   const newMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const scrollToBottom = () => {
+    const container = messageContainerRef.current;
+    if (!container) return;
+
+    // 使用 requestAnimationFrame 确保在下一帧执行滚动
+    requestAnimationFrame(() => {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth',
+      });
+
+      // 添加二次检查，处理可能的延迟加载情况
+      setTimeout(() => {
+        if (container.scrollTop + container.clientHeight < container.scrollHeight) {
+          container.scrollTo({
+            top: container.scrollHeight,
+            behavior: 'smooth',
+          });
+        }
+      }, 100);
+    });
+  };
+
+
   // 修改显示新消息提示的函数
   const showNewMessageNotification = (count: number) => {
     // 先清除之前的消息提示
     messageApi.destroy('newMessage');
-    
+
     messageApi.info({
       content: (
-        <div 
+        <div
           onClick={() => {
             // 点击时关闭消息提示
             messageApi.destroy('newMessage');
             scrollToBottom();
-          }} 
-          style={{ 
+          }}
+          style={{
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -185,13 +207,13 @@ const ChatRoom: React.FC = () => {
           }}
         >
           <span>收到 {count} 条新消息，点击查看</span>
-          <CloseOutlined 
+          <CloseOutlined
             onClick={(e) => {
               e.stopPropagation(); // 阻止事件冒泡
               messageApi.destroy('newMessage');
             }}
-            style={{ 
-              marginLeft: '10px', 
+            style={{
+              marginLeft: '10px',
               cursor: 'pointer',
               color: '#999',
               fontSize: '12px'
@@ -391,28 +413,6 @@ const ChatRoom: React.FC = () => {
     fetchOnlineUsers();
   }, []);
 
-  const scrollToBottom = () => {
-    const container = messageContainerRef.current;
-    if (!container) return;
-
-    // 使用 requestAnimationFrame 确保在下一帧执行滚动
-    requestAnimationFrame(() => {
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: 'smooth',
-      });
-
-      // 添加二次检查，处理可能的延迟加载情况
-      setTimeout(() => {
-        if (container.scrollTop + container.clientHeight < container.scrollHeight) {
-          container.scrollTo({
-            top: container.scrollHeight,
-            behavior: 'smooth',
-          });
-        }
-      }, 100);
-    });
-  };
   const loadHistoryMessages = async (page: number, isFirstLoad = false) => {
     if (!hasMore || loading) return;
 
@@ -1544,7 +1544,12 @@ const ChatRoom: React.FC = () => {
     }
     return null;
   };
-
+  // 添加查看红包记录的处理函数
+  const handleViewRedPacketRecords = async (redPacketId: string) => {
+    setCurrentRedPacketId(redPacketId);
+    setIsRedPacketRecordsVisible(true);
+    await fetchRedPacketRecords(redPacketId);
+  };
   // 修改 renderMessageContent 函数，添加红包消息的渲染
   const renderMessageContent = (content: string) => {
     // 检查是否是红包消息
@@ -1678,12 +1683,7 @@ const ChatRoom: React.FC = () => {
     }
   };
 
-  // 添加查看红包记录的处理函数
-  const handleViewRedPacketRecords = async (redPacketId: string) => {
-    setCurrentRedPacketId(redPacketId);
-    setIsRedPacketRecordsVisible(true);
-    await fetchRedPacketRecords(redPacketId);
-  };
+
 
   // 在组件卸载时清理定时器
   useEffect(() => {
@@ -2081,4 +2081,5 @@ const ChatRoom: React.FC = () => {
   );
 };
 
+// @ts-ignore
 export default ChatRoom;
