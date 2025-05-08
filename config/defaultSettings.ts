@@ -21,9 +21,9 @@ const Settings: ProLayoutProps & {
   fixSiderbar: true,
   colorWeak: false,
   title: userSiteName || '摸鱼岛🎣',
-  logo: 'https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png',
+  logo: 'https://api.oss.cqbo.com/moyu/ChatGPT%20Image%202025%E5%B9%B45%E6%9C%888%E6%97%A5%2015_09_08%20(1).png',
   pwa: true,
-  // iconfontUrl: 'https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png',
+  // iconfontUrl: 'https://api.oss.cqbo.com/moyu/ChatGPT%20Image%202025%E5%B9%B45%E6%9C%888%E6%97%A5%2015_09_08%20(1).png',
   token: {
     header: {
       heightLayoutHeader: 78,
