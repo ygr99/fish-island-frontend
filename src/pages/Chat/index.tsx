@@ -15,6 +15,17 @@ import {
 import { wsService } from '@/services/websocket';
 import { useModel } from '@@/exports';
 
+import {
+  DeleteOutlined,
+  GiftOutlined,
+  PaperClipOutlined,
+  PictureOutlined,
+  RightOutlined,
+  SendOutlined,
+  SmileOutlined,
+  SoundOutlined,
+  CloseOutlined
+} from '@ant-design/icons';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import { history } from '@umijs/max';
@@ -188,8 +199,6 @@ const ChatRoom: React.FC = () => {
 
   // 添加发送频率限制相关的状态
   const [lastSendTime, setLastSendTime] = useState<number>(0);
-  const [sendCooldown, setSendCooldown] = useState<number>(0);
-  const sendCooldownRef = useRef<NodeJS.Timeout | null>(null);
 
   // 添加防止重复发送的状态
   const [lastSendContent, setLastSendContent] = useState<string>('');
@@ -202,6 +211,76 @@ const ChatRoom: React.FC = () => {
 
   // 添加一个状态来记录最新消息的时间戳
   const [lastMessageTimestamp, setLastMessageTimestamp] = useState<number>(Date.now());
+
+  // 添加防抖相关的状态和引用
+  const [newMessageCount, setNewMessageCount] = useState<number>(0);
+  const newMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const [isLoadingMoyu, setIsLoadingMoyu] = useState(false);
+
+  const scrollToBottom = () => {
+    const container = messageContainerRef.current;
+    if (!container) return;
+
+    // 使用 requestAnimationFrame 确保在下一帧执行滚动
+    requestAnimationFrame(() => {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth',
+      });
+
+      // 添加二次检查，处理可能的延迟加载情况
+      setTimeout(() => {
+        if (container.scrollTop + container.clientHeight < container.scrollHeight) {
+          container.scrollTo({
+            top: container.scrollHeight,
+            behavior: 'smooth',
+          });
+        }
+      }, 100);
+    });
+  };
+
+
+  // 修改显示新消息提示的函数
+  const showNewMessageNotification = (count: number) => {
+    // 先清除之前的消息提示
+    messageApi.destroy('newMessage');
+
+    messageApi.info({
+      content: (
+        <div
+          onClick={() => {
+            // 点击时关闭消息提示
+            messageApi.destroy('newMessage');
+            scrollToBottom();
+          }}
+          style={{
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}
+        >
+          <span>收到 {count} 条新消息，点击查看</span>
+          <CloseOutlined
+            onClick={(e) => {
+              e.stopPropagation(); // 阻止事件冒泡
+              messageApi.destroy('newMessage');
+            }}
+            style={{
+              marginLeft: '10px',
+              cursor: 'pointer',
+              color: '#999',
+              fontSize: '12px'
+            }}
+          />
+        </div>
+      ),
+      duration: 3,
+      key: 'newMessage',
+    });
+  };
 
   // 修改计算高度的函数
   const updateListHeight = useCallback(() => {
@@ -390,28 +469,6 @@ const ChatRoom: React.FC = () => {
     fetchOnlineUsers();
   }, []);
 
-  const scrollToBottom = () => {
-    const container = messageContainerRef.current;
-    if (!container) return;
-
-    // 使用 requestAnimationFrame 确保在下一帧执行滚动
-    requestAnimationFrame(() => {
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: 'smooth',
-      });
-
-      // 添加二次检查，处理可能的延迟加载情况
-      setTimeout(() => {
-        if (container.scrollTop + container.clientHeight < container.scrollHeight) {
-          container.scrollTo({
-            top: container.scrollHeight,
-            behavior: 'smooth',
-          });
-        }
-      }, 100);
-    });
-  };
   const loadHistoryMessages = async (page: number, isFirstLoad = false) => {
     if (!hasMore || loading) return;
 
@@ -796,16 +853,20 @@ const ChatRoom: React.FC = () => {
             container.scrollHeight - container.scrollTop - container.clientHeight;
           const isNearBottom = distanceFromBottom <= threshold;
 
-          // 只有在不在底部且是真正的新消息时，才显示新消息提示
+          // 只有在不在底部且是真正的新消息时，才累计新消息数量
           if (!isNearBottom && isNewMessage) {
-            messageApi.info({
-              content: (
-                <div onClick={scrollToBottom} style={{ cursor: 'pointer' }}>
-                  收到新消息，点击查看
-                </div>
-              ),
-              duration: 3,
-            });
+            setNewMessageCount((prev) => prev + 1);
+
+            // 清除之前的定时器
+            if (newMessageTimerRef.current) {
+              clearTimeout(newMessageTimerRef.current);
+            }
+
+            // 设置新的定时器，1秒后显示合并的提示
+            newMessageTimerRef.current = setTimeout(() => {
+              showNewMessageNotification(newMessageCount + 1);
+              setNewMessageCount(0);
+            }, 1000);
           }
 
           // 只有在底部时才限制消息数量
@@ -830,6 +891,12 @@ const ChatRoom: React.FC = () => {
           container.scrollHeight - container.scrollTop - container.clientHeight;
         if (distanceFromBottom <= threshold) {
           setTimeout(scrollToBottom, 100);
+          // 如果滚动到底部，清除新消息计数和定时器
+          setNewMessageCount(0);
+          if (newMessageTimerRef.current) {
+            clearTimeout(newMessageTimerRef.current);
+            newMessageTimerRef.current = null;
+          }
         }
       }
     }
@@ -1023,6 +1090,13 @@ const ChatRoom: React.FC = () => {
   const handleMentionInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setInputValue(value);
+
+    // 检查是否输入了#摸鱼日历
+    if (value === '#摸鱼日历') {
+      fetchMoyuCalendar();
+      setInputValue(''); // 清空输入框，因为这是触发词
+      return;
+    }
 
     // 检查是否输入了@
     const lastAtPos = value.lastIndexOf('@');
@@ -1533,7 +1607,12 @@ const ChatRoom: React.FC = () => {
     }
     return null;
   };
-
+  // 添加查看红包记录的处理函数
+  const handleViewRedPacketRecords = async (redPacketId: string) => {
+    setCurrentRedPacketId(redPacketId);
+    setIsRedPacketRecordsVisible(true);
+    await fetchRedPacketRecords(redPacketId);
+  };
   // 修改 renderMessageContent 函数，添加红包消息的渲染
   const renderMessageContent = (content: string) => {
     const musicMatch = content.match(/\[music\](.*?)\[\/music\]/);
@@ -1678,11 +1757,33 @@ const ChatRoom: React.FC = () => {
     }
   };
 
-  // 添加查看红包记录的处理函数
-  const handleViewRedPacketRecords = async (redPacketId: string) => {
-    setCurrentRedPacketId(redPacketId);
-    setIsRedPacketRecordsVisible(true);
-    await fetchRedPacketRecords(redPacketId);
+
+
+  // 在组件卸载时清理定时器
+  useEffect(() => {
+    return () => {
+      if (newMessageTimerRef.current) {
+        clearTimeout(newMessageTimerRef.current);
+      }
+    };
+  }, []);
+
+  // 修改获取摸鱼日历的函数
+  const fetchMoyuCalendar = async () => {
+    try {
+      setIsLoadingMoyu(true);
+      const response = await fetch('https://api.vvhan.com/api/moyu?type=json');
+      const data = await response.json();
+      if (data.success) {
+        setPendingImageUrl(data.url);
+      } else {
+        messageApi.error('获取摸鱼日历失败');
+      }
+    } catch (error) {
+      messageApi.error('获取摸鱼日历失败');
+    } finally {
+      setIsLoadingMoyu(false);
+    }
   };
 
   return (
@@ -2117,4 +2218,5 @@ const ChatRoom: React.FC = () => {
   );
 };
 
+// @ts-ignore
 export default ChatRoom;

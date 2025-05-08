@@ -120,7 +120,7 @@ const Index: React.FC = () => {
   const currentSource = hostPostVoList.find(item => String(item.id) === activeTab);
 
   const items = [
-    {key: 'all', label: <><GlobalOutlined style={{ color: '#1890ff' }} /> 全部</>},
+    {key: 'all', label: '全部'},
     ...categories
       .filter(category => {
         if (selectedSourceIds.length === 0) return true;
@@ -130,7 +130,7 @@ const Index: React.FC = () => {
       })
       .map(category => ({
         key: category,
-        label: <>{getCategoryIcon(category)} {hostPostVoList.find(item => String(item.category) === String(category))?.categoryName || category}</>
+        label: hostPostVoList.find(item => String(item.category) === String(category))?.categoryName || category
       }))
   ];
 
@@ -247,7 +247,25 @@ const Index: React.FC = () => {
                         }}
                       >
                         <span style={{flexGrow: 1, textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}}>
-                          {index + 1}.{data?.title?.length && data?.title?.length > 25 ? data.title.slice(0, 25) + '...' : data.title}
+                          <span style={{
+                            display: 'inline-block',
+                            width: '18px',
+                            height: '18px',
+                            textAlign: 'center',
+                            lineHeight: '18px',
+                            marginRight: '6px',
+                            color: '#fff',
+                            backgroundColor: index < 3 ? 
+                              index === 0 ? '#ff4d4f' : 
+                              index === 1 ? '#fa8c16' : 
+                              '#faad14' : 
+                              'rgba(124, 124, 124, 0.3)',
+                            borderRadius: '3px',
+                            fontSize: '12px'
+                          }}>
+                            {index + 1}
+                          </span>
+                          {data?.title?.length && data?.title?.length > 25 ? data.title.slice(0, 25) + '...' : data.title}
                         </span>
                         <span style={{flexShrink: 0, marginRight: '10px', fontSize: '12px'}}>
                           🔥 {data.followerCount && data.followerCount >= 10000 ? (data.followerCount / 10000).toFixed(1) + "万" : data.followerCount === 0 ? "置顶🔝" : data.followerCount}
@@ -414,12 +432,21 @@ const Index: React.FC = () => {
                                   <span style={{flexGrow: 1, textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}}>
                                     <span style={{
                                       display: 'inline-block',
-                                      width: '24px',
+                                      width: '18px',
+                                      height: '18px',
                                       textAlign: 'center',
-                                      marginRight: '8px',
-                                      color: '#8c8c8c'
+                                      lineHeight: '18px',
+                                      marginRight: '6px',
+                                      color: '#fff',
+                                      backgroundColor: index < 3 ? 
+                                        index === 0 ? '#ff4d4f' : 
+                                        index === 1 ? '#fa8c16' : 
+                                        '#faad14' : 
+                                        'rgba(124, 124, 124, 0.3)',
+                                      borderRadius: '3px',
+                                      fontSize: '12px'
                                     }}>
-                                      {index + 1}.
+                                      {index + 1}
                                     </span>
                                     {data?.title?.length && data?.title?.length > 25 ? data.title.slice(0, 25) + '...' : data.title}
                                   </span>

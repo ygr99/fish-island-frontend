@@ -191,7 +191,7 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
               maxWidth: '75vw',
             }}
             logo={<img alt="logo" style={{ height: '100%' }}
-                      src="https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png" />}
+                      src="https://api.oss.cqbo.com/moyu/moyu.png" />}
             title="摸鱼岛🎣"
             subTitle={'加入摸鱼岛一起来摸吧'}
             initialValues={{
@@ -401,4 +401,4 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
   );
 };
 
-export default LoginRegister; 
+export default LoginRegister;
