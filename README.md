@@ -6,7 +6,7 @@
 
 
 <p align="center">
-  <a href="https://github.com/lhccong/fish-island-backend"><img src="https://api.oss.cqbo.com/moyu/ChatGPT%20Image%202025%E5%B9%B45%E6%9C%888%E6%97%A5%2015_09_08%20(1).png" width="300" height="250" alt="摸鱼岛 logo"></a>
+  <a href="https://github.com/lhccong/fish-island-backend"><img src="https://api.oss.cqbo.com/moyu/moyu.png" width="300" height="250" alt="摸鱼岛 logo"></a>
 </p>
 
 

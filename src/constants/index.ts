@@ -18,4 +18,4 @@ export const BACKEND_HOST_WS = 'wss://api.yucoder.cn/ws/?token=';
 
 
 export const SYSTEM_LOGO =
-  'https://api.oss.cqbo.com/moyu/ChatGPT%20Image%202025%E5%B9%B45%E6%9C%888%E6%97%A5%2015_09_08%20(1).png';
+  'https://api.oss.cqbo.com/moyu/moyu.png';

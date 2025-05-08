@@ -69,7 +69,7 @@ const Login: React.FC = () => {
             minWidth: 280,
             maxWidth: '75vw',
           }}
-          logo={<img alt="logo" style={{ height: '100%' }} src="https://api.oss.cqbo.com/moyu/ChatGPT%20Image%202025%E5%B9%B45%E6%9C%888%E6%97%A5%2015_09_08%20(1).png" />}
+          logo={<img alt="logo" style={{ height: '100%' }} src="https://api.oss.cqbo.com/moyu/moyu.png" />}
           title="摸鱼岛🎣"
           subTitle={'加入摸鱼岛一起来摸吧'}
           initialValues={{
