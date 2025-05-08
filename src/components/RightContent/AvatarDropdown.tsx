@@ -1077,18 +1077,18 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                         const now = moment();
                         const holidayDate = moment(holidayInfo.date);
                         const diffDays = holidayDate.diff(now, 'days');
-                        
+
                         if (diffDays > 0) {
                           return `还有 ${diffDays} 天 🎉`;
                         } else {
                           const diffHours = holidayDate.diff(now, 'hours') % 24;
                           const diffMinutes = holidayDate.diff(now, 'minutes') % 60;
                           const diffSeconds = holidayDate.diff(now, 'seconds') % 60;
-                          
+
                           if (diffHours <= 0 && diffMinutes <= 0 && diffSeconds <= 0) {
                             return '假期已到 🎉';
                           }
-                          
+
                           return `还有 ${String(diffHours).padStart(2, '0')}:${String(diffMinutes).padStart(2, '0')}:${String(diffSeconds).padStart(2, '0')} 🎉`;
                         }
                       })()}
@@ -1219,6 +1219,85 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   return (
     <div style={{display: 'flex', alignItems: 'center'}}>
       <Tooltip title="跳转到标签模式" placement="left">
+        {/* 找回密码 Modal */}
+        <Modal
+          title="找回密码"
+          open={isResetPasswordOpen}
+          onCancel={() => {
+            setIsResetPasswordOpen(false);
+            resetPasswordForm.resetFields();
+          }}
+          footer={null}
+          width={400}
+        >
+          <Form
+            form={resetPasswordForm}
+            onFinish={handleResetPassword}
+          >
+            <Form.Item
+              name="email"
+              label="邮箱"
+              rules={[
+                {required: true, message: '请输入邮箱地址！'},
+                {type: 'email', message: '请输入正确的邮箱地址！'}
+              ]}
+            >
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <Input placeholder="请输入邮箱地址" style={{ flex: 1 }} />
+                <Button
+                  type="primary"
+                  onClick={handleSendResetPasswordCode}
+                  disabled={resetPasswordCountdown > 0}
+                >
+                  {resetPasswordCountdown > 0 ? `${resetPasswordCountdown}秒` : '获取验证码'}
+                </Button>
+              </div>
+            </Form.Item>
+
+            <Form.Item
+              name="code"
+              label="验证码"
+              rules={[{required: true, message: '请输入验证码！'}]}
+            >
+              <Input placeholder="请输入验证码" />
+            </Form.Item>
+
+            <Form.Item
+              name="userPassword"
+              label="新密码"
+              rules={[
+                {required: true, message: '请输入新密码！'},
+                {min: 8, message: '密码长度不能小于8位！'}
+              ]}
+            >
+              <Input.Password placeholder="请输入新密码" />
+            </Form.Item>
+
+            <Form.Item
+              name="checkPassword"
+              label="确认密码"
+              rules={[
+                {required: true, message: '请再次输入新密码！'},
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    if (!value || getFieldValue('userPassword') === value) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(new Error('两次输入的密码不一致！'));
+                  },
+                }),
+              ]}
+            >
+              <Input.Password placeholder="请再次输入新密码" />
+            </Form.Item>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit" block>
+                确认修改
+              </Button>
+            </Form.Item>
+          </Form>
+        </Modal>
         <Button
           type="text"
           icon={<SwapOutlined />}
@@ -1479,9 +1558,9 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               >
                 {availableTitles.map((title) => (
                   <Select.Option key={title.titleId} value={title.titleId}>
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
                       gap: '8px'
                     }}>
                       <span>{title.name}</span>
@@ -1490,8 +1569,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 ))}
               </Select>
               {currentUser?.titleId && (
-                <div style={{ 
-                  fontSize: '12px', 
+                <div style={{
+                  fontSize: '12px',
                   color: '#52c41a',
                   padding: '4px 8px',
                   background: '#f6ffed',
@@ -1627,18 +1706,18 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                       const now = moment();
                       const holidayDate = moment(holidayInfo.date);
                       const diffDays = holidayDate.diff(now, 'days');
-                      
+
                       if (diffDays > 0) {
                         return `还有 ${diffDays} 天 🎉`;
                       } else {
                         const diffHours = holidayDate.diff(now, 'hours') % 24;
                         const diffMinutes = holidayDate.diff(now, 'minutes') % 60;
                         const diffSeconds = holidayDate.diff(now, 'seconds') % 60;
-                        
+
                         if (diffHours <= 0 && diffMinutes <= 0 && diffSeconds <= 0) {
                           return '假期已到 🎉';
                         }
-                        
+
                         return `还有 ${String(diffHours).padStart(2, '0')}:${String(diffMinutes).padStart(2, '0')}:${String(diffSeconds).padStart(2, '0')} 🎉`;
                       }
                     })()}
