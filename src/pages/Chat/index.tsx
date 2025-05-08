@@ -14,16 +14,7 @@ import {
 } from '@/services/backend/redPacketController';
 import { wsService } from '@/services/websocket';
 import { useModel } from '@@/exports';
-import {
-  DeleteOutlined,
-  GiftOutlined,
-  PaperClipOutlined,
-  PictureOutlined,
-  RightOutlined,
-  SendOutlined,
-  SmileOutlined,
-  SoundOutlined,
-} from '@ant-design/icons';
+
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import { history } from '@umijs/max';
@@ -42,6 +33,18 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import styles from './index.less';
+// ... 其他 imports ...
+import {
+  DeleteOutlined,
+  GiftOutlined,
+  PaperClipOutlined,
+  PictureOutlined,
+  RightOutlined,
+  SendOutlined,
+  SmileOutlined,
+  SoundOutlined,
+  CustomerServiceOutlined, // 添加音乐图标
+} from '@ant-design/icons';
 interface Message {
   id: string;
   content: string;
@@ -141,6 +144,47 @@ const ChatRoom: React.FC = () => {
   const [redPacketDetailsMap, setRedPacketDetailsMap] = useState<Map<string, API.RedPacket | null>>(
     new Map(),
   );
+  const [isMusicSearchVisible, setIsMusicSearchVisible] = useState(false);
+  const [searchKey, setSearchKey] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+
+  // 添加搜索音乐的函数
+  const handleMusicSearch = async () => {
+    try {
+      const response = await fetch(`https://api.kxzjoker.cn/api/163_search?name=${encodeURIComponent(searchKey)}&limit=50`);
+      const data = await response.json();
+      setSearchResults(data.data || []);
+    } catch (error) {
+      messageApi.error('搜索音乐失败');
+    }
+  };
+
+  // 添加选择音乐的函数
+  const handleSelectMusic = async (music: any) => {
+    try {
+      const response = await fetch('https://api.kxzjoker.cn/api/163_music', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        },
+        body: new URLSearchParams({
+          url: music.id,
+          level: 'standard',
+          type: 'json',
+        }).toString(),
+      });
+      const data = await response.json();
+      if (data.url) {
+        const musicMessage = `🎵 ${music.name} - ${music.artists.map((a: any) => a.name).join(',')} [music]${data.url}[/music]`;
+        handleSend(musicMessage);
+        setIsMusicSearchVisible(false);
+        setSearchKey('');
+        setSearchResults([]);
+      }
+    } catch (error) {
+      messageApi.error('获取音乐链接失败');
+    }
+  };
 
   // 添加发送频率限制相关的状态
   const [lastSendTime, setLastSendTime] = useState<number>(0);
@@ -1492,6 +1536,17 @@ const ChatRoom: React.FC = () => {
 
   // 修改 renderMessageContent 函数，添加红包消息的渲染
   const renderMessageContent = (content: string) => {
+    const musicMatch = content.match(/\[music\](.*?)\[\/music\]/);
+  if (musicMatch) {
+    const musicUrl = musicMatch[1];
+    const musicInfo = content.split('[music]')[0];
+    return (
+      <div className={styles.musicMessage}>
+        <div className={styles.musicInfo}>{musicInfo}</div>
+        <audio controls src={musicUrl} style={{ width: '100%', maxWidth: '300px' }} />
+      </div>
+    );
+  }
     // 检查是否是红包消息
     const redPacketMatch = content.match(/\[redpacket\](.*?)\[\/redpacket\]/);
     if (redPacketMatch) {
@@ -1823,6 +1878,11 @@ const ChatRoom: React.FC = () => {
             }}
             disabled={uploadingFile}
           />
+          <Button 
+      icon={<CustomerServiceOutlined />} 
+      className={styles.musicButton}
+      onClick={() => setIsMusicSearchVisible(true)}
+    />
           <Popover
             content={emojiPickerContent}
             trigger="click"
@@ -1907,7 +1967,6 @@ const ChatRoom: React.FC = () => {
           </Button>
         </div>
       </div>
-
       <Modal
         title={
           <div className={styles.redPacketModalTitle}>
@@ -2013,6 +2072,47 @@ const ChatRoom: React.FC = () => {
           </div>
         </div>
       </Modal>
+  <Modal
+    title="点歌"
+    open={isMusicSearchVisible}
+    onCancel={() => setIsMusicSearchVisible(false)}
+    footer={null}
+    width={500}
+  >
+    <div className={styles.musicSearch}>
+      <Input.Search
+        placeholder="输入歌曲名称"
+        value={searchKey}
+        onChange={(e) => setSearchKey(e.target.value)}
+        onSearch={handleMusicSearch}
+        enterButton
+      />
+       <List
+        className={styles.musicList}
+        height={300}
+        itemCount={searchResults.length}
+        itemSize={50}
+        width="100%"
+      >
+        {({ index, style }) => {
+          const item = searchResults[index];
+          return (
+            <div style={style} className={styles.musicListItem}>
+              <div className={styles.musicInfo}>
+                <div className={styles.musicTitle}>{item.name}</div>
+                <div className={styles.musicDesc}>
+                  {`${item.artists.map((a: any) => a.name).join(',')} - ${item.album.name}`}
+                </div>
+              </div>
+              <Button type="link" onClick={() => handleSelectMusic(item)}>
+                选择
+              </Button>
+            </div>
+          );
+        }}
+      </List>
+    </div>
+  </Modal>
     </div>
   );
 };
