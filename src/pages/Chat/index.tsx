@@ -14,7 +14,7 @@ import {
 } from '@/services/backend/redPacketController';
 import { wsService } from '@/services/websocket';
 import { useModel } from '@@/exports';
-
+// ... 其他 imports ...
 import {
   DeleteOutlined,
   GiftOutlined,
@@ -24,7 +24,9 @@ import {
   SendOutlined,
   SmileOutlined,
   SoundOutlined,
-  CloseOutlined
+  CloseOutlined,
+  CustomerServiceOutlined, // 添加音乐图标
+
 } from '@ant-design/icons';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -44,18 +46,7 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import styles from './index.less';
-// ... 其他 imports ...
-import {
-  DeleteOutlined,
-  GiftOutlined,
-  PaperClipOutlined,
-  PictureOutlined,
-  RightOutlined,
-  SendOutlined,
-  SmileOutlined,
-  SoundOutlined,
-  CustomerServiceOutlined, // 添加音乐图标
-} from '@ant-design/icons';
+
 interface Message {
   id: string;
   content: string;
@@ -1979,11 +1970,6 @@ const ChatRoom: React.FC = () => {
             }}
             disabled={uploadingFile}
           />
-          <Button 
-      icon={<CustomerServiceOutlined />} 
-      className={styles.musicButton}
-      onClick={() => setIsMusicSearchVisible(true)}
-    />
           <Popover
             content={emojiPickerContent}
             trigger="click"
@@ -2004,6 +1990,11 @@ const ChatRoom: React.FC = () => {
           >
             <Button icon={<PictureOutlined />} className={styles.emoticonButton} />
           </Popover>
+          <Button
+            icon={<CustomerServiceOutlined />}
+            className={styles.musicButton}
+            onClick={() => setIsMusicSearchVisible(true)}
+          />
           {currentUser?.userRole === 'admin' && (
             <Button
               icon={<GiftOutlined />}
