@@ -1865,3 +1865,57 @@
   }
 }
 
+.musicButton {
+  margin-right: 8px;
+}
+
+.musicSearch {
+  .ant-input-search {
+    margin-bottom: 16px;
+  }
+}
+
+.musicList {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.musicMessage {
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 8px;
+  margin: 4px 0;
+
+  .musicInfo {
+    margin-bottom: 8px;
+    color: #666;
+  }
+}
+
+.musicListItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid #f0f0f0;
+
+  .musicInfo {
+    flex: 1;
+    overflow: hidden;
+
+    .musicTitle {
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .musicDesc {
+      color: #666;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+}
