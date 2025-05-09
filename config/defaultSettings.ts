@@ -21,9 +21,9 @@ const Settings: ProLayoutProps & {
   fixSiderbar: true,
   colorWeak: false,
   title: userSiteName || '摸鱼岛🎣',
-  logo: 'https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png',
+  logo: 'https://api.oss.cqbo.com/moyu/moyu.png',
   pwa: true,
-  // iconfontUrl: 'https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png',
+  // iconfontUrl: 'https://api.oss.cqbo.com/moyu/moyu.png',
   token: {
     header: {
       heightLayoutHeader: 78,

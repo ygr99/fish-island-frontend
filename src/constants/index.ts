@@ -18,4 +18,4 @@ export const BACKEND_HOST_WS = 'wss://api.yucoder.cn/ws/?token=';
 
 
 export const SYSTEM_LOGO =
-  'https://pic.rmb.bdstatic.com/bjh/news/c0afb3b38710698974ac970434e8eb71.png';
+  'https://api.oss.cqbo.com/moyu/moyu.png';
