@@ -169,13 +169,13 @@ const ChatRoom: React.FC = () => {
         },
         body: new URLSearchParams({
           url: music.id,
-          level: 'standard',
+          level: 'lossless',
           type: 'json',
         }).toString(),
       });
       const data = await response.json();
       if (data.url) {
-        const musicMessage = `🎵 ${music.name} - ${music.artists.map((a: any) => a.name).join(',')} [music]${data.url}[/music]`;
+        const musicMessage = `🎵 ${music.name} - ${music.artists.map((a: any) => a.name).join(',')} [music]${data.url}[/music][cover]${data.pic}[/cover]`;
         handleSend(musicMessage);
         setIsMusicSearchVisible(false);
         setSearchKey('');
@@ -1535,15 +1535,41 @@ const ChatRoom: React.FC = () => {
   };
 
   // 修改 renderMessageContent 函数，添加红包消息的渲染
+
+  // 添加一个全局音频引用
+const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
   const renderMessageContent = (content: string) => {
     const musicMatch = content.match(/\[music\](.*?)\[\/music\]/);
+    const coverMatch = content.match(/\[cover\](.*?)\[\/cover\]/);
   if (musicMatch) {
     const musicUrl = musicMatch[1];
+    const coverUrl = coverMatch ? coverMatch[1] : '';
     const musicInfo = content.split('[music]')[0];
     return (
       <div className={styles.musicMessage}>
-        <div className={styles.musicInfo}>{musicInfo}</div>
-        <audio controls src={musicUrl} style={{ width: '100%', maxWidth: '300px' }} />
+         <div className={styles.musicWrapper}>
+          {coverUrl && <img src={coverUrl} alt="album cover" className={styles.musicCover} />}
+          <div className={styles.musicContent}>
+            <div className={styles.musicInfo}>{musicInfo}</div>
+            <audio 
+            controls 
+            src={musicUrl} 
+            style={{ width: '100%', minWidth: '300px' }}
+            onPlay={(e) => {
+              // 停止当前正在播放的音频
+              if (currentAudio && currentAudio !== e.currentTarget) {
+                currentAudio.pause();
+              }
+              setCurrentAudio(e.currentTarget);
+            }}
+            onEnded={() => {
+              if (currentAudio) {
+                setCurrentAudio(null);
+              }
+            }}
+          />
+          </div>
+        </div>
       </div>
     );
   }
