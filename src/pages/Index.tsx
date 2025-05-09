@@ -349,6 +349,7 @@ const Index: React.FC = () => {
                 items={items}
                 style={{ flex: 1, marginRight: 16 }}
                 className="custom-tabs"
+                tabBarStyle={{ color: '#ffa768' }}
               />
             )}
             <Button

@@ -153,7 +153,7 @@ const ChatRoom: React.FC = () => {
   // 添加搜索音乐的函数
   const handleMusicSearch = async () => {
     try {
-      const response = await fetch(`https://api.kxzjoker.cn/api/163_search?name=${encodeURIComponent(searchKey)}&limit=50`);
+      const response = await fetch(`https://api.kxzjoker.cn/api/163_search?name=${encodeURIComponent(searchKey)}&limit=20`);
       const data = await response.json();
       setSearchResults(data.data || []);
     } catch (error) {
