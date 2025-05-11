@@ -1621,9 +1621,9 @@ const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
           {coverUrl && <img src={coverUrl} alt="album cover" className={styles.musicCover} />}
           <div className={styles.musicContent}>
             <div className={styles.musicInfo}>{musicInfo}</div>
-            <audio 
-            controls 
-            src={musicUrl} 
+            <audio
+            controls
+            src={musicUrl}
             style={{ width: '100%', minWidth: '300px' }}
             onPlay={(e) => {
               // 停止当前正在播放的音频
