@@ -403,7 +403,7 @@ const ChatRoom: React.FC = () => {
           id: '-1',
           name: '摸鱼助手',
           avatar:
-            'https://codebug-1309318075.cos.ap-shanghai.myqcloud.com/fishMessage/34eaba5c-3809-45ef-a3bd-dd01cf97881b_478ce06b6d869a5a11148cf3ee119bac.gif',
+            'https://api.oss.cqbo.com/moyu/user_avatar/1/hYskW0jH-34eaba5c-3809-45ef-a3bd-dd01cf97881b_478ce06b6d869a5a11148cf3ee119bac.gif',
           level: 1,
           isAdmin: false,
           status: '在线',

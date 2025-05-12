@@ -192,7 +192,7 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
             }}
             logo={<img alt="logo" style={{ height: '100%' }}
                       src="https://api.oss.cqbo.com/moyu/moyu.png" />}
-            title="摸鱼岛🎣"
+            title="摸鱼岛"
             subTitle={'加入摸鱼岛一起来摸吧'}
             initialValues={{
               autoLogin: true,
