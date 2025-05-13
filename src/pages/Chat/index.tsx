@@ -26,7 +26,7 @@ import {
   SoundOutlined,
   CloseOutlined,
   CustomerServiceOutlined, // 添加音乐图标
-
+  UploadOutlined, // 添加上传图标
 } from '@ant-design/icons';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -2006,10 +2006,22 @@ const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) {
-                handleFileUpload(file);
+                // 检查文件类型
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                if (!allowedTypes.includes(file.type)) {
+                  messageApi.error('只支持 JPG、PNG、GIF 和 WEBP 格式的图片');
+                  return;
+                }
+                // 检查文件大小（限制为 5MB）
+                if (file.size > 5 * 1024 * 1024) {
+                  messageApi.error('图片大小不能超过 5MB');
+                  return;
+                }
+                handleImageUpload(file);
               }
             }}
-            disabled={uploadingFile}
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            disabled={uploading}
           />
           <Popover
             content={emojiPickerContent}
@@ -2043,6 +2055,13 @@ const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
               onClick={() => setIsRedPacketModalVisible(true)}
             />
           )}
+          {/* 添加手机端图片上传按钮 */}
+          <Button
+            icon={<UploadOutlined />}
+            className={styles.imageUploadButton}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          />
           <Input.TextArea
             ref={inputRef}
             value={inputValue}
