@@ -25,7 +25,9 @@ import {
   SmileOutlined,
   SoundOutlined,
   CloseOutlined,
-  CustomerServiceOutlined, // 添加音乐图标
+  CustomerServiceOutlined,
+  PauseOutlined,
+  PlayCircleOutlined, // 添加音乐图标
 
 } from '@ant-design/icons';
 import data from '@emoji-mart/data';
@@ -177,6 +179,7 @@ const ChatRoom: React.FC = () => {
       });
       const data = await response.json();
       if (data.url) {
+        // 发送消息
         const musicMessage = `🎵 ${music.name} - ${music.artists.map((a: any) => a.name).join(',')} [music]${data.url}[/music][cover]${data.pic}[/cover]`;
         handleSend(musicMessage);
         setIsMusicSearchVisible(false);
@@ -1607,8 +1610,45 @@ const ChatRoom: React.FC = () => {
   // 修改 renderMessageContent 函数，添加红包消息的渲染
 
   // 添加一个全局音频引用
-const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
-  const renderMessageContent = (content: string) => {
+const [currentMusic, setCurrentMusic] = useState<{
+  name: string;
+  artists: string;
+  url: string;
+  cover: string;
+  progress: number;
+  duration: number;
+} | null>(null);
+const [isPlaying, setIsPlaying] = useState(false);
+const audioRef = useRef<HTMLAudioElement | null>(null);
+  // 添加播放控制函数
+const togglePlay = () => {
+  if (!audioRef.current || !currentMusic) return;
+  
+  if (isPlaying) {
+    audioRef.current.pause();
+  } else {
+    audioRef.current.play();
+  }
+  setIsPlaying(!isPlaying);
+};
+
+// 关闭音乐播放
+const closeMusic = () => {
+  if (audioRef.current) {
+    audioRef.current.pause();
+  }
+  setCurrentMusic(null);
+  setIsPlaying(false);
+};
+
+// 格式化时间
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+const renderMessageContent = (content: string) => {
     const musicMatch = content.match(/\[music\](.*?)\[\/music\]/);
     const coverMatch = content.match(/\[cover\](.*?)\[\/cover\]/);
   if (musicMatch) {
@@ -1627,15 +1667,23 @@ const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
             style={{ width: '100%', minWidth: '300px' }}
             onPlay={(e) => {
               // 停止当前正在播放的音频
-              if (currentAudio && currentAudio !== e.currentTarget) {
-                currentAudio.pause();
+              if (audioRef.current && audioRef.current !== e.currentTarget) {
+                audioRef.current.pause();
               }
-              setCurrentAudio(e.currentTarget);
+              const audio = e.currentTarget;
+              audioRef.current = audio;
+              setCurrentMusic({
+                name: musicInfo.split(' - ')[0].replace('🎵 ', ''),
+                artists: musicInfo.split(' - ')[1],
+                url: musicUrl,
+                cover: coverUrl,
+                progress: 0,
+                duration: audio.duration
+              });
+              setIsPlaying(true);
             }}
             onEnded={() => {
-              if (currentAudio) {
-                setCurrentAudio(null);
-              }
+              setIsPlaying(false);
             }}
           />
           </div>
@@ -1805,6 +1853,36 @@ const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
 
   return (
     <div className={styles.chatRoom}>
+      {currentMusic && (
+        <div className={styles.musicFloatingPlayer}>
+          <img src={currentMusic.cover} alt="cover" className={styles.musicCover} />
+          <div className={styles.musicInfo}>
+            <div className={styles.musicTitle}>{currentMusic.name}</div>
+            <div className={styles.musicArtist}>{currentMusic.artists}</div>
+            {/* <div className={styles.progressBar}>
+              <div 
+                className={styles.progress} 
+                style={{ width: `${(currentMusic.progress / currentMusic.duration) * 100}%` }}
+              />
+            </div> */}
+            {/* <div className={styles.timeInfo}>
+              {formatTime(currentMusic.progress)} / {formatTime(currentMusic.duration)}
+            </div> */}
+          </div>
+          <div className={styles.controls}>
+            <Button
+              type="text"
+              icon={isPlaying ? <PauseOutlined /> : <PlayCircleOutlined />}
+              onClick={togglePlay}
+            />
+            <Button
+              type="text"
+              icon={<CloseOutlined />}
+              onClick={closeMusic}
+            />
+          </div>
+        </div>
+      )}
       {contextHolder}
       {showAnnouncement && (
         <Alert

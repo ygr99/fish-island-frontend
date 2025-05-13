@@ -1969,3 +1969,81 @@
     min-width: 240px;
   }
 }
+
+.musicFloatingPlayer {
+  position: fixed;
+  top: 80px;
+  right: 300px;
+  width: 300px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  
+  .musicCover {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+  
+  .musicInfo {
+    flex: 1;
+    min-width: 0;
+    
+    .musicTitle {
+      font-weight: 500;
+      font-size: 14px;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .musicArtist {
+      font-size: 12px;
+      color: rgba(0, 0, 0, 0.45);
+      margin-bottom: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .progressBar {
+      height: 4px;
+      background: rgba(0, 0, 0, 0.06);
+      border-radius: 2px;
+      margin-bottom: 4px;
+      overflow: hidden;
+      
+      .progress {
+        height: 100%;
+        background: #1890ff;
+        transition: width 0.1s linear;
+      }
+    }
+    
+    .timeInfo {
+      font-size: 12px;
+      color: rgba(0, 0, 0, 0.45);
+    }
+  }
+  
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    
+    .ant-btn {
+      padding: 4px;
+      
+      &:hover {
+        background: rgba(0, 0, 0, 0.06);
+      }
+    }
+  }
+}
