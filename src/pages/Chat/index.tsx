@@ -25,10 +25,10 @@ import {
   SmileOutlined,
   SoundOutlined,
   CloseOutlined,
-  CustomerServiceOutlined,
   PauseOutlined,
   PlayCircleOutlined, // 添加音乐图标
-
+  CustomerServiceOutlined, // 添加音乐图标
+  UploadOutlined, // 添加上传图标
 } from '@ant-design/icons';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -101,8 +101,8 @@ const ChatRoom: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const pageSize = 10;
-  // 添加已加载消息ID的集合
   const [loadedMessageIds] = useState<Set<string>>(new Set());
+  const loadingRef = useRef(false); // 添加loadingRef防止重复请求
 
   const [announcement, setAnnouncement] = useState<string>(
     '欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢：感谢 yovvis 大佬赞助的服务器资源🌟，域名9月份过期，请移步新域名：<a href="https://yucoder.cn/" target="_blank" rel="noopener noreferrer">https://yucoder.cn/</a>。',
@@ -406,7 +406,7 @@ const ChatRoom: React.FC = () => {
           id: '-1',
           name: '摸鱼助手',
           avatar:
-            'https://codebug-1309318075.cos.ap-shanghai.myqcloud.com/fishMessage/34eaba5c-3809-45ef-a3bd-dd01cf97881b_478ce06b6d869a5a11148cf3ee119bac.gif',
+            'https://api.oss.cqbo.com/moyu/user_avatar/1/hYskW0jH-34eaba5c-3809-45ef-a3bd-dd01cf97881b_478ce06b6d869a5a11148cf3ee119bac.gif',
           level: 1,
           isAdmin: false,
           status: '在线',
@@ -464,10 +464,16 @@ const ChatRoom: React.FC = () => {
   }, []);
 
   const loadHistoryMessages = async (page: number, isFirstLoad = false) => {
-    if (!hasMore || loading) return;
+    if (!hasMore || loadingRef.current) return;
 
     try {
+      loadingRef.current = true;
       setLoading(true);
+      
+      // 记录当前滚动高度
+      const container = messageContainerRef.current;
+      const oldScrollHeight = container?.scrollHeight || 0;
+
       const response = await listMessageVoByPageUsingPost({
         current: page,
         pageSize,
@@ -475,6 +481,7 @@ const ChatRoom: React.FC = () => {
         sortField: 'createTime',
         sortOrder: 'desc',
       });
+
       if (response.data?.records) {
         const historyMessages = response.data.records
           .map((record) => ({
@@ -549,7 +556,6 @@ const ChatRoom: React.FC = () => {
         setTotal(response.data.total || 0);
 
         // 更新是否还有更多消息
-        // 考虑实际加载的消息数量，而不是页码计算
         const currentTotal = loadedMessageIds.size;
         setHasMore(currentTotal < (response.data.total || 0));
 
@@ -563,6 +569,14 @@ const ChatRoom: React.FC = () => {
           setTimeout(() => {
             scrollToBottom();
           }, 100);
+        } else {
+          // 保持滚动位置
+          requestAnimationFrame(() => {
+            if (container) {
+              const newScrollHeight = container.scrollHeight;
+              container.scrollTop = newScrollHeight - oldScrollHeight;
+            }
+          });
         }
       }
     } catch (error) {
@@ -570,6 +584,7 @@ const ChatRoom: React.FC = () => {
       console.error('加载历史消息失败:', error);
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   };
 
@@ -585,10 +600,10 @@ const ChatRoom: React.FC = () => {
     setIsNearBottom(distanceFromBottom <= threshold);
   };
 
-  // 监听滚动事件
+  // 修改滚动处理函数
   const handleScroll = () => {
     const container = messageContainerRef.current;
-    if (!container || loading || !hasMore) return;
+    if (!container || loadingRef.current || !hasMore) return;
 
     // 检查是否在底部
     checkIfNearBottom();
@@ -615,7 +630,7 @@ const ChatRoom: React.FC = () => {
       container.addEventListener('scroll', handleScroll);
       return () => container.removeEventListener('scroll', handleScroll);
     }
-  }, [loading, hasMore, current]);
+  }, [loadingRef.current, hasMore, current]);
 
   // 处理图片上传
   const handleImageUpload = async (file: File) => {
@@ -1661,9 +1676,9 @@ const renderMessageContent = (content: string) => {
           {coverUrl && <img src={coverUrl} alt="album cover" className={styles.musicCover} />}
           <div className={styles.musicContent}>
             <div className={styles.musicInfo}>{musicInfo}</div>
-            <audio 
-            controls 
-            src={musicUrl} 
+            <audio
+            controls
+            src={musicUrl}
             style={{ width: '100%', minWidth: '300px' }}
             onPlay={(e) => {
               // 停止当前正在播放的音频
@@ -2069,10 +2084,22 @@ const renderMessageContent = (content: string) => {
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) {
-                handleFileUpload(file);
+                // 检查文件类型
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                if (!allowedTypes.includes(file.type)) {
+                  messageApi.error('只支持 JPG、PNG、GIF 和 WEBP 格式的图片');
+                  return;
+                }
+                // 检查文件大小（限制为 5MB）
+                if (file.size > 5 * 1024 * 1024) {
+                  messageApi.error('图片大小不能超过 5MB');
+                  return;
+                }
+                handleImageUpload(file);
               }
             }}
-            disabled={uploadingFile}
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            disabled={uploading}
           />
           <Popover
             content={emojiPickerContent}
@@ -2106,6 +2133,13 @@ const renderMessageContent = (content: string) => {
               onClick={() => setIsRedPacketModalVisible(true)}
             />
           )}
+          {/* 添加手机端图片上传按钮 */}
+          <Button
+            icon={<UploadOutlined />}
+            className={styles.imageUploadButton}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          />
           <Input.TextArea
             ref={inputRef}
             value={inputValue}

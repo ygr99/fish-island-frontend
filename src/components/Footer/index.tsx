@@ -40,7 +40,7 @@ const Footer: React.FC = () => {
     //       key: 'shortDog',
     //       title: (
     //         <>
-    //           <GithubOutlined /> 摸鱼岛🎣
+    //           <GithubOutlined /> 摸鱼岛
     //         </>
     //       ),
     //       href: 'https://github.com/lhccong/react-frontend-int',

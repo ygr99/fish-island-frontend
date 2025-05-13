@@ -60,16 +60,16 @@
           opacity: 0;
         }
 
-        .fish:nth-child(1) { 
+        .fish:nth-child(1) {
           animation-delay: 0s;
         }
-        .fish:nth-child(2) { 
+        .fish:nth-child(2) {
           animation-delay: 2s;
         }
-        .fish:nth-child(3) { 
+        .fish:nth-child(3) {
           animation-delay: 4s;
         }
-        .fish:nth-child(4) { 
+        .fish:nth-child(4) {
           animation-delay: 6s;
         }
 
@@ -250,12 +250,12 @@
           <div class="fish">🐠</div>
           <div class="fish">🐟</div>
           <div class="fish">🐡</div>
-          <div class="fish">🎣</div>
+          <div class="fish"></div>
         </div>
 
         <div class="loading-text">摸鱼时间到... 🎏</div>
         <div class="loading-subtext">正在寻找最佳摸鱼姿势 🏊‍♂️</div>
-        
+
         <div class="fun-facts">
           ${[
             "摸鱼小贴士：假装在键盘上打字，实际上是在玩贪吃蛇 🐍",

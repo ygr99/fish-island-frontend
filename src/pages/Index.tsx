@@ -219,62 +219,71 @@ const Index: React.FC = () => {
           {loading ? (
             <Skeleton active />
           ) : currentSource ? (
-            <div
-              style={{
-                padding: '0 16px'
-              }}
-            >
-              <List
-                dataSource={currentSource.data}
-                renderItem={(data, index) => (
-                  <List.Item>
-                    <Tooltip title={data.title} mouseEnterDelay={0.2}>
-                      <Typography.Link
-                        target="_blank"
-                        onClick={(e) => {
-                          if (currentSource.category === 4) {
-                            e.preventDefault()
-                            setCurrentMusic(data.url as any);
-                            setIsMusicOpen(true);
-                          }
-                        }}
-                        href={data.url}
-                        style={{
-                          display: 'flex',
-                          width: '100%',
-                          color: 'black',
-                          justifyContent: 'space-between',
-                        }}
-                      >
-                        <span style={{flexGrow: 1, textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}}>
-                          <span style={{
-                            display: 'inline-block',
-                            width: '18px',
-                            height: '18px',
-                            textAlign: 'center',
-                            lineHeight: '18px',
-                            marginRight: '6px',
-                            color: '#fff',
-                            backgroundColor: index < 3 ? 
-                              index === 0 ? '#ff4d4f' : 
-                              index === 1 ? '#fa8c16' : 
-                              '#faad14' : 
-                              'rgba(124, 124, 124, 0.3)',
-                            borderRadius: '3px',
-                            fontSize: '12px'
-                          }}>
-                            {index + 1}
+            <div>
+              <div
+                style={{
+                  background: '#fff',
+                  borderRadius: '16px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                  padding: '20px 12px',
+                  margin: '10px 0',
+                }}
+              >
+                <div style={{marginBottom: 12, color: '#888', fontSize: 13}}>
+                  上次更新时间：{currentSource.updateTime ? dayjs(currentSource.updateTime).fromNow() : '--'}
+                </div>
+                <List
+                  dataSource={currentSource.data}
+                  renderItem={(data, index) => (
+                    <List.Item>
+                      <Tooltip title={data.title} mouseEnterDelay={0.2}>
+                        <Typography.Link
+                          target="_blank"
+                          onClick={(e) => {
+                            if (currentSource.category === 4) {
+                              e.preventDefault()
+                              setCurrentMusic(data.url as any);
+                              setIsMusicOpen(true);
+                            }
+                          }}
+                          href={data.url}
+                          style={{
+                            display: 'flex',
+                            width: '100%',
+                            color: 'black',
+                            justifyContent: 'space-between',
+                          }}
+                        >
+                          <span style={{flexGrow: 1, textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden'}}>
+                            <span style={{
+                              display: 'inline-block',
+                              width: '18px',
+                              height: '18px',
+                              textAlign: 'center',
+                              lineHeight: '18px',
+                              marginRight: '6px',
+                              color: '#fff',
+                              backgroundColor: index < 3 ?
+                                index === 0 ? '#ff4d4f' :
+                                index === 1 ? '#fa8c16' :
+                                '#faad14' :
+                                'rgba(124, 124, 124, 0.3)',
+                              borderRadius: '3px',
+                              fontSize: '12px'
+                            }}>
+                              {index + 1}
+                            </span>
+                            {data?.title?.length && data?.title?.length > 25 ? data.title.slice(0, 25) + '...' : data.title}
                           </span>
-                          {data?.title?.length && data?.title?.length > 25 ? data.title.slice(0, 25) + '...' : data.title}
-                        </span>
-                        <span style={{flexShrink: 0, marginRight: '10px', fontSize: '12px'}}>
-                          🔥 {data.followerCount && data.followerCount >= 10000 ? (data.followerCount / 10000).toFixed(1) + "万" : data.followerCount === 0 ? "置顶🔝" : data.followerCount}
-                        </span>
-                      </Typography.Link>
-                    </Tooltip>
-                  </List.Item>
-                )}
-              />
+                          <span style={{flexShrink: 0, marginRight: '10px', fontSize: '12px'}}>
+                            🔥 {data.followerCount && data.followerCount >= 10000 ? (data.followerCount / 10000).toFixed(1) + "万" : data.followerCount === 0 ? "置顶🔝" : data.followerCount}
+                          </span>
+                        </Typography.Link>
+                      </Tooltip>
+                    </List.Item>
+                  )}
+                />
+              </div>
             </div>
           ) : (
             <div style={{ textAlign: 'center', padding: '20px' }}>
@@ -439,10 +448,10 @@ const Index: React.FC = () => {
                                       lineHeight: '18px',
                                       marginRight: '6px',
                                       color: '#fff',
-                                      backgroundColor: index < 3 ? 
-                                        index === 0 ? '#ff4d4f' : 
-                                        index === 1 ? '#fa8c16' : 
-                                        '#faad14' : 
+                                      backgroundColor: index < 3 ?
+                                        index === 0 ? '#ff4d4f' :
+                                        index === 1 ? '#fa8c16' :
+                                        '#faad14' :
                                         'rgba(124, 124, 124, 0.3)',
                                       borderRadius: '3px',
                                       fontSize: '12px'

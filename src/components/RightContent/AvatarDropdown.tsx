@@ -48,6 +48,7 @@ import COS from 'cos-js-sdk-v5';
 import LoginRegister from '../LoginRegister';
 import {getNotificationEnabled, setNotificationEnabled} from '@/utils/notification';
 import FoodRecommender from '@/components/FoodRecommender';
+
 lazy(() => import('@/components/MusicPlayer'));
 export type GlobalHeaderRightProps = {
   menu?: boolean;
@@ -165,7 +166,6 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
   }>({type: 'work', timeRemaining: '00:00:00'});
 
 
-
   const onFinishMoYu: FormProps<MoYuTimeType>['onFinish'] = (values) => {
     // 将 Moment 对象转换为 ISO 字符串格式后存储
     const dataToSave = {
@@ -225,7 +225,24 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           createTime: new Date().toISOString(),
           updateTime: new Date().toISOString(),
         };
-        setAvailableTitles([defaultTitle, ...res.data]);
+        //管理员等级称号
+        // eslint-disable-next-line eqeqeq
+        if (currentUser.userRole == "admin") {
+          const adminTitle = {
+            titleId: "-1",
+            name: '摸鱼监督员',
+            description: '摸鱼监督员',
+            level: 1,
+            experience: 0,
+            createTime: new Date().toISOString(),
+            updateTime: new Date().toISOString(),
+          }
+          // @ts-ignore
+          setAvailableTitles([defaultTitle, adminTitle, ...res.data]);
+        } else {
+          // @ts-ignore
+          setAvailableTitles([defaultTitle, ...res.data]);
+        }
       }
     } catch (error) {
       console.error('获取称号列表失败:', error);
@@ -464,7 +481,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       const res = await signInUsingPost();
       if (res.code === 0) {
         setHasCheckedIn(true);
-        message.success('摸鱼打卡成功！获得 10 积分 🎣');
+        message.success('摸鱼打卡成功！获得 10 积分 ');
         // 更新用户信息
         const userInfo = await getLoginUserUsingGet();
         if (userInfo.data) {
@@ -559,7 +576,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
       const fileToUpload = needCompress ? await compressImage(file) : file;
 
       const res = await uploadFileByMinioUsingPost(
-        { biz: 'user_avatar' },
+        {biz: 'user_avatar'},
         {},
         fileToUpload,
         {
@@ -1156,8 +1173,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 {type: 'email', message: '请输入正确的邮箱地址！'}
               ]}
             >
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <Input placeholder="请输入邮箱地址" style={{ flex: 1 }} />
+              <div style={{display: 'flex', gap: '8px'}}>
+                <Input placeholder="请输入邮箱地址" style={{flex: 1}}/>
                 <Button
                   type="primary"
                   onClick={handleSendResetPasswordCode}
@@ -1173,7 +1190,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               label="验证码"
               rules={[{required: true, message: '请输入验证码！'}]}
             >
-              <Input placeholder="请输入验证码" />
+              <Input placeholder="请输入验证码"/>
             </Form.Item>
 
             <Form.Item
@@ -1184,7 +1201,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 {min: 8, message: '密码长度不能小于8位！'}
               ]}
             >
-              <Input.Password placeholder="请输入新密码" />
+              <Input.Password placeholder="请输入新密码"/>
             </Form.Item>
 
             <Form.Item
@@ -1192,7 +1209,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               label="确认密码"
               rules={[
                 {required: true, message: '请再次输入新密码！'},
-                ({ getFieldValue }) => ({
+                ({getFieldValue}) => ({
                   validator(_, value) {
                     if (!value || getFieldValue('userPassword') === value) {
                       return Promise.resolve();
@@ -1202,7 +1219,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 }),
               ]}
             >
-              <Input.Password placeholder="请再次输入新密码" />
+              <Input.Password placeholder="请再次输入新密码"/>
             </Form.Item>
 
             <Form.Item>
@@ -1242,8 +1259,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 {type: 'email', message: '请输入正确的邮箱地址！'}
               ]}
             >
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <Input placeholder="请输入邮箱地址" style={{ flex: 1 }} />
+              <div style={{display: 'flex', gap: '8px'}}>
+                <Input placeholder="请输入邮箱地址" style={{flex: 1}}/>
                 <Button
                   type="primary"
                   onClick={handleSendResetPasswordCode}
@@ -1259,7 +1276,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               label="验证码"
               rules={[{required: true, message: '请输入验证码！'}]}
             >
-              <Input placeholder="请输入验证码" />
+              <Input placeholder="请输入验证码"/>
             </Form.Item>
 
             <Form.Item
@@ -1270,7 +1287,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 {min: 8, message: '密码长度不能小于8位！'}
               ]}
             >
-              <Input.Password placeholder="请输入新密码" />
+              <Input.Password placeholder="请输入新密码"/>
             </Form.Item>
 
             <Form.Item
@@ -1278,7 +1295,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
               label="确认密码"
               rules={[
                 {required: true, message: '请再次输入新密码！'},
-                ({ getFieldValue }) => ({
+                ({getFieldValue}) => ({
                   validator(_, value) {
                     if (!value || getFieldValue('userPassword') === value) {
                       return Promise.resolve();
@@ -1288,7 +1305,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 }),
               ]}
             >
-              <Input.Password placeholder="请再次输入新密码" />
+              <Input.Password placeholder="请再次输入新密码"/>
             </Form.Item>
 
             <Form.Item>
@@ -1300,7 +1317,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         </Modal>
         <Button
           type="text"
-          icon={<SwapOutlined />}
+          icon={<SwapOutlined/>}
           onClick={() => {
             const currentPath = window.location.pathname;
             history.push(`/home?redirect=${encodeURIComponent(currentPath)}`);
@@ -1365,7 +1382,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         </Space>
       </HeaderDropdown>
 
-      {musicPlayer && React.createElement(musicPlayer, { playerId: "1742366149119", key: isMusicVisible.toString() })}
+      {musicPlayer && React.createElement(musicPlayer, {playerId: "1742366149119", key: isMusicVisible.toString()})}
 
       {/* 添加修改信息的 Modal */}
       <Modal
@@ -1483,8 +1500,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                   {type: 'email', message: '请输入正确的邮箱地址！'}
                 ]}
               >
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <Input placeholder="请输入要绑定的邮箱地址" style={{ flex: 1 }} />
+                <div style={{display: 'flex', gap: '8px'}}>
+                  <Input placeholder="请输入要绑定的邮箱地址" style={{flex: 1}}/>
                   <Button
                     type="primary"
                     onClick={handleSendEmailCode}
@@ -1500,8 +1517,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 label="验证码"
                 rules={[{required: true, message: '请输入验证码！'}]}
               >
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                  <Input placeholder="请输入验证码" style={{ flex: 1 }} />
+                <div style={{display: 'flex', gap: '8px', alignItems: 'flex-start'}}>
+                  <Input placeholder="请输入验证码" style={{flex: 1}}/>
                   <Button
                     type="primary"
                     onClick={handleEmailBind}
@@ -1527,8 +1544,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 border: '1px solid #b7eb8f',
                 borderRadius: '6px'
               }}>
-                <span style={{ color: '#52c41a' }}>✓</span>
-                <span style={{ color: '#333' }}>{currentUser.email}</span>
+                <span style={{color: '#52c41a'}}>✓</span>
+                <span style={{color: '#333'}}>{currentUser.email}</span>
               </div>
             </Form.Item>
           )}
@@ -1549,7 +1566,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           </Form.Item>
 
           <Form.Item label="称号设置" name="titleId">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
               <Select
                 placeholder="请选择称号"
                 onChange={handleSetTitle}
@@ -1602,10 +1619,10 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
           style={{marginLeft: 24}}
         >
           <span className="checkin-emoji">
-            {hasCheckedIn ? '🐟' : '🎣'}
+            {hasCheckedIn ? '🐟' : ''}
           </span>
           <span className="checkin-text">
-            {hasCheckedIn ? '已打卡' : '摸鱼'}
+            {hasCheckedIn ? '已打卡' : '摸鱼🐟'}
           </span>
         </div>
       </Tooltip>

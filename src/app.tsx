@@ -25,7 +25,7 @@ const getSiteName = () => {
     const {siteName} = JSON.parse(savedSiteConfig);
     return siteName;
   }
-  return '摸鱼岛🎣 - 有趣的在线交流平台';
+  return '摸鱼岛 - 有趣的在线交流平台';
 };
 
 // 监听路由变化

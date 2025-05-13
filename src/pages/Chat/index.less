@@ -714,9 +714,89 @@
         }
       }
 
-      .sendButton {
+      // 添加图片上传按钮样式
+      .imageUploadButton {
+        display: none;
         @media screen and (max-width: 768px) {
           display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px;
+          height: 36px;
+          border-radius: 18px;
+          background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+          color: white;
+          transition: all 0.3s ease;
+          border: none;
+          box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
+
+          &:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+            background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+          }
+
+          &:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+          }
+
+          .anticon {
+            font-size: 18px;
+          }
+        }
+      }
+
+      .sendButton {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 80px;
+        height: 36px;
+        padding: 0 16px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+        color: white;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        border: none;
+        box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
+        margin-left: 8px;
+
+        &:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+          background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+        }
+
+        &:active {
+          transform: translateY(0);
+          box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+        }
+
+        &:disabled {
+          background: #d9d9d9;
+          color: rgba(0, 0, 0, 0.25);
+          box-shadow: none;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        .anticon {
+          margin-right: 4px;
+          font-size: 16px;
+        }
+
+        @media screen and (max-width: 768px) {
+          min-width: 60px;
+          height: 32px;
+          padding: 0 12px;
+          font-size: 14px;
+
+          .anticon {
+            margin-right: 2px;
+            font-size: 14px;
+          }
         }
       }
 
@@ -1026,8 +1106,8 @@
   }
 
   &.titleTagBuilder {
-    background: linear-gradient(135deg, #20b2aa 0%, #008080 100%);
-    box-shadow: 0 2px 4px rgba(32, 178, 170, 0.3);
+    background: linear-gradient(135deg, #fda085 0%, #f6d365 100%);
+    box-shadow: 0 2px 4px rgba(253, 160, 133, 0.3);
   }
 }
 
@@ -1467,13 +1547,6 @@
     margin-left: 8px;
     color: #333;
     font-size: 14px;
-  }
-}
-
-// 添加发送按钮样式
-.sendButton {
-  @media screen and (max-width: 768px) {
-    display: flex;
   }
 }
 
