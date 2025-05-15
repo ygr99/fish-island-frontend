@@ -58,6 +58,8 @@ interface Message {
   mentionedUsers?: User[];
   region?: string;
   country?: string;
+  workdayType?: 'single' | 'double' | 'mixed';
+  currentWeekType?: 'big' | 'small';
 }
 
 interface User {
@@ -83,6 +85,8 @@ interface Title {
 
 const ChatRoom: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
+const [workdayType, setWorkdayType] = useState<'single' | 'double' | 'mixed'>('double');
+const [currentWeekType, setCurrentWeekType] = useState<'big' | 'small'>('big');
   const [inputValue, setInputValue] = useState('');
   const [isEmojiPickerVisible, setIsEmojiPickerVisible] = useState(false);
   const [isEmoticonPickerVisible, setIsEmoticonPickerVisible] = useState(false);
@@ -965,6 +969,25 @@ const ChatRoom: React.FC = () => {
 
   // 修改 handleSend 函数
   const handleSend = (customContent?: string) => {
+    // Check if the message is a workday type command
+    if (customContent?.startsWith('/workday ')) {
+      const type = customContent.split(' ')[1];
+      if (['single', 'double', 'mixed'].includes(type)) {
+        setWorkdayType(type as 'single' | 'double' | 'mixed');
+        messageApi.success(`工作制已设置为${type === 'single' ? '单休' : type === 'double' ? '双休' : '大小周'}`);
+        return;
+      }
+    }
+
+    // Check if the message is a week type command
+    if (customContent?.startsWith('/week ')) {
+      const type = customContent.split(' ')[1];
+      if (['big', 'small'].includes(type)) {
+        setCurrentWeekType(type as 'big' | 'small');
+        messageApi.success(`当前周类型已设置为${type === 'big' ? '大周' : '小周'}`);
+        return;
+      }
+    }
     // 检查发送冷却时间
     const now = Date.now();
     if (now - lastSendTime < 1000) {
