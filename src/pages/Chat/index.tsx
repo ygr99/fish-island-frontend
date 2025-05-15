@@ -1825,12 +1825,14 @@ const renderMessageContent = (content: string) => {
     return <MessageContent content={content} />;
   };
 
-  // 添加获取红包记录的函数
+  // 修改获取红包记录的函数
   const fetchRedPacketRecords = async (redPacketId: string) => {
     try {
       const response = await getRedPacketRecordsUsingGet({ redPacketId });
       if (response.data) {
-        setRedPacketRecords(response.data);
+        // 按金额降序排序
+        const sortedRecords = [...response.data].sort((a, b) => (b.amount || 0) - (a.amount || 0));
+        setRedPacketRecords(sortedRecords);
       }
     } catch (error) {
       messageApi.error('获取红包记录失败！');
@@ -2281,11 +2283,14 @@ const renderMessageContent = (content: string) => {
         <div className={styles.redPacketRecords}>
           <div className={styles.recordsList}>
             {redPacketRecords.length > 0 ? (
-              redPacketRecords.map((record) => (
+              redPacketRecords.map((record, index) => (
                 <div key={record.id} className={styles.recordItem}>
                   <Avatar src={record.userAvatar} size={32} />
                   <div className={styles.userInfo}>
-                    <div className={styles.userName}>{record.userName}</div>
+                    <div className={styles.userName}>
+                      {record.userName}
+                      {index === 0 && <span className={styles.luckyKing}>👑 手气王</span>}
+                    </div>
                     <div className={styles.grabTime}>
                       {new Date(record.grabTime || '').toLocaleString()}
                     </div>
