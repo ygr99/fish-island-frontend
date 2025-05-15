@@ -58,7 +58,8 @@ type MoYuTimeType = {
   endTime?: Moment;
   lunchTime?: Moment;
   monthlySalary?: number;
-  workdayType?: 'single' | 'double';
+  workdayType?: 'single' | 'double' | 'mixed';
+  currentWeekType?: 'big' | 'small';
 };
 
 // 修改检查文件大小函数
@@ -136,11 +137,23 @@ const compressImage = (file: File): Promise<File> => {
 };
 
 export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
-  const [moYuData, setMoYuData] = useState<MoYuTimeType>({
+  const [bigWeekBaseDate, setBigWeekBaseDate] = useState(() => {
+  const savedData = localStorage.getItem('bigWeekBaseDate');
+  return savedData ? moment(savedData) : moment();
+});
+
+const calculateCurrentWeekType = (baseDate: moment.Moment) => {
+  const currentDate = moment();
+  const weeksDiff = currentDate.diff(baseDate, 'weeks');
+  return weeksDiff % 2 === 0 ? 'big' : 'small';
+};
+
+const [moYuData, setMoYuData] = useState<MoYuTimeType>({
     startTime: moment('08:30', 'HH:mm'),
     endTime: moment('17:30', 'HH:mm'),
     lunchTime: moment('12:00', 'HH:mm'),
     workdayType: 'double', // 默认双休
+    currentWeekType: 'big', // 默认大周
   });
 
   // 从 localStorage 读取数据
@@ -153,7 +166,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
         endTime: moment(parsedData.endTime, 'HH:mm'),
         lunchTime: moment(parsedData.lunchTime, 'HH:mm'),
         monthlySalary: parsedData.monthlySalary,
-        workdayType: parsedData.workdayType || 'double', // 添加单双休设置
+        workdayType: parsedData.workdayType || 'double',
+        currentWeekType: parsedData.currentWeekType || 'big', // 添加当前周类型的读取
       });
     }
   }, []);
@@ -167,23 +181,39 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
 
 
   const onFinishMoYu: FormProps<MoYuTimeType>['onFinish'] = (values) => {
-    // 将 Moment 对象转换为 ISO 字符串格式后存储
+    let newCurrentWeekType = values.currentWeekType;
+    if (values.workdayType === 'mixed') {
+      if (moYuData.workdayType !== 'mixed') {
+        const baseDate = moment().startOf('week');
+        setBigWeekBaseDate(baseDate);
+        localStorage.setItem('bigWeekBaseDate', baseDate.format());
+        newCurrentWeekType = calculateCurrentWeekType(baseDate);
+      } else {
+        newCurrentWeekType = values.currentWeekType;
+      }
+    }
+
     const dataToSave = {
       startTime: values.startTime?.format('HH:mm'),
       endTime: values.endTime?.format('HH:mm'),
       lunchTime: values.lunchTime?.format('HH:mm'),
       monthlySalary: values.monthlySalary,
       workdayType: values.workdayType,
+      currentWeekType: newCurrentWeekType,
     };
     localStorage.setItem('moYuData', JSON.stringify(dataToSave));
-    // 转换回 Moment 对象后设置
+    
     setMoYuData({
       startTime: moment(values.startTime?.format('HH:mm'), 'HH:mm'),
       endTime: moment(values.endTime?.format('HH:mm'), 'HH:mm'),
       lunchTime: moment(values.lunchTime?.format('HH:mm'), 'HH:mm'),
       monthlySalary: values.monthlySalary,
       workdayType: values.workdayType,
+      currentWeekType: newCurrentWeekType,
     });
+
+    setIsMoneyOpen(false);
+    message.success('设置已保存');
   };
 
   const onFinishFailedMoYu: FormProps<MoYuTimeType>['onFinishFailed'] = (errorInfo) => {
@@ -386,23 +416,40 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
     if (moYuData?.endTime && moYuData?.startTime) {
       const interval = setInterval(() => {
         const now = moment();
+        const start = moment(moYuData.startTime?.format('HH:mm'), 'HH:mm');
+        const end = moment(moYuData.endTime?.format('HH:mm'), 'HH:mm');
+        const lunch = moment(moYuData.lunchTime?.format('HH:mm'), 'HH:mm');
         const lunchTime = moment(moYuData.lunchTime);
         const endTime = moment(moYuData.endTime);
 
-        const workdaysInMonth = moYuData.workdayType === 'single' ? 26 : 22; // 单休26天，双休22天
-        const workHoursPerDay = moment(moYuData.endTime).diff(moment(moYuData.startTime), 'hours');
-        const hourlyRate = moYuData.monthlySalary ? (moYuData.monthlySalary / (workdaysInMonth * workHoursPerDay)) : 0;
-        // 计算工作日每小时收入
-        // const workdaysInMonth = 22; // 假设每月22个工作日
-        // const workHoursPerDay = moment(moYuData.endTime).diff(moment(moYuData.startTime), 'hours');
-        // const hourlyRate = moYuData.monthlySalary ? (moYuData.monthlySalary / (workdaysInMonth * workHoursPerDay)) : 0;
+        // 计算每天工作时长（小时）
+        const workHoursPerDay = end.diff(start, 'hours');
 
-        // 计算已工作时长和收入
-        const startTime = moment(moYuData.startTime);
-        const workedDuration = moment.duration(
-          now.isAfter(endTime) ? endTime.diff(startTime) : now.diff(startTime)
-        );
-        const earnedAmount = hourlyRate * workedDuration.asHours();
+        // 根据工作制度计算月工作天数
+        let workDaysPerMonth = 0;
+        if (moYuData.workdayType === 'single') {
+          workDaysPerMonth = 26; // 单休
+        } else if (moYuData.workdayType === 'double') {
+          workDaysPerMonth = 22; // 双休
+        } else if (moYuData.workdayType === 'mixed') {
+          // 大小周，使用当前设置的周类型
+          workDaysPerMonth = moYuData.currentWeekType === 'big' ? 26 : 22;
+        }
+
+        // 计算每小时工资
+        const monthlyWorkHours = workDaysPerMonth * workHoursPerDay;
+        const hourlyRate = (moYuData.monthlySalary || 0) / monthlyWorkHours;
+
+        // 计算今天已经工作的时长
+        let workedHours = 0;
+        if (now.isAfter(start) && now.isBefore(end)) {
+          workedHours = now.diff(start, 'hours', true);
+        } else if (now.isAfter(end)) {
+          workedHours = workHoursPerDay;
+        }
+
+        // 计算今天已赚金额
+        const earnedAmount = hourlyRate * workedHours;
 
         // 检查是否在午餐时间前后120分钟内，且未超过午餐时间1小时
         const isNearLunch = Math.abs(now.diff(lunchTime, 'minutes')) <= 120
@@ -455,7 +502,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
 
       return () => clearInterval(interval);
     }
-  }, [moYuData]);
+  }, [moYuData, bigWeekBaseDate]);
 
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
   const [isCheckinAnimating, setIsCheckinAnimating] = useState(false);
@@ -1034,6 +1081,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                   <Select>
                     <Select.Option value="single">单休</Select.Option>
                     <Select.Option value="double">双休</Select.Option>
+                    <Select.Option value="mixed">大小周</Select.Option>
                   </Select>
                 </Form.Item>
 
@@ -1639,6 +1687,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 endTime: moYuData.endTime,
                 lunchTime: moYuData.lunchTime,
                 monthlySalary: moYuData.monthlySalary,
+                workdayType: moYuData.workdayType || 'double',
+                currentWeekType: moYuData.currentWeekType || 'big'
               }}
               onFinish={onFinishMoYu}
               onFinishFailed={onFinishFailedMoYu}
@@ -1663,7 +1713,25 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({menu}) => {
                 <Select>
                   <Select.Option value="single">单休</Select.Option>
                   <Select.Option value="double">双休</Select.Option>
+                  <Select.Option value="mixed">大小周</Select.Option>
                 </Select>
+              </Form.Item>
+
+              {/* 当选择大小周时显示当前周类型选择 */}
+              <Form.Item
+                noStyle
+                shouldUpdate={(prevValues, currentValues) => prevValues.workdayType !== currentValues.workdayType}
+              >
+                {({ getFieldValue }) =>
+                  getFieldValue('workdayType') === 'mixed' ? (
+                    <Form.Item label="当前周类型" name="currentWeekType">
+                      <Select>
+                        <Select.Option value="big">大周</Select.Option>
+                        <Select.Option value="small">小周</Select.Option>
+                      </Select>
+                    </Form.Item>
+                  ) : null
+                }
               </Form.Item>
 
               <Form.Item label="显示状态">
