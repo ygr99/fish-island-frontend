@@ -189,4 +189,12 @@
   }
 }
 
+/* 强制 Space 容器水平排列 */
+@media (max-width: 768px) {
+  .ant-space.ant-space-horizontal {
+    flex-wrap: nowrap !important; /* 禁止换行 */
+  }
+}
+
+
 
