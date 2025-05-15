@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {Button, Card, Collapse, Form, List, message, Modal, Select, Space} from 'antd';
 import {
-  getGuessCount,
+  getGuessCount, getGuessRanking,
   getHeroById,
   getNewHero,
   getRandomHero,
@@ -9,7 +9,13 @@ import {
   recordGuessSuccess
 } from '@/services/backend/heroController';
 import "./index.css"
-import {ArrowDownOutlined, ArrowUpOutlined, CheckCircleOutlined, RocketOutlined} from "@ant-design/icons";
+import {
+  ArrowDownOutlined,
+  ArrowUpOutlined,
+  BarChartOutlined,
+  CheckCircleOutlined,
+  RocketOutlined, UnorderedListOutlined
+} from "@ant-design/icons";
 
 const GuessHero: React.FC = () => {
   const [form] = Form.useForm();
@@ -26,6 +32,10 @@ const GuessHero: React.FC = () => {
   const [isRuleModalVisible, setIsRuleModalVisible] = useState(false);
   // 新增状态
   const [guessCount, setGuessCount] = useState<number | null>(null);
+// 新增状态
+  const [isRankingModalVisible, setIsRankingModalVisible] = useState(false);
+  const [rankingList, setRankingList] = useState<API.HeroRankingVO[]>([]);
+  const [loadingRanking, setLoadingRanking] = useState(false);
 
   // 加载英雄列表
   useEffect(() => {
@@ -106,13 +116,14 @@ const GuessHero: React.FC = () => {
         return;
       }
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('tokenValue');
       if (values.heroId === randomHero?.id) {
         // 猜中逻辑
         setGuessList(prev => [randomHero, ...prev]);
         message.success('恭喜猜中！');
         resetGame();
         // 登录后才调用接口
+        console.log('token', token);
         if (token) {
           try {
             await recordGuessSuccess(); // 记录猜中
@@ -163,6 +174,83 @@ const GuessHero: React.FC = () => {
     const match = height?.match(/^\d+/);
     return match ? parseInt(match[0], 10) : 0;
   };
+
+  // 获取排行榜数据
+  const fetchRanking = async () => {
+    setLoadingRanking(true);
+    try {
+      const response = await getGuessRanking();
+      if (response.code === 0) {
+        setRankingList(response.data || []);
+      }
+    } catch (error) {
+      message.error('获取排行榜失败');
+    } finally {
+      setLoadingRanking(false);
+    }
+  };
+// 排行榜模态框
+  const rankingModal = (
+    <Modal
+      title="排行榜"
+      visible={isRankingModalVisible}
+      onOk={() => setIsRankingModalVisible(false)}
+      onCancel={() => setIsRankingModalVisible(false)}
+      width={400}
+    >
+      {loadingRanking ? (
+        <div style={{ textAlign: 'center', padding: 24 }}>
+          <RocketOutlined spin style={{ fontSize: 24, color: '#597ef7' }} />
+          <p>加载中...</p>
+        </div>
+      ) : rankingList.length > 0 ? (
+        <List
+          dataSource={rankingList}
+          renderItem={(item, index) => (
+            <List.Item style={{ padding: '8px 0' }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                width: '100%',
+                alignItems: 'center'
+              }}>
+                <div>
+                <span style={{
+                  width: 24,
+                  display: 'inline-block',
+                  textAlign: 'center',
+                  marginRight: 8,
+                  color: index < 3 ? ['#ff4d4f', '#ff7a45', '#ffac41'][index] : '#888'
+                }}>
+                  {index + 1}
+                </span>
+                  <img
+                    src={item.userAvatar|| 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'}
+                    alt="头像"
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      marginRight: 8,
+                      border: '1px solid #eee'
+                    }}
+                  />
+                  {item.userName}
+                </div>
+                <span style={{ color: '#597ef7', fontWeight: 500 }}>
+                {item.score} 次
+              </span>
+              </div>
+            </List.Item>
+          )}
+        />
+      ) : (
+        <div style={{ textAlign: 'center', color: '#888', padding: 24 }}>
+          暂无排行榜数据
+        </div>
+      )}
+    </Modal>
+  );
 
   const gameRules = (
     <Modal
@@ -360,17 +448,35 @@ const GuessHero: React.FC = () => {
   return (
     <>
       {gameRules} {}
+      {rankingModal} {}
       <Card
         title={
-          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-            <span style={{fontSize: 16}}>英雄猜猜乐</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 16 }}>英雄猜猜乐</span>
 
-            <a
-              style={{color: '#ffa768'}}
-              onClick={() => setIsRuleModalVisible(true)}
-            >
-              规则
-            </a>
+            {/* 图标组 */}
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              {/* 规则图标 */}
+              <a
+                style={{ color: '#ffa768' }}
+                onClick={() => setIsRuleModalVisible(true)}
+                title="游戏规则"
+              >
+                <UnorderedListOutlined style={{ fontSize: 18 }} />
+              </a>
+
+              {/* 排行榜图标 */}
+              <a
+                style={{ color: '#ffa768' }}
+                onClick={() => {
+                  setIsRankingModalVisible(true);
+                  fetchRanking();
+                }}
+                title="排行榜"
+              >
+                <BarChartOutlined style={{ fontSize: 18 }} />
+              </a>
+            </div>
           </div>
         }
       >

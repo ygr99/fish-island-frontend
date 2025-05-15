@@ -162,5 +162,31 @@
     font-size: 13px;
   }
 }
+/* 排行榜特殊样式 */
+.ranking-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.ranking-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ranking-list::-webkit-scrollbar-thumb {
+  background: #e8e8e8;
+  border-radius: 3px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .ant-modal {
+    width: 90% !important;
+    max-width: 90%;
+  }
+
+  .ant-list-item {
+    font-size: 13px;
+  }
+}
 
 

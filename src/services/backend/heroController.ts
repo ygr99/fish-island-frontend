@@ -70,3 +70,13 @@ export async function getGuessCount(
     ...(options || {}),
   });
 }
+
+/** 获取英雄排行榜 GET /api/hero/guess/ranking */
+export async function getGuessRanking(
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseListHeroRankingVO_>('/api/hero/guess/ranking', {
+    method: 'GET',
+    ...(options || {}),
+  });
+}
