@@ -155,6 +155,9 @@ const [currentWeekType, setCurrentWeekType] = useState<'big' | 'small'>('big');
   const [isMusicSearchVisible, setIsMusicSearchVisible] = useState(false);
   const [searchKey, setSearchKey] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  // 添加防抖状态
+  const [isSelectingMusic, setIsSelectingMusic] = useState(false);
+  const selectMusicDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // 添加搜索音乐的函数
   const handleMusicSearch = async () => {
@@ -167,33 +170,64 @@ const [currentWeekType, setCurrentWeekType] = useState<'big' | 'small'>('big');
     }
   };
 
-  // 添加选择音乐的函数
+  // 添加选择音乐的函数（带防抖）
   const handleSelectMusic = async (music: any) => {
+    // 如果已经在处理中，直接返回
+    if (isSelectingMusic) {
+      messageApi.warning('正在处理上一首歌，请稍候...');
+      return;
+    }
+
+    // 清除之前的防抖定时器
+    if (selectMusicDebounceRef.current) {
+      clearTimeout(selectMusicDebounceRef.current);
+    }
+
     try {
-      const response = await fetch('https://api.kxzjoker.cn/api/163_music', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        },
-        body: new URLSearchParams({
-          url: music.id,
-          level: 'lossless',
-          type: 'json',
-        }).toString(),
-      });
-      const data = await response.json();
-      if (data.url) {
-        // 发送消息
-        const musicMessage = `🎵 ${music.name} - ${music.artists.map((a: any) => a.name).join(',')} [music]${data.url}[/music][cover]${data.pic}[/cover]`;
-        handleSend(musicMessage);
-        setIsMusicSearchVisible(false);
-        setSearchKey('');
-        setSearchResults([]);
-      }
+      setIsSelectingMusic(true);
+      
+      // 设置防抖延迟
+      selectMusicDebounceRef.current = setTimeout(async () => {
+        try {
+          const response = await fetch('https://api.kxzjoker.cn/api/163_music', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            },
+            body: new URLSearchParams({
+              url: music.id,
+              level: 'lossless',
+              type: 'json',
+            }).toString(),
+          });
+          const data = await response.json();
+          if (data.url) {
+            // 发送消息
+            const musicMessage = `🎵 ${music.name} - ${music.artists.map((a: any) => a.name).join(',')} [music]${data.url}[/music][cover]${data.pic}[/cover]`;
+            handleSend(musicMessage);
+            setIsMusicSearchVisible(false);
+            setSearchKey('');
+            setSearchResults([]);
+          }
+        } catch (error) {
+          messageApi.error('获取音乐链接失败');
+        } finally {
+          setIsSelectingMusic(false);
+        }
+      }, 1000); // 1秒防抖延迟
     } catch (error) {
-      messageApi.error('获取音乐链接失败');
+      setIsSelectingMusic(false);
+      messageApi.error('处理音乐选择时出错');
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (selectMusicDebounceRef.current) {
+        clearTimeout(selectMusicDebounceRef.current);
+      }
+    };
+  }, []);
 
   // 添加发送频率限制相关的状态
   const [lastSendTime, setLastSendTime] = useState<number>(0);
