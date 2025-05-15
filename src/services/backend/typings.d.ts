@@ -1136,4 +1136,17 @@ declare namespace API {
     id?: number;
     cname?: string;
   };
+
+  type BaseResponseListHeroRankingVO_ = {
+    code?: number;
+    data?: HeroRankingVO[];
+    message?: string;
+  };
+  type HeroRankingVO = {
+    userId?: number;
+    userName?: string;
+    userAvatar?: string;
+    score?: number;
+    rank?: number;
+  };
 }
