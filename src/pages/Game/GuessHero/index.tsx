@@ -1,7 +1,8 @@
 import React, {useEffect, useState} from 'react';
 import {Button, Card, Collapse, Form, List, message, Modal, Select, Space} from 'antd';
 import {
-  getGuessCount, getGuessRanking,
+  getGuessCount,
+  getGuessRanking,
   getHeroById,
   getNewHero,
   getRandomHero,
@@ -14,7 +15,8 @@ import {
   ArrowUpOutlined,
   BarChartOutlined,
   CheckCircleOutlined,
-  RocketOutlined, UnorderedListOutlined
+  QuestionCircleOutlined,
+  RocketOutlined
 } from "@ant-design/icons";
 
 const GuessHero: React.FC = () => {
@@ -453,18 +455,8 @@ const GuessHero: React.FC = () => {
         title={
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 16 }}>英雄猜猜乐</span>
-
             {/* 图标组 */}
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              {/* 规则图标 */}
-              <a
-                style={{ color: '#ffa768' }}
-                onClick={() => setIsRuleModalVisible(true)}
-                title="游戏规则"
-              >
-                <UnorderedListOutlined style={{ fontSize: 18 }} />
-              </a>
-
               {/* 排行榜图标 */}
               <a
                 style={{ color: '#ffa768' }}
@@ -475,6 +467,14 @@ const GuessHero: React.FC = () => {
                 title="排行榜"
               >
                 <BarChartOutlined style={{ fontSize: 18 }} />
+              </a>
+              {/* 规则图标 */}
+              <a
+                style={{ color: '#ffa768' }}
+                onClick={() => setIsRuleModalVisible(true)}
+                title="游戏规则"
+              >
+                <QuestionCircleOutlined style={{ fontSize: 18 }} />
               </a>
             </div>
           </div>
