@@ -1,8 +1,23 @@
 import React, {useEffect, useState} from 'react';
 import {Button, Card, Collapse, Form, List, message, Modal, Select, Space} from 'antd';
-import {getHeroById, getNewHero, getRandomHero, listSimpleHero} from '@/services/backend/heroController';
+import {
+  getGuessCount,
+  getGuessRanking,
+  getHeroById,
+  getNewHero,
+  getRandomHero,
+  listSimpleHero,
+  recordGuessSuccess
+} from '@/services/backend/heroController';
 import "./index.css"
-import {ArrowDownOutlined, ArrowUpOutlined, CheckCircleOutlined, RocketOutlined} from "@ant-design/icons";
+import {
+  ArrowDownOutlined,
+  ArrowUpOutlined,
+  BarChartOutlined,
+  CheckCircleOutlined,
+  QuestionCircleOutlined,
+  RocketOutlined
+} from "@ant-design/icons";
 
 const GuessHero: React.FC = () => {
   const [form] = Form.useForm();
@@ -17,6 +32,12 @@ const GuessHero: React.FC = () => {
   const [newHero, setNewHero] = useState<API.HeroVO | null>(null);
   const [loadingNewHero, setLoadingNewHero] = useState(false);
   const [isRuleModalVisible, setIsRuleModalVisible] = useState(false);
+  // 新增状态
+  const [guessCount, setGuessCount] = useState<number | null>(null);
+// 新增状态
+  const [isRankingModalVisible, setIsRankingModalVisible] = useState(false);
+  const [rankingList, setRankingList] = useState<API.HeroRankingVO[]>([]);
+  const [loadingRanking, setLoadingRanking] = useState(false);
 
   // 加载英雄列表
   useEffect(() => {
@@ -46,7 +67,17 @@ const GuessHero: React.FC = () => {
         setLoadingNewHero(false);
       }
     };
-
+    const fetchGuessCount = async () => {
+      try {
+        const response = await getGuessCount();
+        if (response.code === 0) {
+          setGuessCount(response.data || 0);
+        }
+      } catch (error) {
+        message.error('获取猜中次数失败');
+      }
+    };
+    fetchGuessCount();
     fetchNewHero();
     fetchHeroes();
   }, []);
@@ -87,11 +118,25 @@ const GuessHero: React.FC = () => {
         return;
       }
       setLoading(true);
+      const token = localStorage.getItem('tokenValue');
       if (values.heroId === randomHero?.id) {
         // 猜中逻辑
         setGuessList(prev => [randomHero, ...prev]);
         message.success('恭喜猜中！');
         resetGame();
+        // 登录后才调用接口
+        console.log('token', token);
+        if (token) {
+          try {
+            await recordGuessSuccess(); // 记录猜中
+            const response = await getGuessCount(); // 更新统计
+            if (response.code === 0) {
+              setGuessCount(response.data || 0);
+            }
+          } catch (error) {
+            message.error('记录猜中次数失败');
+          }
+        }
       } else {
         // 未猜中逻辑
         const response = await getHeroById({id: values.heroId});
@@ -132,6 +177,83 @@ const GuessHero: React.FC = () => {
     return match ? parseInt(match[0], 10) : 0;
   };
 
+  // 获取排行榜数据
+  const fetchRanking = async () => {
+    setLoadingRanking(true);
+    try {
+      const response = await getGuessRanking();
+      if (response.code === 0) {
+        setRankingList(response.data || []);
+      }
+    } catch (error) {
+      message.error('获取排行榜失败');
+    } finally {
+      setLoadingRanking(false);
+    }
+  };
+// 排行榜模态框
+  const rankingModal = (
+    <Modal
+      title="排行榜"
+      visible={isRankingModalVisible}
+      onOk={() => setIsRankingModalVisible(false)}
+      onCancel={() => setIsRankingModalVisible(false)}
+      width={400}
+    >
+      {loadingRanking ? (
+        <div style={{ textAlign: 'center', padding: 24 }}>
+          <RocketOutlined spin style={{ fontSize: 24, color: '#597ef7' }} />
+          <p>加载中...</p>
+        </div>
+      ) : rankingList.length > 0 ? (
+        <List
+          dataSource={rankingList}
+          renderItem={(item, index) => (
+            <List.Item style={{ padding: '8px 0' }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                width: '100%',
+                alignItems: 'center'
+              }}>
+                <div>
+                <span style={{
+                  width: 24,
+                  display: 'inline-block',
+                  textAlign: 'center',
+                  marginRight: 8,
+                  color: index < 3 ? ['#ff4d4f', '#ff7a45', '#ffac41'][index] : '#888'
+                }}>
+                  {index + 1}
+                </span>
+                  <img
+                    src={item.userAvatar|| 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'}
+                    alt="头像"
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      marginRight: 8,
+                      border: '1px solid #eee'
+                    }}
+                  />
+                  {item.userName}
+                </div>
+                <span style={{ color: '#597ef7', fontWeight: 500 }}>
+                {item.score} 次
+              </span>
+              </div>
+            </List.Item>
+          )}
+        />
+      ) : (
+        <div style={{ textAlign: 'center', color: '#888', padding: 24 }}>
+          暂无排行榜数据
+        </div>
+      )}
+    </Modal>
+  );
+
   const gameRules = (
     <Modal
       title="游戏规则"
@@ -139,7 +261,7 @@ const GuessHero: React.FC = () => {
       onOk={() => setIsRuleModalVisible(false)}
       onCancel={() => setIsRuleModalVisible(false)}
     >
-      <div style={{ padding: '0 12px' }}>
+      <div style={{padding: '0 12px'}}>
         <ol>
           <li><strong>目标：</strong>通过每次猜测获取线索，最终猜中隐藏的英雄。</li>
           <li><strong>流程：</strong>点击「开始」获取随机英雄 → 选择猜测 → 获取属性对比线索 → 直到猜中或点击「结束」。</li>
@@ -156,13 +278,13 @@ const GuessHero: React.FC = () => {
           borderRadius: 8,
           boxShadow: '0 1px 4px rgba(0,0,0,0.05)'
         }}>
-          <h4 style={{ marginBottom: 12, fontSize: 14, fontWeight: 600 }}>
+          <h4 style={{marginBottom: 12, fontSize: 14, fontWeight: 600}}>
             最新英雄信息
           </h4>
 
           {loadingNewHero ? (
             <Space>
-              <RocketOutlined spin style={{ color: '#ffa768' }} />
+              <RocketOutlined spin style={{color: '#ffa768'}}/>
               <span>加载中...</span>
             </Space>
           ) : newHero ? (
@@ -170,7 +292,7 @@ const GuessHero: React.FC = () => {
               <img
                 src={`https://game.gtimg.cn/images/yxzj/img201606/heroimg/${newHero.ename}/${newHero.ename}.jpg`}
                 alt="最新英雄"
-                style={{ width: 40, height: 40, borderRadius: 4 }}
+                style={{width: 40, height: 40, borderRadius: 4}}
               />
               <div>
                 <div>名称：<strong>{newHero.cname}</strong></div>
@@ -178,7 +300,7 @@ const GuessHero: React.FC = () => {
               </div>
             </Space>
           ) : (
-            <span style={{ color: '#888' }}>暂无最新英雄信息</span>
+            <span style={{color: '#888'}}>暂无最新英雄信息</span>
           )}
         </div>
       </div>
@@ -189,9 +311,9 @@ const GuessHero: React.FC = () => {
   // 比较图标渲染函数
   const renderCompareIcon = (current: number, target: number) => {
     if (!randomHero) return null;
-    if (current > target) return <ArrowDownOutlined style={{ color: '#ff4d4f', marginLeft: 4 }} />;
-    if (current < target) return <ArrowUpOutlined style={{ color: '#49aa19', marginLeft: 4 }} />;
-    return <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 4 }} />;
+    if (current > target) return <ArrowDownOutlined style={{color: '#ff4d4f', marginLeft: 4}}/>;
+    if (current < target) return <ArrowUpOutlined style={{color: '#49aa19', marginLeft: 4}}/>;
+    return <CheckCircleOutlined style={{color: '#52c41a', marginLeft: 4}}/>;
   };
   // 替换表格的移动端列表展示
   const renderGuessList = () => (
@@ -208,12 +330,12 @@ const GuessHero: React.FC = () => {
             boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
           }}
         >
-          <div style={{ width: '100%' }}>
+          <div style={{width: '100%'}}>
             {/* 头部信息 */}
-            <div style={{ display: 'flex', marginBottom: 12 }}>
+            <div style={{display: 'flex', marginBottom: 12}}>
               <img
                 src={`https://game.gtimg.cn/images/yxzj/img201606/heroimg/${record.ename}/${record.ename}.jpg`}
-                style={{ width: 50, height: 50, borderRadius: 4, marginRight: 12 }}
+                style={{width: 50, height: 50, borderRadius: 4, marginRight: 12}}
               />
               <div>
                 <div style={{fontWeight: 'bold', fontSize: 16}}>{record.cname}</div>
@@ -244,7 +366,7 @@ const GuessHero: React.FC = () => {
                 )}
               </div>
 
-              <div style={{ padding: 8, border: '1px solid #eee', borderRadius: 4 }}>
+              <div style={{padding: 8, border: '1px solid #eee', borderRadius: 4}}>
                 皮肤数：{record.skinsNum}
                 {renderCompareIcon(
                   parseInt(record.skinsNum),
@@ -252,7 +374,7 @@ const GuessHero: React.FC = () => {
                 )}
               </div>
 
-              <div style={{ padding: 8, border: '1px solid #eee', borderRadius: 4 }}>
+              <div style={{padding: 8, border: '1px solid #eee', borderRadius: 4}}>
                 身高：{getHeightNumber(record.height)}cm
                 {renderCompareIcon(
                   getHeightNumber(record.height),
@@ -275,7 +397,7 @@ const GuessHero: React.FC = () => {
                   }}>
                     阵营：{record.faction || '无'}
                     {randomHero && isSame(record.faction, randomHero.faction) && (
-                      <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 4 }} />
+                      <CheckCircleOutlined style={{color: '#52c41a', marginLeft: 4}}/>
                     )}
                   </div>
 
@@ -284,7 +406,7 @@ const GuessHero: React.FC = () => {
                   }}>
                     区域：{record.region || '无'}
                     {randomHero && isSame(record.region, randomHero.region) && (
-                      <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 4 }} />
+                      <CheckCircleOutlined style={{color: '#52c41a', marginLeft: 4}}/>
                     )}
                   </div>
 
@@ -296,7 +418,7 @@ const GuessHero: React.FC = () => {
                       ? typeMap[record.secondaryType as keyof typeof typeMap] || record.secondaryType
                       : '无'}
                     {randomHero && isSame(record.secondaryType, randomHero.secondaryType) && (
-                      <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 4 }} />
+                      <CheckCircleOutlined style={{color: '#52c41a', marginLeft: 4}}/>
                     )}
                   </div>
 
@@ -305,7 +427,7 @@ const GuessHero: React.FC = () => {
                   }}>
                     种族：{record.race || '无'}
                     {randomHero && isSame(record.race, randomHero.race) && (
-                      <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 4 }} />
+                      <CheckCircleOutlined style={{color: '#52c41a', marginLeft: 4}}/>
                     )}
                   </div>
 
@@ -314,7 +436,7 @@ const GuessHero: React.FC = () => {
                   }}>
                     能量：{record.ability || '无'}
                     {randomHero && isSame(record.ability, randomHero.ability) && (
-                      <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 4 }} />
+                      <CheckCircleOutlined style={{color: '#52c41a', marginLeft: 4}}/>
                     )}
                   </div>
                 </div>
@@ -328,103 +450,131 @@ const GuessHero: React.FC = () => {
   return (
     <>
       {gameRules} {}
-    <Card
-      title={
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 16 }}>英雄猜猜乐</span>
-          <a
-            style={{ color: '#ffa768'}}
-            onClick={() => setIsRuleModalVisible(true)}
+      {rankingModal} {}
+      <Card
+        title={
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 16 }}>英雄猜猜乐</span>
+            {/* 图标组 */}
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              {/* 排行榜图标 */}
+              <a
+                style={{ color: '#ffa768' }}
+                onClick={() => {
+                  setIsRankingModalVisible(true);
+                  fetchRanking();
+                }}
+                title="排行榜"
+              >
+                <BarChartOutlined style={{ fontSize: 18 }} />
+              </a>
+              {/* 规则图标 */}
+              <a
+                style={{ color: '#ffa768' }}
+                onClick={() => setIsRuleModalVisible(true)}
+                title="游戏规则"
+              >
+                <QuestionCircleOutlined style={{ fontSize: 18 }} />
+              </a>
+            </div>
+          </div>
+        }
+      >
+        <Form form={form} onFinish={handleGuess}>
+          <Space
+            direction="vertical"
+            size="large"
+            style={{width: '100%'}}
+            align="center" // 新增属性
           >
-            规则
-          </a>
-        </div>
-      }
-    >
-      <Form form={form} onFinish={handleGuess}>
-        <Space
-          direction="vertical"
-          size="large"
-          style={{width: '100%'}}
-          align="center" // 新增属性
-        >
-          <Form.Item
-            label="选择英雄"
-            name="heroId"
-            rules={[
-              {
-                required: true,
-                message: <span className="mobile-validation">请选择英雄</span>, // 使用自定义样式容器
-              }
-            ]}
-            style={{textAlign: 'center'}} // 新增样式
-            labelCol={{style: {textAlign: 'left'}}} // 保持标签左对齐
-          >
-            <Select
-              showSearch={{
-                filter: true,
-                placeholder: '请输入英雄名称',
-              }}
-              options={heroList.map(hero => ({
-                label: hero.cname,
-                value: hero.id,
-              }))}
-              filterOption={(input, option) =>
-                (option?.label as string).toLowerCase().includes(input.toLowerCase())
-              }
-              style={{minWidth: 200}}
-            />
-          </Form.Item>
-
-          <Space>
-            <Button
-              type="primary"
-              onClick={handleStartGame}
-              loading={loading}
-              disabled={gameStarted}
-            >
-              开始
-            </Button>
-            <Button
-              danger
-              onClick={handleEndGame}
-              disabled={!gameStarted}
-            >
-              结束
-            </Button>
-            <Button
-              type="primary"
-              onClick={() => {
-                if (randomHero?.quote) {
-                  message.success(`英雄台词：${randomHero.quote}`);
-                } else {
-                  message.warning('该英雄暂无经典台词');
+            <Form.Item
+              label="选择英雄"
+              name="heroId"
+              rules={[
+                {
+                  required: true,
+                  message: <span className="mobile-validation">请选择英雄</span>, // 使用自定义样式容器
                 }
-              }}
-              disabled={!gameStarted}
+              ]}
+              style={{textAlign: 'center'}} // 新增样式
+              labelCol={{style: {textAlign: 'left'}}} // 保持标签左对齐
             >
-              提示
-            </Button>
-            <Button
-              type="primary"
-              htmlType="submit"
-              disabled={!gameStarted}
-              loading={loading}
-            >
-              猜一下
-            </Button>
-          </Space>
 
-          {guessList.length > 0 ? (
-            renderGuessList()
-          ) : (
-            <p style={{ textAlign: 'center', color: '#888' }}>
-              暂无猜测记录，请开始游戏并猜一下
-            </p>
-          )}
-        </Space>
-      </Form>
-    </Card>
+              <Select
+                showSearch={{
+                  filter: true,
+                  placeholder: '请输入英雄名称',
+                }}
+                options={heroList.map(hero => ({
+                  label: hero.cname,
+                  value: hero.id,
+                }))}
+                filterOption={(input, option) =>
+                  (option?.label as string).toLowerCase().includes(input.toLowerCase())
+                }
+                style={{minWidth: 200}}
+              />
+
+            </Form.Item>
+            {/* 动态显示猜中人数 */}
+            {guessCount !== null && (
+              <div className="guess-count-container">
+                <span>已有</span>
+                <span className="guess-count-number">{guessCount}</span>
+                <span>人猜出</span>
+                <span className="guess-count-login-hint">（登录后计入统计）</span>
+              </div>
+            )}
+
+            <Space>
+              <Button
+                type="primary"
+                onClick={handleStartGame}
+                loading={loading}
+                disabled={gameStarted}
+              >
+                开始
+              </Button>
+              <Button
+                danger
+                onClick={handleEndGame}
+                disabled={!gameStarted}
+              >
+                结束
+              </Button>
+              <Button
+                type="primary"
+                onClick={() => {
+                  if (randomHero?.quote) {
+                    message.success(`英雄台词：${randomHero.quote}`);
+                  } else {
+                    message.warning('该英雄暂无经典台词');
+                  }
+                }}
+                disabled={!gameStarted}
+              >
+                提示
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                disabled={!gameStarted}
+                loading={loading}
+              >
+                猜一下
+              </Button>
+            </Space>
+
+            {guessList.length > 0 ? (
+              renderGuessList()
+            ) : (
+              <p style={{textAlign: 'center', color: '#888'}}>
+                暂无猜测记录，请开始游戏并猜一下
+              </p>
+            )}
+          </Space>
+        </Form>
+      </Card>
     </>
   );
 };

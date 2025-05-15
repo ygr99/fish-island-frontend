@@ -47,3 +47,36 @@ export async function getHeroById(
     ...(options || {}),
   });
 }
+
+/** 记录猜对英雄次数 POST /api/hero/guess/success */
+export async function recordGuessSuccess(
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseBoolean_>('/api/hero/guess/success', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    ...(options || {}),
+  });
+}
+
+/** 获取猜对英雄次数 GET /api/hero/guess/count */
+export async function getGuessCount(
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseInt_>('/api/hero/guess/count', {
+    method: 'GET',
+    ...(options || {}),
+  });
+}
+
+/** 获取英雄排行榜 GET /api/hero/guess/ranking */
+export async function getGuessRanking(
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseListHeroRankingVO_>('/api/hero/guess/ranking', {
+    method: 'GET',
+    ...(options || {}),
+  });
+}
