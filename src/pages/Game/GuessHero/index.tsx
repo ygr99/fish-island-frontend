@@ -18,6 +18,7 @@ import {
   QuestionCircleOutlined,
   RocketOutlined
 } from "@ant-design/icons";
+import {aesDecrypt} from "@/utils/cryptoUtils";
 
 const GuessHero: React.FC = () => {
   const [form] = Form.useForm();
@@ -34,10 +35,11 @@ const GuessHero: React.FC = () => {
   const [isRuleModalVisible, setIsRuleModalVisible] = useState(false);
   // 新增状态
   const [guessCount, setGuessCount] = useState<number | null>(null);
-// 新增状态
+  // 新增状态
   const [isRankingModalVisible, setIsRankingModalVisible] = useState(false);
   const [rankingList, setRankingList] = useState<API.HeroRankingVO[]>([]);
   const [loadingRanking, setLoadingRanking] = useState(false);
+
 
   // 加载英雄列表
   useEffect(() => {
@@ -88,10 +90,15 @@ const GuessHero: React.FC = () => {
       setLoading(true);
       const response = await getRandomHero();
       if (response.code === 0) {
-        setRandomHero(response.data);
-        setCorrectHeroId(response.data?.id || null); // 存储正确答案 ID
-        setGuessList([]);
-        setGameStarted(true);
+        // aes解密
+        aesDecrypt(response.data).then((hero) => {
+          setRandomHero(hero);
+          setCorrectHeroId(hero?.id || null); // 存储正确答案 ID
+          setGuessList([]);
+          setGameStarted(true);
+        }).catch((error) => {
+          console.error('解密失败:', error);
+        });
       }
     } catch (error) {
       message.error('获取随机英雄失败');
@@ -124,11 +131,9 @@ const GuessHero: React.FC = () => {
         setGuessList(prev => [randomHero, ...prev]);
         message.success('恭喜猜中！');
         resetGame();
-        // 登录后才调用接口
-        console.log('token', token);
         if (token) {
           try {
-            await recordGuessSuccess(); // 记录猜中
+            await recordGuessSuccess({heroId: values.heroId}); // 记录猜中
             const response = await getGuessCount(); // 更新统计
             if (response.code === 0) {
               setGuessCount(response.data || 0);
