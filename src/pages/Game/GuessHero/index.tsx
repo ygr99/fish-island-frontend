@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {Button, Card, Collapse, Form, List, message, Modal, Select, Space} from 'antd';
+import {Button, Card, Collapse, Form, List, message, Modal, Select, Space, Tooltip} from 'antd';
 import {
   getGuessCount,
   getGuessRanking,
@@ -196,25 +196,34 @@ const GuessHero: React.FC = () => {
       setLoadingRanking(false);
     }
   };
-// 排行榜模态框
+  // 排行榜模态框
   const rankingModal = (
     <Modal
-      title="排行榜"
+      title={
+        <div>
+          <span>排行榜</span>
+          <span style={{paddingLeft: 8}}>
+            <Tooltip title="仅展示猜中次数最高的前10名玩家">
+              <QuestionCircleOutlined style={{color: '#888', cursor: 'pointer'}}/>
+            </Tooltip>
+          </span>
+        </div>
+      }
       visible={isRankingModalVisible}
       onOk={() => setIsRankingModalVisible(false)}
       onCancel={() => setIsRankingModalVisible(false)}
       width={400}
     >
       {loadingRanking ? (
-        <div style={{ textAlign: 'center', padding: 24 }}>
-          <RocketOutlined spin style={{ fontSize: 24, color: '#597ef7' }} />
+        <div style={{textAlign: 'center', padding: 24}}>
+          <RocketOutlined spin style={{fontSize: 24, color: '#597ef7'}}/>
           <p>加载中...</p>
         </div>
       ) : rankingList.length > 0 ? (
         <List
           dataSource={rankingList}
           renderItem={(item, index) => (
-            <List.Item style={{ padding: '8px 0' }}>
+            <List.Item style={{padding: '8px 0'}}>
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -232,7 +241,7 @@ const GuessHero: React.FC = () => {
                   {index + 1}
                 </span>
                   <img
-                    src={item.userAvatar|| 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'}
+                    src={item.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'}
                     alt="头像"
                     style={{
                       width: 24,
@@ -244,7 +253,7 @@ const GuessHero: React.FC = () => {
                   />
                   {item.userName}
                 </div>
-                <span style={{ color: '#597ef7', fontWeight: 500 }}>
+                <span style={{color: '#597ef7', fontWeight: 500}}>
                 {item.score} 次
               </span>
               </div>
@@ -252,7 +261,7 @@ const GuessHero: React.FC = () => {
           )}
         />
       ) : (
-        <div style={{ textAlign: 'center', color: '#888', padding: 24 }}>
+        <div style={{textAlign: 'center', color: '#888', padding: 24}}>
           暂无排行榜数据
         </div>
       )}
@@ -458,28 +467,28 @@ const GuessHero: React.FC = () => {
       {rankingModal} {}
       <Card
         title={
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 16 }}>英雄猜猜乐</span>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+            <span style={{fontSize: 16}}>英雄猜猜乐</span>
             {/* 图标组 */}
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <div style={{display: 'flex', gap: 12, alignItems: 'center'}}>
               {/* 排行榜图标 */}
               <a
-                style={{ color: '#ffa768' }}
+                style={{color: '#ffa768'}}
                 onClick={() => {
                   setIsRankingModalVisible(true);
                   fetchRanking();
                 }}
                 title="排行榜"
               >
-                <BarChartOutlined style={{ fontSize: 18 }} />
+                <BarChartOutlined style={{fontSize: 18}}/>
               </a>
               {/* 规则图标 */}
               <a
-                style={{ color: '#ffa768' }}
+                style={{color: '#ffa768'}}
                 onClick={() => setIsRuleModalVisible(true)}
                 title="游戏规则"
               >
-                <QuestionCircleOutlined style={{ fontSize: 18 }} />
+                <QuestionCircleOutlined style={{fontSize: 18}}/>
               </a>
             </div>
           </div>
