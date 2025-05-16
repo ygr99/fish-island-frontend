@@ -251,7 +251,7 @@ const GuessHero: React.FC = () => {
                       border: '1px solid #eee'
                     }}
                   />
-                  {item.userName}
+                  {item.userName || '游客'}
                 </div>
                 <span style={{color: '#597ef7', fontWeight: 500}}>
                 {item.score} 次
