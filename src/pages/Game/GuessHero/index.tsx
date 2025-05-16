@@ -224,22 +224,17 @@ const GuessHero: React.FC = () => {
           dataSource={rankingList}
           renderItem={(item, index) => (
             <List.Item style={{padding: '8px 0'}}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                width: '100%',
-                alignItems: 'center'
-              }}>
-                <div>
-                <span style={{
-                  width: 24,
-                  display: 'inline-block',
-                  textAlign: 'center',
-                  marginRight: 8,
-                  color: index < 3 ? ['#ff4d4f', '#ff7a45', '#ffac41'][index] : '#888'
-                }}>
-                  {index + 1}
-                </span>
+              <div className="no-wrap-container">
+                <div className="no-wrap">
+                  <span style={{
+                    width: 24,
+                    display: 'inline-block',
+                    textAlign: 'center',
+                    marginRight: 8,
+                    color: index < 3 ? ['#ff4d4f', '#ff7a45', '#ffac41'][index] : '#888'
+                  }}>
+                    {index + 1}
+                  </span>
                   <img
                     src={item.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'}
                     alt="头像"
@@ -253,9 +248,7 @@ const GuessHero: React.FC = () => {
                   />
                   {item.userName || '游客'}
                 </div>
-                <span style={{color: '#597ef7', fontWeight: 500}}>
-                {item.score} 次
-              </span>
+                <span style={{color: '#597ef7', fontWeight: 500}}>{item.score} 次</span>
               </div>
             </List.Item>
           )}
@@ -467,7 +460,7 @@ const GuessHero: React.FC = () => {
       {rankingModal} {}
       <Card
         className="card-background"
-        style={{ maxHeight: '80vh', overflowY: 'auto' }}
+        style={{maxHeight: '80vh', overflowY: 'auto'}}
         title={
           <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
             <span style={{fontSize: 16}}>英雄猜猜乐</span>
