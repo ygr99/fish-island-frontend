@@ -22,9 +22,9 @@ import {aesDecrypt} from "@/utils/cryptoUtils";
 
 const GuessHero: React.FC = () => {
   const [form] = Form.useForm();
-  const [heroList, setHeroList] = useState<API.SimpleHeroVO_[]>([]);
-  const [randomHero, setRandomHero] = useState<API.HeroVO_ | null>(null);
-  const [guessList, setGuessList] = useState<API.HeroVO_[]>([]);
+  const [heroList, setHeroList] = useState<API.SimpleHeroVO[]>([]);
+  const [randomHero, setRandomHero] = useState<API.HeroVO | null>(null);
+  const [guessList, setGuessList] = useState<API.HeroVO[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [gameStarted, setGameStarted] = useState(false);
