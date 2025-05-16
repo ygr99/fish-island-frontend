@@ -521,12 +521,11 @@ const GuessHero: React.FC = () => {
               />
 
             </Form.Item>
-            {/* 动态显示猜中人数 */}
+            {/* 动态显示猜中次数 */}
             {guessCount !== null && (
               <div className="guess-count-container">
-                <span>已有</span>
+                <span>全站累计猜对次数：</span>
                 <span className="guess-count-number">{guessCount}</span>
-                <span>人猜出</span>
                 <span className="guess-count-login-hint">（登录后计入统计）</span>
               </div>
             )}
