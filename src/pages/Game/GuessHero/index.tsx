@@ -466,6 +466,8 @@ const GuessHero: React.FC = () => {
       {gameRules} {}
       {rankingModal} {}
       <Card
+        className="card-background"
+        style={{ maxHeight: '80vh', overflowY: 'auto' }}
         title={
           <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
             <span style={{fontSize: 16}}>英雄猜猜乐</span>
