@@ -18,7 +18,6 @@ import {
   QuestionCircleOutlined,
   RocketOutlined
 } from "@ant-design/icons";
-import {aesDecrypt} from "@/utils/cryptoUtils";
 
 const GuessHero: React.FC = () => {
   const [form] = Form.useForm();
@@ -90,15 +89,10 @@ const GuessHero: React.FC = () => {
       setLoading(true);
       const response = await getRandomHero();
       if (response.code === 0) {
-        // aes解密
-        aesDecrypt(response.data).then((hero) => {
-          setRandomHero(hero);
-          setCorrectHeroId(hero?.id || null); // 存储正确答案 ID
-          setGuessList([]);
-          setGameStarted(true);
-        }).catch((error) => {
-          console.error('解密失败:', error);
-        });
+        setRandomHero(response.data);
+        setCorrectHeroId(response.data?.id || null); // 存储正确答案 ID
+        setGuessList([]);
+        setGameStarted(true);
       }
     } catch (error) {
       message.error('获取随机英雄失败');
@@ -108,9 +102,12 @@ const GuessHero: React.FC = () => {
   };
 
   // 结束游戏
-  const handleEndGame = () => {
+  const handleEndGame = async () => {
     if (randomHero) {
-      setGuessList([randomHero, ...guessList]);
+      const response = await getHeroById({id: randomHero.id});
+      if (response.code === 0) {
+        setGuessList(prev => [response.data, ...prev]); // 使用函数式更新
+      }
       resetGame();
     }
   };
@@ -128,7 +125,10 @@ const GuessHero: React.FC = () => {
       const token = localStorage.getItem('tokenValue');
       if (values.heroId === randomHero?.id) {
         // 猜中逻辑
-        setGuessList(prev => [randomHero, ...prev]);
+        const response = await getHeroById({id: values.heroId});
+        if (response.code === 0) {
+          setGuessList(prev => [response.data, ...prev]); // 使用函数式更新
+        }
         message.success('恭喜猜中！');
         resetGame();
         if (token) {
