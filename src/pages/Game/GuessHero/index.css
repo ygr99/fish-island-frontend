@@ -191,14 +191,8 @@
 /* 强制 Space 容器水平排列 */
 @media (max-width: 768px) {
   .ant-space.ant-space-horizontal {
-    flex-wrap: nowrap !important; /* 禁止换行 */
+    flex-wrap: nowrap !important;
   }
-}
-
-
-/* 默认样式（大屏幕） */
-.ant-card {
-  height: 90vh;
 }
 
 /* 背景图样式 */
@@ -208,6 +202,7 @@
   background-position: center;
   background-repeat: no-repeat;
   position: relative;
+  height: 90vh;
 }
 
 /* 小于 768px 的屏幕 */
