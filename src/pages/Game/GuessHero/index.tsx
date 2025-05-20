@@ -231,9 +231,11 @@ const GuessHero: React.FC = () => {
                     display: 'inline-block',
                     textAlign: 'center',
                     marginRight: 8,
-                    color: index < 3 ? ['#ff4d4f', '#ff7a45', '#ffac41'][index] : '#888'
+                    fontSize: index < 3 ? 18 : 14,
+                    verticalAlign: 'middle',
+                    color: '#888'
                   }}>
-                    {index + 1}
+                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
                   </span>
                   <img
                     src={item.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'}
