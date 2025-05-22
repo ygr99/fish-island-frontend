@@ -19,6 +19,7 @@ import {
   RocketOutlined
 } from "@ant-design/icons";
 import {aesDecrypt} from "@/utils/cryptoUtils";
+import pinyin from 'pinyin';
 
 const GuessHero: React.FC = () => {
   const [form] = Form.useForm();
@@ -510,22 +511,29 @@ const GuessHero: React.FC = () => {
               style={{textAlign: 'center'}} // 新增样式
               labelCol={{style: {textAlign: 'left'}}} // 保持标签左对齐
             >
-
               <Select
-                showSearch={{
-                  filter: true,
-                  placeholder: '请输入英雄名称',
-                }}
+                placeholder="请选择一位英雄"
+                showSearch={true}
                 options={heroList.map(hero => ({
                   label: hero.cname,
                   value: hero.id,
                 }))}
-                filterOption={(input, option) =>
-                  (option?.label as string).toLowerCase().includes(input.toLowerCase())
-                }
+                filterOption={(input, option) => {
+                  const label = (option?.label as string) || '';
+                  const inputLower = input.toLowerCase();
+                  // 中文直接匹配
+                  if (label.toLowerCase().includes(inputLower)) return true;
+                  // 生成两种拼音形式
+                  const fullPinyin = pinyin(label, { style: pinyin.STYLE_NORMAL }).join('');
+                  const initialPinyin = pinyin(label, { style: pinyin.STYLE_FIRST_LETTER }).join('');
+                  // 全拼模糊匹配（如：yas 可匹配 yase）
+                  const fullMatch = fullPinyin.toLowerCase().includes(inputLower);
+                  // 首字母匹配（如：ys 可匹配 ya se）
+                  const initialMatch = initialPinyin.toLowerCase().includes(inputLower);
+                  return fullMatch || initialMatch;
+                }}
                 style={{minWidth: 200}}
               />
-
             </Form.Item>
             {/* 动态显示猜中次数 */}
             {guessCount !== null && (
