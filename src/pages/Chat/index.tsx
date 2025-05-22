@@ -1074,7 +1074,7 @@ const ChatRoom: React.FC = () => {
     let content = customContent || inputValue;
 
     // 检查是否包含 iframe 标签
-    const iframeRegex = new RegExp('<iframe[^>]*>[\\s\\S]*?</iframe>', 'gi');
+    const iframeRegex = /\<iframe.*?\>.*?\<\/iframe\>/gi;
     if (iframeRegex.test(content)) {
       messageApi.warning('为了安全考虑，不支持 iframe 标签');
       return;
@@ -1109,7 +1109,7 @@ const ChatRoom: React.FC = () => {
 
     // 解析@用户
     const mentionedUsers: User[] = [];
-    const mentionRegex = new RegExp('@([\\w\\u4e00-\\u9fa5]+)', 'g');
+    const mentionRegex = /@([a-zA-Z0-9_\u4e00-\u9fa5]+)/g;
     let match;
     while ((match = mentionRegex.exec(content)) !== null) {
       const mentionedName = match[1];
@@ -1793,10 +1793,8 @@ const ChatRoom: React.FC = () => {
   };
 
   const renderMessageContent = (content: string) => {
-    // 原来: const musicMatch = content.match(/\[music\](.*?)\[\/music\]/);
-    const musicMatch = content.match(/\[music\]([^\[\]]*)\[\/music\]/);
-    // 原来: const coverMatch = content.match(/\[cover\](.*?)\[\/cover\]/);
-    const coverMatch = content.match(/\[cover\]([^\[\]]*)\[\/cover\]/);
+    const musicMatch = /\[music\]([^\[\]]*)\[\/music\]/i.exec(content);
+    const coverMatch = /\[cover\]([^\[\]]*)\[\/cover\]/i.exec(content);
     if (musicMatch) {
       const musicUrl = musicMatch[1];
       const coverUrl = coverMatch ? coverMatch[1] : '';
@@ -1839,7 +1837,7 @@ const ChatRoom: React.FC = () => {
     }
     // 检查是否是红包消息
     // const redPacketMatch = content.match(/\[redpacket\](.*?)\[\/redpacket\]/);
-    const redPacketMatch = content.match(/\[redpacket\]([^\[\]]*)\[\/redpacket\]/);
+    const redPacketMatch = /\[redpacket\]([^\[\]]*)\[\/redpacket\]/i.exec(content);
     if (redPacketMatch) {
       const redPacketId = redPacketMatch[1];
       const detail = redPacketDetailsMap.get(redPacketId);
@@ -1907,7 +1905,7 @@ const ChatRoom: React.FC = () => {
 
     // 检查是否是邀请消息
     // const inviteMatch = content.match(/\[invite\/(\w+)\](\d+)\[\/invite\]/);
-    const inviteMatch = content.match(/\[invite\/([a-zA-Z0-9_]+)\](\d+)\[\/invite\]/);
+    const inviteMatch = /\[invite\/([a-zA-Z0-9_]+)\]([0-9]+)\[\/invite\]/i.exec(content);
     if (inviteMatch) {
       const roomId = inviteMatch[2];
       const gameType = inviteMatch[1];
@@ -1937,7 +1935,7 @@ const ChatRoom: React.FC = () => {
       );
     }
     // const imgMatch = content.match(/\[img\](.*?)\[\/img\]/);
-    const imgMatch = content.match(/\[img\]([^\[\]]*)\[\/img\]/);
+    const imgMatch = /\[img\]([^\[\]]*)\[\/img\]/i.exec(content);
     if (imgMatch) {
       return (
         <MessageContent
