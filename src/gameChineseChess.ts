@@ -18,6 +18,7 @@ export interface Piece {
   type: PieceType;
   player: Player;
   id: string; // 用于标识唯一的棋子
+  isHidden?: boolean; // 是否为暗棋
 }
 
 // 棋盘坐标

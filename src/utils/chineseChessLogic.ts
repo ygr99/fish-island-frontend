@@ -12,45 +12,152 @@ export function createEmptyBoard(): Board {
   return Array(BOARD_ROWS).fill(null).map(() => Array(BOARD_COLS).fill(null));
 }
 
+// 添加揭棋模式相关的类型定义
+export interface HiddenPiece extends Piece {
+  isHidden: boolean;
+  originalPosition?: Position; // 添加原始位置字段，用于确定走法
+}
+
 // 创建初始棋盘，设置所有棋子的初始位置
-export function createInitialBoard(): Board {
+export function createInitialBoard(gameType: 'normal' | 'hidden' = 'normal'): Board {
   const board = createEmptyBoard();
 
-  // 放置红方棋子
-  placePiece(board, 'chariot', 'red', 9, 0);
-  placePiece(board, 'horse', 'red', 9, 1);
-  placePiece(board, 'elephant', 'red', 9, 2);
-  placePiece(board, 'advisor', 'red', 9, 3);
-  placePiece(board, 'general', 'red', 9, 4);
-  placePiece(board, 'advisor', 'red', 9, 5);
-  placePiece(board, 'elephant', 'red', 9, 6);
-  placePiece(board, 'horse', 'red', 9, 7);
-  placePiece(board, 'chariot', 'red', 9, 8);
-  placePiece(board, 'cannon', 'red', 7, 1);
-  placePiece(board, 'cannon', 'red', 7, 7);
-  placePiece(board, 'soldier', 'red', 6, 0);
-  placePiece(board, 'soldier', 'red', 6, 2);
-  placePiece(board, 'soldier', 'red', 6, 4);
-  placePiece(board, 'soldier', 'red', 6, 6);
-  placePiece(board, 'soldier', 'red', 6, 8);
+  if (gameType === 'normal') {
+    // 普通模式，按标准方式放置
+    placePiece(board, 'chariot', 'red', 9, 0);
+    placePiece(board, 'horse', 'red', 9, 1);
+    placePiece(board, 'elephant', 'red', 9, 2);
+    placePiece(board, 'advisor', 'red', 9, 3);
+    placePiece(board, 'general', 'red', 9, 4);
+    placePiece(board, 'advisor', 'red', 9, 5);
+    placePiece(board, 'elephant', 'red', 9, 6);
+    placePiece(board, 'horse', 'red', 9, 7);
+    placePiece(board, 'chariot', 'red', 9, 8);
+    placePiece(board, 'cannon', 'red', 7, 1);
+    placePiece(board, 'cannon', 'red', 7, 7);
+    placePiece(board, 'soldier', 'red', 6, 0);
+    placePiece(board, 'soldier', 'red', 6, 2);
+    placePiece(board, 'soldier', 'red', 6, 4);
+    placePiece(board, 'soldier', 'red', 6, 6);
+    placePiece(board, 'soldier', 'red', 6, 8);
+    placePiece(board, 'chariot', 'black', 0, 0);
+    placePiece(board, 'horse', 'black', 0, 1);
+    placePiece(board, 'elephant', 'black', 0, 2);
+    placePiece(board, 'advisor', 'black', 0, 3);
+    placePiece(board, 'general', 'black', 0, 4);
+    placePiece(board, 'advisor', 'black', 0, 5);
+    placePiece(board, 'elephant', 'black', 0, 6);
+    placePiece(board, 'horse', 'black', 0, 7);
+    placePiece(board, 'chariot', 'black', 0, 8);
+    placePiece(board, 'cannon', 'black', 2, 1);
+    placePiece(board, 'cannon', 'black', 2, 7);
+    placePiece(board, 'soldier', 'black', 3, 0);
+    placePiece(board, 'soldier', 'black', 3, 2);
+    placePiece(board, 'soldier', 'black', 3, 4);
+    placePiece(board, 'soldier', 'black', 3, 6);
+    placePiece(board, 'soldier', 'black', 3, 8);
+    return board;
+  }
 
-  // 放置黑方棋子
-  placePiece(board, 'chariot', 'black', 0, 0);
-  placePiece(board, 'horse', 'black', 0, 1);
-  placePiece(board, 'elephant', 'black', 0, 2);
-  placePiece(board, 'advisor', 'black', 0, 3);
+  // 揭棋模式
+  // 1. 先放明将/帅
+  placePiece(board, 'general', 'red', 9, 4);
   placePiece(board, 'general', 'black', 0, 4);
-  placePiece(board, 'advisor', 'black', 0, 5);
-  placePiece(board, 'elephant', 'black', 0, 6);
-  placePiece(board, 'horse', 'black', 0, 7);
-  placePiece(board, 'chariot', 'black', 0, 8);
-  placePiece(board, 'cannon', 'black', 2, 1);
-  placePiece(board, 'cannon', 'black', 2, 7);
-  placePiece(board, 'soldier', 'black', 3, 0);
-  placePiece(board, 'soldier', 'black', 3, 2);
-  placePiece(board, 'soldier', 'black', 3, 4);
-  placePiece(board, 'soldier', 'black', 3, 6);
-  placePiece(board, 'soldier', 'black', 3, 8);
+
+  // 2. 创建所有棋子类型的池子（不包括将帅）
+  const pieceTypes: PieceType[] = [
+    'chariot', 'chariot', 'horse', 'horse', 'elephant', 'elephant', 
+    'advisor', 'advisor', 'cannon', 'cannon', 
+    'soldier', 'soldier', 'soldier', 'soldier', 'soldier'
+  ];
+  
+  // 红黑双方各自的棋子池
+  const redPieces: Piece[] = pieceTypes.map((type, i) => ({
+    type,
+    player: 'red',
+    id: `red-${type}-${i}`
+  }));
+  
+  const blackPieces: Piece[] = pieceTypes.map((type, i) => ({
+    type,
+    player: 'black',
+    id: `black-${type}-${i}`
+  }));
+  
+  // 3. 随机打乱棋子池
+  for (let i = redPieces.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [redPieces[i], redPieces[j]] = [redPieces[j], redPieces[i]];
+  }
+  
+  for (let i = blackPieces.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [blackPieces[i], blackPieces[j]] = [blackPieces[j], blackPieces[i]];
+  }
+  
+  // 4. 放置红方暗子（按位置）
+  let redIndex = 0;
+  // 底线棋子（车马相士）
+  for (let col = 0; col < 9; col++) {
+    if (col !== 4) { // 跳过将帅位置
+      board[9][col] = {
+        ...redPieces[redIndex++],
+        isHidden: true,
+        originalPosition: {row: 9, col} // 记录原始位置，用于确定走法
+      } as HiddenPiece;
+    }
+  }
+  // 炮的位置
+  board[7][1] = {
+    ...redPieces[redIndex++],
+    isHidden: true,
+    originalPosition: {row: 7, col: 1}
+  } as HiddenPiece;
+  board[7][7] = {
+    ...redPieces[redIndex++],
+    isHidden: true,
+    originalPosition: {row: 7, col: 7}
+  } as HiddenPiece;
+  // 兵的位置
+  for (let col = 0; col < 9; col += 2) {
+    board[6][col] = {
+      ...redPieces[redIndex++],
+      isHidden: true,
+      originalPosition: {row: 6, col}
+    } as HiddenPiece;
+  }
+
+  // 5. 放置黑方暗子（按位置）
+  let blackIndex = 0;
+  // 底线棋子（车马相士）
+  for (let col = 0; col < 9; col++) {
+    if (col !== 4) { // 跳过将帅位置
+      board[0][col] = {
+        ...blackPieces[blackIndex++],
+        isHidden: true,
+        originalPosition: {row: 0, col} // 记录原始位置，用于确定走法
+      } as HiddenPiece;
+    }
+  }
+  // 炮的位置
+  board[2][1] = {
+    ...blackPieces[blackIndex++],
+    isHidden: true,
+    originalPosition: {row: 2, col: 1}
+  } as HiddenPiece;
+  board[2][7] = {
+    ...blackPieces[blackIndex++],
+    isHidden: true,
+    originalPosition: {row: 2, col: 7}
+  } as HiddenPiece;
+  // 卒的位置
+  for (let col = 0; col < 9; col += 2) {
+    board[3][col] = {
+      ...blackPieces[blackIndex++],
+      isHidden: true,
+      originalPosition: {row: 3, col}
+    } as HiddenPiece;
+  }
 
   return board;
 }
@@ -88,86 +195,66 @@ export function isInPalace(position: Position, player: Player): boolean {
   return isValidCol && isValidRow;
 }
 
-// 判断棋子移动是否合法
-export function isValidMove(
+// 新增：根据棋子类型判断走法（不依赖piece.type）
+function isValidMoveByType(
   board: Board,
-  fromPos: Position,
-  toPos: Position,
-  currentPlayer: Player,
-  silent: boolean = true // 添加静默参数，默认为false
+  from: Position,
+  to: Position,
+  pieceType: PieceType,
+  player: Player,
+  canCrossRiver: boolean = false
 ): boolean {
-  // 判断是否使用全局静默模式
-  const isSilent = GLOBAL_SILENT_MODE || silent;
-
-  // 基本验证
-  // 检查起始位置和目标位置是否在棋盘内
-  if (!isPositionInBoard(fromPos) || !isPositionInBoard(toPos)) {
-    if (!isSilent) console.log(`移动验证失败: 位置超出棋盘范围 (${fromPos.row},${fromPos.col})->(${toPos.row},${toPos.col})`);
-    return false;
-  }
-
-  // 检查起始位置是否有棋子
-  const piece = board[fromPos.row][fromPos.col];
-  if (!piece) {
-    if (!isSilent) console.log(`移动验证失败: 起始位置没有棋子 (${fromPos.row},${fromPos.col})`);
-    return false;
-  }
-
-  // 检查是否是当前玩家的棋子
-  if (piece.player !== currentPlayer) {
-    if (!isSilent) console.log(`移动验证失败: 不是当前玩家的棋子 ${piece.player}!=${currentPlayer}`);
-    return false;
-  }
-
-  // 如果起始位置和目标位置相同，不是有效移动
-  if (fromPos.row === toPos.row && fromPos.col === toPos.col) {
-    if (!isSilent) console.log(`移动验证失败: 起始位置和目标位置相同`);
-    return false;
-  }
-
-  // 检查目标位置是否有己方棋子
-  const targetPiece = board[toPos.row][toPos.col];
-  if (targetPiece && targetPiece.player === currentPlayer) {
-    if (!isSilent) console.log(`移动验证失败: 目标位置有己方棋子`);
-    return false;
-  }
-
-  // 根据不同棋子类型检查移动规则
-  let result = false;
-  switch (piece.type) {
+  // 不能吃自己的棋子
+  if (board[to.row][to.col]?.player === player) return false;
+  // 修正：未翻开的暗子，pieceType 必须用 getEffectivePieceType
+  const piece = board[from.row][from.col];
+  let realType = piece ? getEffectivePieceType(piece, from) : pieceType;
+  switch (realType) {
     case 'general':
-      result = isValidGeneralMove(board, fromPos, toPos, piece.player);
-      break;
+      return isValidGeneralMove(board, from, to, player);
     case 'advisor':
-      result = isValidAdvisorMove(board, fromPos, toPos, piece.player);
-      break;
+      return isValidAdvisorMove(board, from, to, player, canCrossRiver);
     case 'elephant':
-      result = isValidElephantMove(board, fromPos, toPos, piece.player);
-      break;
+      return isValidElephantMove(board, from, to, player, canCrossRiver);
     case 'horse':
-      result = isValidHorseMove(board, fromPos, toPos);
-      break;
+      return isValidHorseMove(board, from, to);
     case 'chariot':
-      result = isValidChariotMove(board, fromPos, toPos);
-      break;
+      return isValidChariotMove(board, from, to);
     case 'cannon':
-      result = isValidCannonMove(board, fromPos, toPos);
-      break;
+      return isValidCannonMove(board, from, to);
     case 'soldier':
-      result = isValidSoldierMove(board, fromPos, toPos, piece.player);
-      break;
+      return isValidSoldierMove(board, from, to, player);
     default:
-      if (!isSilent) console.log(`移动验证失败: 未知棋子类型 ${piece.type}`);
-      result = false;
-      break;
+      return false;
   }
+}
 
-  // 打印调试信息
-  if (!result && !isSilent) {
-    // console.log(`移动验证失败: ${piece.type}(${fromPos.row},${fromPos.col})->(${toPos.row},${toPos.col}) 不符合该棋子移动规则`);
+// 原有的移动规则函数
+function isValidMoveNormal(board: Board, from: Position, to: Position, canCrossRiver: boolean = false): boolean {
+  const piece = board[from.row][from.col];
+  if (!piece) return false;
+  // 不能吃自己的棋子
+  if (board[to.row][to.col]?.player === piece.player) return false;
+  // 修正：未翻开的暗子，pieceType 必须用 getEffectivePieceType
+  let realType = getEffectivePieceType(piece, from);
+  switch (realType) {
+    case 'general':
+      return isValidGeneralMove(board, from, to, piece.player);
+    case 'advisor':
+      return isValidAdvisorMove(board, from, to, piece.player, canCrossRiver);
+    case 'elephant':
+      return isValidElephantMove(board, from, to, piece.player, canCrossRiver);
+    case 'horse':
+      return isValidHorseMove(board, from, to);
+    case 'chariot':
+      return isValidChariotMove(board, from, to);
+    case 'cannon':
+      return isValidCannonMove(board, from, to);
+    case 'soldier':
+      return isValidSoldierMove(board, from, to, piece.player);
+    default:
+      return false;
   }
-
-  return result;
 }
 
 // 将/帅的移动规则
@@ -216,9 +303,9 @@ function isValidGeneralMove(board: Board, fromPos: Position, toPos: Position, pl
 }
 
 // 士/仕的移动规则
-function isValidAdvisorMove(board: Board, fromPos: Position, toPos: Position, player: Player): boolean {
-  // 士仕只能在九宫格内移动
-  if (!isInPalace(toPos, player)) return false;
+function isValidAdvisorMove(board: Board, fromPos: Position, toPos: Position, player: Player, canCrossRiver: boolean = false): boolean {
+  // 如果允许过河，则不需要检查九宫格限制
+  if (!canCrossRiver && !isInPalace(toPos, player)) return false;
 
   const rowDiff = Math.abs(toPos.row - fromPos.row);
   const colDiff = Math.abs(toPos.col - fromPos.col);
@@ -228,10 +315,12 @@ function isValidAdvisorMove(board: Board, fromPos: Position, toPos: Position, pl
 }
 
 // 象/相的移动规则
-function isValidElephantMove(board: Board, fromPos: Position, toPos: Position, player: Player): boolean {
-  // 象相不能过河
-  if (player === 'red' && toPos.row < 5) return false;
-  if (player === 'black' && toPos.row > 4) return false;
+function isValidElephantMove(board: Board, fromPos: Position, toPos: Position, player: Player, canCrossRiver: boolean = false): boolean {
+  // 如果不允许过河，则检查过河限制
+  if (!canCrossRiver) {
+    if (player === 'red' && toPos.row < 5) return false;
+    if (player === 'black' && toPos.row > 4) return false;
+  }
 
   const rowDiff = Math.abs(toPos.row - fromPos.row);
   const colDiff = Math.abs(toPos.col - fromPos.col);
@@ -413,7 +502,8 @@ export function findGeneral(board: Board, player: Player): Position | null {
 export function isInCheck(
   board: Board,
   player: Player,
-  silent: boolean = true // 添加silent参数
+  silent: boolean = true, // 添加silent参数
+  gameType: 'normal' | 'hidden' = 'normal'
 ): CheckStatus {
   // 使用全局静默模式或传入的silent参数
   const isSilent = GLOBAL_SILENT_MODE || silent;
@@ -432,7 +522,7 @@ export function isInCheck(
       if (piece && piece.player === opponent) {
         const fromPos = { row, col };
         // 使用isValidMove确认对方是否能够攻击将帅
-        if (isValidMove(board, fromPos, generalPosition, opponent, isSilent)) {
+        if (isValidMove(board, fromPos, generalPosition, gameType)) {
           checkedBy.push(piece);
           if (!isSilent) {
             console.log(`${player}方将/帅被${opponent}方${piece.type}将军`);
@@ -484,26 +574,27 @@ export function isMoveSafeFromCheck(
   fromPos: Position,
   toPos: Position,
   player: Player,
-  silent: boolean = false // 添加silent参数
+  silent: boolean = false, // 添加silent参数
+  gameType: 'normal' | 'hidden' = 'normal'
 ): boolean {
   // 使用全局静默模式或传入的silent参数
   const isSilent = GLOBAL_SILENT_MODE || silent;
 
   // 模拟进行移动
-  const newBoard = makeMove(board, fromPos, toPos);
+  const newBoard = makeMove(board, fromPos, toPos, gameType);
 
   // 检查移动后是否处于被将军状态
-  const checkStatus = isInCheck(newBoard, player, isSilent);
+  const checkStatus = isInCheck(newBoard, player, isSilent, gameType);
 
   return !checkStatus.inCheck;
 }
 
 // 检查是否将死（无合法移动可以解除将军状态）
-export function isCheckmate(board: Board, player: Player, silent: boolean = false): boolean {
+export function isCheckmate(board: Board, player: Player, silent: boolean = false, gameType: 'normal' | 'hidden' = 'normal'): boolean {
   // 使用全局静默模式或传入的silent参数
   const isSilent = GLOBAL_SILENT_MODE || silent;
 
-  const checkStatus = isInCheck(board, player, isSilent);
+  const checkStatus = isInCheck(board, player, isSilent, gameType);
   if (!checkStatus.inCheck) return false;
 
   // 尝试每个棋子的每个可能移动，看是否能解除将军
@@ -514,11 +605,11 @@ export function isCheckmate(board: Board, player: Player, silent: boolean = fals
         const fromPos = { row, col };
 
         // 使用getPotentialMoves获取可能的移动，减少遍历次数
-        const potentialMoves = getPotentialMoves(board, fromPos, piece.type, player, true);
+        const potentialMoves = getPotentialMoves(board, fromPos, piece.type, player, true, gameType);
         for (const toPos of potentialMoves) {
           // 如果移动合法且可以解除将军状态
-          if (isValidMove(board, fromPos, toPos, player, true) &&
-              isMoveSafeFromCheck(board, fromPos, toPos, player, isSilent)) {
+          if (isValidMove(board, fromPos, toPos, gameType) &&
+              isMoveSafeFromCheck(board, fromPos, toPos, player, isSilent, gameType)) {
             return false; // 找到了一个可以解除将军的移动
           }
         }
@@ -531,22 +622,33 @@ export function isCheckmate(board: Board, player: Player, silent: boolean = fals
 }
 
 // 执行移动，返回移动后的新棋盘
-export function makeMove(board: Board, fromPos: Position, toPos: Position): Board {
+export function makeMove(
+  board: Board,
+  from: Position,
+  to: Position,
+  gameType: 'normal' | 'hidden' = 'normal'
+): Board {
   const newBoard = copyBoard(board);
+  const piece = newBoard[from.row][from.col];
+  if (!piece) return newBoard;
 
-  // 获取被吃的棋子（如果有）
-  const capturedPiece = newBoard[toPos.row][toPos.col];
-
-  // 移动棋子
-  const piece = newBoard[fromPos.row][fromPos.col];
-  newBoard[toPos.row][toPos.col] = piece;
-  newBoard[fromPos.row][fromPos.col] = null;
-
+  // 修正：揭棋模式下暗子移动，先翻明再移动
+  if (gameType === 'hidden' && (piece as HiddenPiece).isHidden) {
+    // 先翻明（去掉 isHidden 和 originalPosition）
+    const { isHidden, originalPosition, ...restProps } = piece as HiddenPiece;
+    // 生成明子对象
+    const revealed = { ...restProps };
+    // 目标位置放明子
+    newBoard[to.row][to.col] = revealed;
+  } else {
+    newBoard[to.row][to.col] = piece;
+  }
+  newBoard[from.row][from.col] = null;
   return newBoard;
 }
 
 // 获取电脑AI的移动
-export function getAIMove(board: Board, player: Player): { from: Position, to: Position } {
+export function getAIMove(board: Board, player: Player, gameType: 'normal' | 'hidden' = 'normal'): { from: Position, to: Position } {
   // 启用全局静默模式，抑制所有日志输出
   const previousSilentMode = GLOBAL_SILENT_MODE;
   GLOBAL_SILENT_MODE = true;
@@ -560,7 +662,7 @@ export function getAIMove(board: Board, player: Player): { from: Position, to: P
     const opponent = player === 'red' ? 'black' : 'red';
 
     // 检查当前是否处于将军状态，优先考虑解除将军
-    const inCheckStatus = isInCheck(board, player, true);
+    const inCheckStatus = isInCheck(board, player, true, gameType);
     let movesChecked = 0;
 
     // 遍历所有AI棋子
@@ -569,28 +671,34 @@ export function getAIMove(board: Board, player: Player): { from: Position, to: P
         const piece = board[row][col];
         if (piece && piece.player === player) {
           const fromPos = { row, col };
-
+          // 修正：暗子用原始位置规则
+          let moveType: PieceType;
+          if (gameType === 'hidden' && (piece as HiddenPiece).isHidden) {
+            moveType = getPieceTypeByPosition((piece as HiddenPiece).originalPosition || fromPos);
+          } else {
+            moveType = piece.type;
+          }
           // 快速找出可能的目标位置
-          const potentialMoves = getPotentialMoves(board, fromPos, piece.type, player, true);
+          const potentialMoves = getPotentialMoves(board, fromPos, moveType, player, true, gameType);
 
           for (const toPos of potentialMoves) {
             // 检查移动是否合法且安全 - AI必须遵循规则，不能自杀
-            if (isValidMove(board, fromPos, toPos, player, true) &&  // 添加silent=true参数
-                isMoveSafeFromCheck(board, fromPos, toPos, player, true)) {  // AI必须检查是否会导致自己被将军
+            if (isValidMove(board, fromPos, toPos, gameType) &&  // 添加gameType参数
+                isMoveSafeFromCheck(board, fromPos, toPos, player, true, gameType)) {  // AI必须检查是否会导致自己被将军
 
               movesChecked++;
 
               // 模拟移动
-              const newBoard = makeMove(board, fromPos, toPos);
+              const newBoard = makeMove(board, fromPos, toPos, gameType);
 
               // 优先考虑即时胜利
-              if (isImmediateWin(newBoard, toPos, player, opponent)) {
-                console.log(`AI找到了立即获胜的走法: ${piece.type} (${fromPos.row},${fromPos.col})->(${toPos.row},${toPos.col})`);
+              if (isImmediateWin(newBoard, toPos, player, opponent, gameType)) {
+                console.log(`AI找到了立即获胜的走法: ${moveType} (${fromPos.row},${fromPos.col})->(${toPos.row},${toPos.col})`);
                 return { from: fromPos, to: toPos };
               }
 
               // 提高搜索深度到3，使AI能够考虑更远的后果
-              const score = minimax(newBoard, 3, false, -Infinity, Infinity, player, opponent);
+              const score = minimax(newBoard, 3, false, -Infinity, Infinity, player, opponent, gameType);
 
               possibleMoves.push({ from: fromPos, to: toPos, score });
 
@@ -613,34 +721,16 @@ export function getAIMove(board: Board, player: Player): { from: Position, to: P
     const endTime = Date.now();
     const timeSpent = endTime - startTime;
 
-    // 添加调试信息
-    if (possibleMoves.length > 0) {
-      console.log(`AI考虑了${possibleMoves.length}种走法，耗时${timeSpent}ms，最佳分数: ${possibleMoves[0].score}`);
-      // 显示前三个最佳走法供参考
-      const topMoves = possibleMoves.slice(0, Math.min(3, possibleMoves.length));
-      topMoves.forEach((move, index) => {
-        const piece = board[move.from.row][move.from.col];
-        if (piece) {
-          console.log(`第${index+1}好的走法: ${piece.type} (${move.from.row},${move.from.col})->(${move.to.row},${move.to.col}) 分数: ${move.score}`);
-        }
-      });
+    // 如果没有找到任何可能的移动，返回一个默认移动
+    if (possibleMoves.length === 0) {
+      console.log('AI没有找到任何可能的移动');
+      return { from: { row: 0, col: 0 }, to: { row: 0, col: 0 } };
     }
 
-    // 选择最佳走法，高级AI应该总是选择最佳走法
-    if (possibleMoves.length > 0) {
-      // 高级AI不应随机选择次优走法，减少随机性提高棋力
-      const randomFactor = Math.random();
-      if (randomFactor > 0.95 && possibleMoves.length > 1) {
-        // 仅5%的概率选择第二好的走法，保持一定的不可预测性
-        return possibleMoves[1];
-      } else {
-        // 95%的概率选择最佳走法
-        return possibleMoves[0];
-      }
-    }
-
-    // 如果没有合法移动（极少情况），返回错误
-    throw new Error("AI没有找到有效走法");
+    // 返回最佳移动
+    const bestMove = possibleMoves[0];
+    console.log(`AI选择了最佳移动: ${bestMove.from.row},${bestMove.from.col}->${bestMove.to.row},${bestMove.to.col}，分数: ${bestMove.score}，耗时: ${timeSpent}ms`);
+    return { from: bestMove.from, to: bestMove.to };
   } finally {
     // 恢复之前的静默模式设置
     GLOBAL_SILENT_MODE = previousSilentMode;
@@ -648,7 +738,7 @@ export function getAIMove(board: Board, player: Player): { from: Position, to: P
 }
 
 // 检查是否是立即获胜的走法
-function isImmediateWin(board: Board, movePos: Position, player: Player, opponent: Player): boolean {
+function isImmediateWin(board: Board, movePos: Position, player: Player, opponent: Player, gameType: 'normal' | 'hidden' = 'normal'): boolean {
   // 检查是否吃掉了对方的将/帅
   const targetPiece = board[movePos.row][movePos.col];
 
@@ -657,22 +747,22 @@ function isImmediateWin(board: Board, movePos: Position, player: Player, opponen
   }
 
   // 检查是否将死对方
-  return isCheckmate(board, opponent, true);
+  return isCheckmate(board, opponent, true, gameType);
 }
 
 // 极大极小搜索算法 - 优化版
-function minimax(board: Board, depth: number, isMaximizing: boolean, alpha: number, beta: number, currentPlayer: Player, opponent: Player): number {
+function minimax(board: Board, depth: number, isMaximizing: boolean, alpha: number, beta: number, currentPlayer: Player, opponent: Player, gameType: 'normal' | 'hidden'): number {
   // 达到搜索深度或游戏结束，评估当前局面
   if (depth === 0) {
-    return evaluateBoard(board, currentPlayer, opponent);
+    return evaluateBoard(board, currentPlayer, opponent, gameType);
   }
 
   // 检查终局条件
-  if (isCheckmate(board, opponent)) {
+  if (isCheckmate(board, opponent, true, gameType)) {
     return 100000 + depth * 1000; // 尽快获胜，加上深度因子
   }
 
-  if (isCheckmate(board, currentPlayer)) {
+  if (isCheckmate(board, currentPlayer, true, gameType)) {
     return -100000 - depth * 1000; // 尽量避免被将死，减去深度因子
   }
 
@@ -688,16 +778,22 @@ function minimax(board: Board, depth: number, isMaximizing: boolean, alpha: numb
       const piece = board[row][col];
       if (piece && piece.player === activePlayer) {
         const fromPos = { row, col };
-
+        // 修正：暗子用原始位置规则
+        let moveType: PieceType;
+        if (gameType === 'hidden' && (piece as HiddenPiece).isHidden) {
+          moveType = getPieceTypeByPosition((piece as HiddenPiece).originalPosition || fromPos);
+        } else {
+          moveType = piece.type;
+        }
         // 获取潜在移动
-        const potentialMoves = getPotentialMoves(board, fromPos, piece.type, activePlayer, true);
+        const potentialMoves = getPotentialMoves(board, fromPos, moveType, activePlayer, true, gameType);
 
         for (const toPos of potentialMoves) {
           // 仅检查基本移动规则，加速验证过程
-          if (isValidMove(board, fromPos, toPos, activePlayer, true)) {  // 使用静默模式
+          if (isValidMove(board, fromPos, toPos, gameType)) {  // 使用静默模式
             // 模拟移动并快速评估
-            const newBoard = makeMove(board, fromPos, toPos);
-            const quickScore = quickEvaluate(newBoard, piece, toPos, currentPlayer, opponent, isMaximizing);
+            const newBoard = makeMove(board, fromPos, toPos, gameType);
+            const quickScore = quickEvaluate(newBoard, piece, toPos, currentPlayer, opponent, isMaximizing, gameType);
 
             allMoves.push({ fromPos, toPos, score: quickScore });
           }
@@ -719,12 +815,12 @@ function minimax(board: Board, depth: number, isMaximizing: boolean, alpha: numb
 
     for (const move of movesToConsider) {
       // 检查移动是否安全
-      if (isMoveSafeFromCheck(board, move.fromPos, move.toPos, currentPlayer, true)) {  // 使用静默模式
+      if (isMoveSafeFromCheck(board, move.fromPos, move.toPos, currentPlayer, true, gameType)) {  // 使用静默模式
         // 模拟移动
-        const newBoard = makeMove(board, move.fromPos, move.toPos);
+        const newBoard = makeMove(board, move.fromPos, move.toPos, gameType);
 
         // 递归计算分数
-        const score = minimax(newBoard, depth - 1, false, alpha, beta, currentPlayer, opponent);
+        const score = minimax(newBoard, depth - 1, false, alpha, beta, currentPlayer, opponent, gameType);
         maxScore = Math.max(maxScore, score);
 
         // Alpha-Beta剪枝
@@ -735,19 +831,19 @@ function minimax(board: Board, depth: number, isMaximizing: boolean, alpha: numb
       }
     }
 
-    return maxScore === -Infinity ? evaluateBoard(board, currentPlayer, opponent) : maxScore;
+    return maxScore === -Infinity ? evaluateBoard(board, currentPlayer, opponent, gameType) : maxScore;
   } else {
     // 对手回合，寻找最小分数
     let minScore = Infinity;
 
     for (const move of movesToConsider) {
       // 检查移动是否安全
-      if (isMoveSafeFromCheck(board, move.fromPos, move.toPos, opponent, true)) {  // 使用静默模式
+      if (isMoveSafeFromCheck(board, move.fromPos, move.toPos, opponent, true, gameType)) {  // 使用静默模式
         // 模拟移动
-        const newBoard = makeMove(board, move.fromPos, move.toPos);
+        const newBoard = makeMove(board, move.fromPos, move.toPos, gameType);
 
         // 递归计算分数
-        const score = minimax(newBoard, depth - 1, true, alpha, beta, currentPlayer, opponent);
+        const score = minimax(newBoard, depth - 1, true, alpha, beta, currentPlayer, opponent, gameType);
         minScore = Math.min(minScore, score);
 
         // Alpha-Beta剪枝
@@ -758,12 +854,12 @@ function minimax(board: Board, depth: number, isMaximizing: boolean, alpha: numb
       }
     }
 
-    return minScore === Infinity ? evaluateBoard(board, currentPlayer, opponent) : minScore;
+    return minScore === Infinity ? evaluateBoard(board, currentPlayer, opponent, gameType) : minScore;
   }
 }
 
 // 快速评估函数 - 增强版
-function quickEvaluate(board: Board, piece: Piece, movePos: Position, player: Player, opponent: Player, isMaximizing: boolean): number {
+function quickEvaluate(board: Board, piece: Piece, movePos: Position, player: Player, opponent: Player, isMaximizing: boolean, gameType: 'normal' | 'hidden' = 'normal'): number {
   // 棋子价值表 - 调整价值以反映高级象棋认知
   const pieceValues: Record<PieceType, number> = {
     'general': 10000,
@@ -779,17 +875,19 @@ function quickEvaluate(board: Board, piece: Piece, movePos: Position, player: Pl
 
   // 1. 如果能吃子，加分
   const targetPiece = board[movePos.row][movePos.col];
+  let targetType = targetPiece ? getEffectivePieceType(targetPiece, { row: movePos.row, col: movePos.col }) : null;
   if (targetPiece) {
-    score += pieceValues[targetPiece.type] * 1.2; // 提高吃子价值
+    score += pieceValues[targetType!] * 1.2; // 提高吃子价值
 
     // 如果能吃将/帅，给极高分数
-    if (targetPiece.type === 'general') {
+    if (targetType === 'general') {
       return isMaximizing ? 9999 : -9999;
     }
   }
 
   // 2. 如果是兵/卒过河，加分
-  if (piece.type === 'soldier') {
+  const myType = getEffectivePieceType(piece, movePos);
+  if (myType === 'soldier') {
     const hasCrossedRiver = (piece.player === 'red' && movePos.row < 5) ||
                           (piece.player === 'black' && movePos.row > 4);
     if (hasCrossedRiver) {
@@ -798,7 +896,7 @@ function quickEvaluate(board: Board, piece: Piece, movePos: Position, player: Pl
   }
 
   // 3. 控制中心点和要道
-  if (['chariot', 'horse', 'cannon'].includes(piece.type)) {
+  if ([ 'chariot', 'horse', 'cannon' ].includes(myType)) {
     // 估计中心控制
     const centerScore = 8 - Math.abs(movePos.col - 4) - Math.abs(movePos.row - 4.5);
     score += centerScore * 8; // 提高中心控制价值
@@ -810,14 +908,14 @@ function quickEvaluate(board: Board, piece: Piece, movePos: Position, player: Pl
   }
 
   // 4. 增加马、车、炮的机动性奖励
-  if (piece.type === 'horse') {
+  if (myType === 'horse') {
     // 马靠近中心更灵活
     const mobilityBonus = 6 - (Math.abs(movePos.col - 4) + Math.abs(movePos.row - 4.5)) / 2;
     score += mobilityBonus * 10;
-  } else if (piece.type === 'chariot') {
+  } else if (myType === 'chariot') {
     // 车在开阔位置更有价值
     score += countOpenLines(board, movePos) * 15;
-  } else if (piece.type === 'cannon') {
+  } else if (myType === 'cannon') {
     // 炮有潜在的炮架更有价值
     let potentialPawnCount = 0;
     // 检查横向和纵向的潜在炮架
@@ -831,19 +929,37 @@ function quickEvaluate(board: Board, piece: Piece, movePos: Position, player: Pl
   }
 
   // 5. 考虑安全性
-  if (isPieceEndangered(board, movePos, piece.player)) {
-    score -= pieceValues[piece.type] / 2; // 如果棋子处于危险中，减分
+  if (isPieceEndangered(board, movePos, piece.player, gameType)) {
+    score -= pieceValues[myType] / 2; // 如果棋子处于危险中，减分
   }
 
   return isMaximizing ? score : -score;
 }
 
 // 获取棋子可能的移动位置，减少遍历整个棋盘
-function getPotentialMoves(board: Board, fromPos: Position, pieceType: PieceType, player: Player, silent: boolean = true): Position[] {
+function getPotentialMoves(board: Board, fromPos: Position, pieceType: PieceType, player: Player, silent: boolean = true, gameType: 'normal' | 'hidden' = 'normal'): Position[] {
+  const piece = board[fromPos.row][fromPos.col];
+  // 如果是暗棋，只能走暗棋第一步规则
+  if (piece && (piece as any).isHidden) {
+    const moves: Position[] = [];
+    for (let row = 0; row < BOARD_ROWS; row++) {
+      for (let col = 0; col < BOARD_COLS; col++) {
+        const toPos = { row, col };
+        if (isValidHiddenPieceFirstMove(board, fromPos, toPos, piece)) {
+          moves.push(toPos);
+        }
+      }
+    }
+    return moves;
+  }
+  // ...原有明棋逻辑...
   const moves: Position[] = [];
   const { row, col } = fromPos;
 
-  switch (pieceType) {
+  // 修正：未翻开的暗子，pieceType 必须用 getEffectivePieceType
+  let realPieceType = piece ? getEffectivePieceType(piece, fromPos) : pieceType;
+
+  switch (realPieceType) {
     case 'general': // 将/帅只能在九宫格内移动
       // 上下左右四个方向，每次一格
       const directions = [[0, 1], [1, 0], [0, -1], [-1, 0]]; // 右、下、左、上
@@ -1025,27 +1141,28 @@ function getPotentialMoves(board: Board, fromPos: Position, pieceType: PieceType
   // 过滤掉目标位置有己方棋子的移动
   return moves.filter(toPos => {
     const targetPiece = board[toPos.row][toPos.col];
-    return targetPiece === null || targetPiece.player !== player;
+    // 修正：未翻开的暗子，pieceType 必须用 getEffectivePieceType
+    const useType = piece ? getEffectivePieceType(piece, fromPos) : pieceType;
+    return (targetPiece === null || targetPiece.player !== player) && isValidMoveByType(board, fromPos, toPos, useType, player, gameType === 'hidden' ? false : undefined);
   });
 }
 
 // 检查棋子是否处于危险中（会被吃掉）
-function isPieceEndangered(board: Board, position: Position, player: Player): boolean {
+function isPieceEndangered(board: Board, position: Position, player: Player, gameType: 'normal' | 'hidden' = 'normal'): boolean {
   const opponent = player === 'red' ? 'black' : 'red';
-
-  // 检查对手的每个棋子是否可以吃掉此位置的棋子
   for (let row = 0; row < BOARD_ROWS; row++) {
     for (let col = 0; col < BOARD_COLS; col++) {
       const piece = board[row][col];
       if (piece && piece.player === opponent) {
         const fromPos = { row, col };
-        if (isValidMove(board, fromPos, position, opponent, true)) {
+        // 用原始类型判断威胁
+        const pieceType = getEffectivePieceType(piece, fromPos);
+        if (isValidMoveByType(board, fromPos, position, pieceType, opponent)) {
           return true;
         }
       }
     }
   }
-
   return false;
 }
 
@@ -1060,8 +1177,12 @@ function countThreatenedPieces(board: Board, position: Position, player: Player)
       const piece = board[row][col];
       if (piece && piece.player === opponent) {
         // 检查是否可以吃到这个敌方棋子
-        if (isValidMove(board, position, { row, col }, player, true)) {
-          count++;
+        const selfPiece = board[position.row][position.col];
+        if (selfPiece) {
+          const pieceType = getEffectivePieceType(selfPiece, position);
+          if (isValidMoveByType(board, position, { row, col }, pieceType, player)) {
+            count++;
+          }
         }
       }
     }
@@ -1119,17 +1240,20 @@ function countProtectedPieces(board: Board, position: Position, player: Player):
   let count = 0;
   const piece = board[position.row][position.col];
   if (!piece) return 0;
+  const myType = getEffectivePieceType(piece, position);
 
   // 遍历棋盘寻找己方棋子
   for (let row = 0; row < BOARD_ROWS; row++) {
     for (let col = 0; col < BOARD_COLS; col++) {
       const targetPiece = board[row][col];
-      if (targetPiece && targetPiece.player === player &&
-          ['general', 'chariot', 'horse'].includes(targetPiece.type)) {
-        // 检查是否在保护范围内
-        const distance = Math.abs(position.row - row) + Math.abs(position.col - col);
-        if (distance <= 2) {
-          count++;
+      if (targetPiece && targetPiece.player === player) {
+        const targetType = getEffectivePieceType(targetPiece, { row, col });
+        if ([ 'general', 'chariot', 'horse' ].includes(targetType)) {
+          // 检查是否在保护范围内
+          const distance = Math.abs(position.row - row) + Math.abs(position.col - col);
+          if (distance <= 2) {
+            count++;
+          }
         }
       }
     }
@@ -1139,29 +1263,29 @@ function countProtectedPieces(board: Board, position: Position, player: Player):
 }
 
 // 评估移动的分数 - 为兼容旧代码保留此函数，但进行优化
-function evaluateMove(board: Board, fromPos: Position, toPos: Position, player: Player, opponent: Player): number {
+function evaluateMove(board: Board, fromPos: Position, toPos: Position, player: Player, opponent: Player, gameType: 'normal' | 'hidden' = 'normal'): number {
   // 模拟移动
-  const newBoard = makeMove(board, fromPos, toPos);
+  const newBoard = makeMove(board, fromPos, toPos, gameType);
 
   // 使用更先进的局面评估
-  return evaluateBoard(newBoard, player, opponent);
+  return evaluateBoard(newBoard, player, opponent, gameType);
 }
 
 // 评估整个棋盘的分数 - 增强版
-function evaluateBoard(board: Board, player: Player, opponent: Player): number {
+function evaluateBoard(board: Board, player: Player, opponent: Player, gameType: 'normal' | 'hidden' = 'normal'): number {
   let score = 0;
 
   // 检查是否将军或被将军
-  const playerInCheck = isInCheck(board, player);
-  const opponentInCheck = isInCheck(board, opponent);
+  const playerInCheck = isInCheck(board, player, true, gameType);
+  const opponentInCheck = isInCheck(board, opponent, true, gameType);
 
   // 如果对手被将死，返回最高分
-  if (isCheckmate(board, opponent)) {
+  if (isCheckmate(board, opponent, true, gameType)) {
     return 100000;
   }
 
   // 如果自己被将死，返回最低分
-  if (isCheckmate(board, player)) {
+  if (isCheckmate(board, player, true, gameType)) {
     return -100000;
   }
 
@@ -1337,7 +1461,7 @@ function evaluateBoard(board: Board, player: Player, opponent: Player): number {
           score -= totalValue;
 
           // 考虑是否威胁对方重要棋子
-          if (isPieceEndangered(board, { row, col }, opponent)) {
+          if (isPieceEndangered(board, { row, col }, opponent, gameType)) {
             score += materialValue / 1.8; // 威胁对方棋子加分，但减少比例避免过度冒险
           }
 
@@ -1480,5 +1604,200 @@ export function isPlayerMoveAllowed(
   }
 
   // 如果是玩家移动，只检查基本走法是否正确
-  return isValidMove(board, fromPos, toPos, player, silent);
+  return isValidMove(board, fromPos, toPos);
+}
+
+// 判断暗棋第一步走法是否合法
+function isValidHiddenPieceFirstMove(board: Board, from: Position, to: Position, piece: Piece): boolean {
+  const targetPiece = board[to.row][to.col];
+  // 不能吃自己
+  if (targetPiece && targetPiece.player === piece.player) return false;
+
+  switch (piece.type) {
+    case 'soldier':
+      // 暗兵第一步只能向前一格
+      if (piece.player === 'red') {
+        return from.row - to.row === 1 && from.col === to.col;
+      } else {
+        return to.row - from.row === 1 && from.col === to.col;
+      }
+    case 'cannon':
+      // 暗炮第一步可以水平或垂直移动，吃子时必须跳过一个棋子
+      if (from.row === to.row || from.col === to.col) {
+        if (!targetPiece) {
+          // 不吃子，不能有障碍
+          if (from.row === to.row) {
+            const minCol = Math.min(from.col, to.col);
+            const maxCol = Math.max(from.col, to.col);
+            for (let col = minCol + 1; col < maxCol; col++) {
+              if (board[from.row][col]) return false;
+            }
+          } else {
+            const minRow = Math.min(from.row, to.row);
+            const maxRow = Math.max(from.row, to.row);
+            for (let row = minRow + 1; row < maxRow; row++) {
+              if (board[row][from.col]) return false;
+            }
+          }
+          return true;
+        } else {
+          // 吃子，必须正好跳过一个棋子
+          let piecesInPath = 0;
+          if (from.row === to.row) {
+            const minCol = Math.min(from.col, to.col);
+            const maxCol = Math.max(from.col, to.col);
+            for (let col = minCol + 1; col < maxCol; col++) {
+              if (board[from.row][col]) piecesInPath++;
+            }
+          } else {
+            const minRow = Math.min(from.row, to.row);
+            const maxRow = Math.max(from.row, to.row);
+            for (let row = minRow + 1; row < maxRow; row++) {
+              if (board[row][from.col]) piecesInPath++;
+            }
+          }
+          return piecesInPath === 1;
+        }
+      }
+      return false;
+    case 'chariot':
+      // 暗车第一步可以水平或垂直移动，可以直接吃掉受攻击范围内的任何棋子
+      if (from.row === to.row) {
+        const minCol = Math.min(from.col, to.col);
+        const maxCol = Math.max(from.col, to.col);
+        for (let col = minCol + 1; col < maxCol; col++) {
+          if (board[from.row][col]) return false;
+        }
+        return true;
+      } else if (from.col === to.col) {
+        const minRow = Math.min(from.row, to.row);
+        const maxRow = Math.max(from.row, to.row);
+        for (let row = minRow + 1; row < maxRow; row++) {
+          if (board[row][from.col]) return false;
+        }
+        return true;
+      }
+      return false;
+    case 'horse':
+      // 暗马第一步按日字形移动，不能蹩马腿
+      const rowDiff = Math.abs(to.row - from.row);
+      const colDiff = Math.abs(to.col - from.col);
+      if ((rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2)) {
+        // 检查蹩马腿
+        let blockRow, blockCol;
+        if (rowDiff === 2) {
+          blockRow = from.row + (to.row > from.row ? 1 : -1);
+          blockCol = from.col;
+        } else {
+          blockRow = from.row;
+          blockCol = from.col + (to.col > from.col ? 1 : -1);
+        }
+        return !board[blockRow][blockCol];
+      }
+      return false;
+    case 'elephant':
+      // 暗象第一步按田字形移动，不能塞象眼
+      if (Math.abs(to.row - from.row) === 2 && Math.abs(to.col - from.col) === 2) {
+        const blockRow = (from.row + to.row) / 2;
+        const blockCol = (from.col + to.col) / 2;
+        return !board[blockRow][blockCol];
+      }
+      return false;
+    case 'advisor':
+      // 暗士第一步限九宫内沿斜线移动
+      if (!isInPalace(to, piece.player)) return false;
+      return Math.abs(to.row - from.row) === 1 && Math.abs(to.col - from.col) === 1;
+    case 'general':
+      // 暗将限九宫内移动
+      if (!isInPalace(to, piece.player)) return false;
+      return (Math.abs(to.row - from.row) === 1 && from.col === to.col) ||
+             (Math.abs(to.col - from.col) === 1 && from.row === to.row);
+    default:
+      return false;
+  }
+}
+
+// 根据位置判断应该按什么规则走
+function getPieceTypeByPosition(pos: Position): PieceType {
+  const { row, col } = pos;
+  
+  // 红方
+  if (row >= 7) {
+    if (row === 9) {
+      if (col === 0 || col === 8) return 'chariot';
+      if (col === 1 || col === 7) return 'horse';
+      if (col === 2 || col === 6) return 'elephant';
+      if (col === 3 || col === 5) return 'advisor';
+      if (col === 4) return 'general';
+    }
+    if (row === 7) {
+      if (col === 1 || col === 7) return 'cannon';
+    }
+    if (row === 6) {
+      if (col === 0 || col === 2 || col === 4 || col === 6 || col === 8) return 'soldier';
+    }
+  }
+  
+  // 黑方
+  if (row <= 2) {
+    if (row === 0) {
+      if (col === 0 || col === 8) return 'chariot';
+      if (col === 1 || col === 7) return 'horse';
+      if (col === 2 || col === 6) return 'elephant';
+      if (col === 3 || col === 5) return 'advisor';
+      if (col === 4) return 'general';
+    }
+    if (row === 2) {
+      if (col === 1 || col === 7) return 'cannon';
+    }
+    if (row === 3) {
+      if (col === 0 || col === 2 || col === 4 || col === 6 || col === 8) return 'soldier';
+    }
+  }
+  
+  // 默认返回兵，因为其他位置都是兵
+  return 'soldier';
+}
+
+// 判断棋子移动是否合法
+export function isValidMove(
+  board: Board,
+  from: Position,
+  to: Position,
+  gameType: 'normal' | 'hidden' = 'normal'
+): boolean {
+  // 检查位置是否在棋盘内
+  if (!isPositionInBoard(from) || !isPositionInBoard(to)) {
+    return false;
+  }
+  const piece = board[from.row][from.col];
+  if (!piece) return false;
+  // 揭棋模式的特殊规则
+  if (gameType === 'hidden') {
+    // 如果是暗子，按照其原始位置对应的棋子规则走
+    if ((piece as HiddenPiece).isHidden) {
+      const originalPos = (piece as HiddenPiece).originalPosition || from;
+      const pieceType = getPieceTypeByPosition(originalPos);
+      // 暗子走法不允许象/士过河
+      return isValidMoveByType(board, from, to, pieceType, piece.player, false);
+    }
+    // 如果是明子，允许相（象）和仕（士）过河
+    // 修正：明子也用 getEffectivePieceType
+    const realType = getEffectivePieceType(piece, from);
+    return isValidMoveNormal(board, from, to, realType === 'advisor' || realType === 'elephant');
+  }
+  // 普通模式的规则
+  // 修正：普通模式也用 getEffectivePieceType
+  const realType = getEffectivePieceType(piece, from);
+  return isValidMoveNormal(board, from, to, realType === 'advisor' || realType === 'elephant');
+}
+
+// 辅助函数：获取棋子的有效类型（未翻开的暗子用原始位置规则，否则用真实类型）
+function getEffectivePieceType(piece: Piece, pos: Position): PieceType {
+  if ((piece as any).isHidden) {
+    // @ts-ignore
+    const originalPos = (piece as any).originalPosition || pos;
+    return getPieceTypeByPosition(originalPos);
+  }
+  return piece.type;
 }
