@@ -262,3 +262,31 @@ export async function updateMyUserUsingPost(
     ...(options || {}),
   });
 }
+
+/** 用户数据（仅管理员） POST /api/user/get/UserDataWebVO */
+export async function getUserDataWebVO(
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseGetUserDataWebVO_>('/api/user/get/UserDataWebVO', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    ...(options || {}),
+  });
+}
+
+/** 新增用户走势图（仅管理员） POST /api/user/get/NewUserDataWebVO */
+export async function getNewUserDataWebVO(
+  body: API.NewUserDataWebRequest,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseGetNewUserDataWebVO_>('/api/user/get/NewUserDataWebVO', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
