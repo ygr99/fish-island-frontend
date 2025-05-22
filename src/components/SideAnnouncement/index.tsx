@@ -58,9 +58,9 @@ const SideAnnouncement: React.FC = () => {
         [styles.collapsed]: isCollapsed,
       })}
     >
-      <div className={styles.toggleButton} onClick={toggleCollapse}>
-        {isCollapsed ? '➡️' : '⬅️'}
-      </div>
+      {/*<div className={styles.toggleButton} onClick={toggleCollapse}>*/}
+      {/*  {isCollapsed ? '➡️' : '⬅️'}*/}
+      {/*</div>*/}
       <Card
         title="更新公告"
         className={styles.card}

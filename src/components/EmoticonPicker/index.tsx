@@ -2,11 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Input, Spin, Button, Tooltip, message } from 'antd';
 import { StarOutlined, StarFilled } from '@ant-design/icons';
 import styles from './index.less';
-import { debounce } from 'lodash';
-import { 
-  addEmoticonFavourUsingPost, 
-  deleteEmoticonFavourUsingPost, 
-  listEmoticonFavourByPageUsingPost 
+import {
+  addEmoticonFavourUsingPost,
+  deleteEmoticonFavourUsingPost,
+  listEmoticonFavourByPageUsingPost
 } from '@/services/backend/emoticonFavourController';
 import eventBus from '@/utils/eventBus';
 import { EMOTICON_FAVORITE_CHANGED } from '@/components/MessageContent';
@@ -47,6 +46,8 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
   const sogouListRef = useRef<HTMLDivElement>(null);
   const favoriteListRef = useRef<HTMLDivElement>(null);
   const hasFetchedFavorites = useRef(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
 
   // 获取收藏的表情包
   const fetchFavoriteEmoticons = async (page: number = 1) => {
@@ -67,7 +68,7 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
         current: page,
         pageSize: PAGE_SIZE,
       });
-      
+
       if (response.code === 0 && response.data) {
         const { records, total } = response.data;
         if (page === 1) {
@@ -150,13 +151,23 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
     }
 
     setSogouLoading(true);
+    setIsSearching(true);
     try {
+      // 首先尝试使用新的数据源
       const response = await fetch(
-        `https://moyuapi.codebug.icu/sogou-api/napi/wap/emoji/searchlist?keyword=${encodeURIComponent(searchKeyword)}&spver=&rcer=&tag=0&routeName=emosearch`
+        `https://cn.apihz.cn/api/img/apihzbqbbaidu.php?id=10004660&key=7c3485d99f196b59266266835e3982a9&limit=10&page=${page}&words=${encodeURIComponent(searchKeyword)}`
       );
       const data = await response.json();
-      if (data.status === 0 && data.data?.emotions) {
-        const newEmoticons = data.data.emotions.map((emoticon: Emoticon) => ({ ...emoticon, isError: false }));
+
+      if (data.code === 200 && data.res && data.res.length > 0) {
+        // 转换数据格式以匹配现有接口
+        const newEmoticons = data.res.map((url: string, index: number) => ({
+          thumbSrc: url,
+          idx: index,
+          source: url,
+          isError: false
+        }));
+
         // 如果是第一页，直接设置新结果
         if (page === 1) {
           setSogouEmoticons(newEmoticons);
@@ -164,48 +175,76 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
           // 如果是加载更多，则追加到现有结果
           setSogouEmoticons(prev => [...prev, ...newEmoticons]);
         }
-        setHasMore(newEmoticons.length === PAGE_SIZE);
+        setHasMore(page < parseInt(data.maxpage));
         setSogouPage(page);
       } else {
-        // 如果请求失败或没有数据，清空结果
-        setSogouEmoticons([]);
-        setHasMore(false);
+        // 如果主数据源失败，尝试使用搜狗作为兜底
+        const sogouResponse = await fetch(
+          `https://moyuapi.codebug.icu/sogou-api/napi/wap/emoji/searchlist?keyword=${encodeURIComponent(searchKeyword)}&spver=&rcer=&tag=0&routeName=emosearch`
+        );
+        const sogouData = await sogouResponse.json();
+
+        if (sogouData.status === 0 && sogouData.data?.emotions) {
+          const newEmoticons = sogouData.data.emotions.map((emoticon: Emoticon) => ({ ...emoticon, isError: false }));
+          if (page === 1) {
+            setSogouEmoticons(newEmoticons);
+          } else {
+            setSogouEmoticons(prev => [...prev, ...newEmoticons]);
+          }
+          setHasMore(newEmoticons.length === PAGE_SIZE);
+          setSogouPage(page);
+        } else {
+          // 如果两个数据源都失败，清空结果
+          setSogouEmoticons([]);
+          setHasMore(false);
+        }
       }
     } catch (error) {
-      console.error('搜索搜狗表情包失败:', error);
+      console.error('搜索表情包失败:', error);
       // 发生错误时清空结果
       setSogouEmoticons([]);
       setHasMore(false);
     } finally {
       setSogouLoading(false);
+      setIsSearching(false);
     }
   };
 
-  const debouncedSogouSearch = debounce(searchSogouEmoticons, 500);
+  const handleSearch = (value: string) => {
+    setKeyword(value);
 
-  useEffect(() => {
-    // 每次关键词改变时，重置页码和状态
-    setSogouPage(1);
-    setHasMore(true);
-    setSogouEmoticons([]); // 清空之前的结果
-    debouncedSogouSearch(keyword, 1);
-    return () => {
-      debouncedSogouSearch.cancel();
-    };
-  }, [keyword]);
+    // 清除之前的定时器
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // 如果输入为空，清空结果
+    if (!value.trim()) {
+      setSogouEmoticons([]);
+      return;
+    }
+
+    // 设置新的定时器，延迟 800ms 后执行搜索
+    searchTimeoutRef.current = setTimeout(() => {
+      setSogouPage(1);
+      setHasMore(true);
+      setSogouEmoticons([]); // 清空之前的结果
+      searchSogouEmoticons(value, 1);
+    }, 800);
+  };
 
   useEffect(() => {
     // 初始加载收藏表情包
     fetchFavoriteEmoticons(1);
-    
+
     // 监听收藏变化事件
     const handleFavoriteChanged = () => {
       hasFetchedFavorites.current = false; // 重置标志，允许重新获取
       fetchFavoriteEmoticons(1);
     };
-    
+
     eventBus.on(EMOTICON_FAVORITE_CHANGED, handleFavoriteChanged);
-    
+
     // 组件卸载时取消订阅
     return () => {
       eventBus.off(EMOTICON_FAVORITE_CHANGED, handleFavoriteChanged);
@@ -218,7 +257,7 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
 
       const { scrollTop, scrollHeight, clientHeight } = sogouListRef.current;
       if (scrollHeight - scrollTop - clientHeight < 50) {
-        debouncedSogouSearch(keyword, sogouPage + 1);
+        searchSogouEmoticons(keyword, sogouPage + 1);
       }
     };
 
@@ -344,13 +383,25 @@ const EmoticonPicker: React.FC<EmoticonPickerProps> = ({ onSelect }) => {
     );
   };
 
+  // 组件卸载时清除定时器
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className={styles.emoticonPicker}>
-      <Input
+      <Input.Search
         placeholder="搜索表情包..."
         value={keyword}
-        onChange={(e) => setKeyword(e.target.value)}
+        onChange={(e) => handleSearch(e.target.value)}
+        onSearch={(value) => handleSearch(value)}
         className={styles.searchInput}
+        loading={isSearching}
+        allowClear
       />
       {keyword.trim() ? (
         renderSogouEmoticonList(sogouEmoticons)
