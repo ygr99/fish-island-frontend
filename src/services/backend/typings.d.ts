@@ -1152,7 +1152,7 @@ declare namespace API {
 
   type UserDataWebVO = {
     totalUsers: number;
-    currentActiveUsers: number;
+    todayActiveUsers: number;
     todayNewUsers: number;
     thisMonthNewUsers:  number;
   };

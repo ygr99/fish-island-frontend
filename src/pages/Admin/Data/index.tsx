@@ -20,7 +20,7 @@ const DataAdminPage: React.FC = () => {
   const [timeRange, setTimeRange] = useState<[moment.Moment, moment.Moment] | null>(null);
 
   const [totalUsers, setTotalUsers] = useState(0);
-  const [currentActiveUsers, setCurrentActiveUsers] = useState(0);
+  const [todayActiveUsers, setTodayActiveUsers] = useState(0);
   const [todayNewUsers, setTodayNewUsers] = useState(0);
   const [thisMonthNewUsers, setThisMonthNewUsers] = useState(0);
 
@@ -73,7 +73,7 @@ const DataAdminPage: React.FC = () => {
       getUserDataWebVO().then((res) => {
         if (res.data){
           setTotalUsers(res.data.totalUsers);
-          setCurrentActiveUsers(res.data.currentActiveUsers);
+          setTodayActiveUsers(res.data.todayActiveUsers);
           setTodayNewUsers(res.data.todayNewUsers);
           setThisMonthNewUsers(res.data.thisMonthNewUsers);
         }
@@ -143,8 +143,8 @@ const DataAdminPage: React.FC = () => {
           >
             <Statistic value={totalUsers} suffix={'人'} />
           </ProCard>
-          <ProCard title={'当前活跃'} style={{ width: '40vh' }}>
-            <Statistic value={currentActiveUsers} suffix={'人'} />
+          <ProCard title={'今日活跃'} style={{ width: '40vh' }}>
+            <Statistic value={todayActiveUsers} suffix={'人'} />
           </ProCard>
           <ProCard title={'今日新增'} style={{ width: '40vh' }}>
             <Statistic value={todayNewUsers} suffix={'人'} />
