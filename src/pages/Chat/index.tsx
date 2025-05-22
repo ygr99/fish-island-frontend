@@ -1584,9 +1584,13 @@ const ChatRoom: React.FC = () => {
       sender: {
         id: String(currentUser.id),
         name: currentUser.userName || '游客',
-        avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+        avatar:
+          currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
         level: currentUser.level || 1,
+        points: currentUser.points || 0, // 确保这里设置了积分
         isAdmin: currentUser.userRole === 'admin',
+        region: userIpInfo?.region || '未知地区',
+        country: userIpInfo?.country || '未知国家',
         avatarFramerUrl: currentUser.avatarFramerUrl,
         titleId: currentUser.titleId,
         titleIdList: currentUser.titleIdList,
