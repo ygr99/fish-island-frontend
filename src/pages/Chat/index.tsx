@@ -1091,7 +1091,11 @@ const ChatRoom: React.FC = () => {
     }
 
     if (!content.trim() && !pendingImageUrl && !pendingFileUrl) {
-      message.warning('请输入消息内容');
+      // 使用一个唯一的key来确保消息只显示一次
+      messageApi.warning({
+        content: '请输入消息内容',
+        key: 'emptyMessage',
+      });
       return;
     }
 
