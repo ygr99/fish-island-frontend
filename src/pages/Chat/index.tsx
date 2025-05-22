@@ -129,7 +129,7 @@ const ChatRoom: React.FC = () => {
   const loadingRef = useRef(false); // 添加loadingRef防止重复请求
 
   const [announcement, setAnnouncement] = useState<string>(
-    '欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢：感谢 yovvis 大佬赞助的服务器资源🌟，域名9月份过期，请移步新域名：<a href="https://yucoder.cn/" target="_blank" rel="noopener noreferrer">https://yucoder.cn/</a>。',
+    '欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢：感谢 yovvis 大佬赞助的服务器资源🌟，域名9月份过期，请移步新域名：<a href="https://yucoder.cn/" target="_blank" rel="noopener noreferrer">https://yucoder.cn/</a>。<br/>留言区🌟：🐟友 7878 留言：打倒绿头龟 渣男老 b 登',
   );
   const [showAnnouncement, setShowAnnouncement] = useState<boolean>(true);
 
@@ -1179,7 +1179,11 @@ const ChatRoom: React.FC = () => {
 
   // 处理@输入
   const handleMentionInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
+    let value = e.target.value;
+
+    // 过滤掉 ``` 字符
+    value = value.replace(/```/g, '');
+
     setInputValue(value);
 
     // 检查是否输入了#摸鱼日历
@@ -1267,10 +1271,24 @@ const ChatRoom: React.FC = () => {
     }, 0);
   };
 
+  // 添加一个生成简短唯一标识符的函数
+  const generateUniqueShortId = (userId: string): string => {
+    // 如果是数字ID，转换为16进制并取前4位
+    if (/^\d+$/.test(userId)) {
+      const hex = parseInt(userId).toString(16).toUpperCase();
+      return `#${hex.padStart(4, '0').slice(0, 4)}`;
+    }
+    // 如果是字符串ID，取前4个字符，不足则补0
+    return `#${userId.slice(0, 4).padEnd(4, '0').toUpperCase()}`;
+  };
+
   const UserInfoCard: React.FC<{ user: User }> = ({ user }) => {
     // 从 titleIdList 字符串解析称号 ID 数组
     const userTitleIds: number[] = user.titleIdList ? JSON.parse(user.titleIdList) : [];
     const [isTitlesExpanded, setIsTitlesExpanded] = useState(false);
+
+    // 生成用户唯一标识符
+    const userShortId = generateUniqueShortId(user.id);
 
     // 获取所有称号
     const allTitles = [
@@ -1309,12 +1327,18 @@ const ChatRoom: React.FC = () => {
               handleSelectMention(user);
             }}
           >
-            <div className={styles.avatarWithFrame}>
-              <Avatar src={user.avatar} size={48} />
-              {user.avatarFramerUrl && (
-                <img src={user.avatarFramerUrl} className={styles.avatarFrame} alt="avatar-frame" />
-              )}
-            </div>
+            <Popover
+              content={<div className={styles.userShortId}>{userShortId}</div>}
+              trigger="hover"
+              placement="bottom"
+            >
+              <div className={styles.avatarWithFrame}>
+                <Avatar src={user.avatar} size={48} />
+                {user.avatarFramerUrl && (
+                  <img src={user.avatarFramerUrl} className={styles.avatarFrame} alt="avatar-frame" />
+                )}
+              </div>
+            </Popover>
             <div className={styles.floatingFish}>🐟</div>
           </div>
           <div className={styles.userInfoCardTitle}>
@@ -1398,7 +1422,7 @@ const ChatRoom: React.FC = () => {
       case 7:
         return '👑'; // 最高级
       case 6:
-        return '🛏';
+        return '💫';
       case 5:
         return '🏖';
       case 4:
@@ -1479,7 +1503,7 @@ const ChatRoom: React.FC = () => {
         break;
       case 6:
         tagText = '躺平宗师';
-        tagEmoji = '🛏';
+        tagEmoji = '💫';
         tagClass = styles.levelTagExpert;
         break;
       case 5:
@@ -2148,6 +2172,15 @@ const ChatRoom: React.FC = () => {
           <div className={styles.musicInfo}>
             <div className={styles.musicTitle}>{currentMusic.name}</div>
             <div className={styles.musicArtist}>{currentMusic.artists}</div>
+            {/* <div className={styles.progressBar}>
+              <div
+                className={styles.progress}
+                style={{ width: `${(currentMusic.progress / currentMusic.duration) * 100}%` }}
+              />
+            </div> */}
+            {/* <div className={styles.timeInfo}>
+              {formatTime(currentMusic.progress)} / {formatTime(currentMusic.duration)}
+            </div> */}
           </div>
           <div className={styles.controls}>
             <Button

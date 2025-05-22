@@ -93,6 +93,32 @@ const Feedback: React.FC = () => {
                   复制
                 </Button>
               </div>
+              <div style={{ marginTop: 16, textAlign: 'center' }}>
+                <Button
+                  type="primary"
+                  href="https://docs.qq.com/sheet/DSXdWdk9rbGNqT2NT?tab=BB08J2"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  icon={<ReadOutlined />}
+                  style={{
+                    height: 'auto',
+                    padding: '8px 16px',
+                    fontSize: '16px',
+                    boxShadow: '0 2px 8px rgba(24, 144, 255, 0.2)',
+                    transition: 'all 0.3s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(24, 144, 255, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(24, 144, 255, 0.2)';
+                  }}
+                >
+                  【腾讯文档】摸鱼岛需求与Bug
+                </Button>
+              </div>
             </div>
           </div>
           <div>
