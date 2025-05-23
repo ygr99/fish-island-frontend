@@ -603,14 +603,45 @@ export function isCheckmate(board: Board, player: Player, silent: boolean = fals
       const piece = board[row][col];
       if (piece && piece.player === player) {
         const fromPos = { row, col };
-
-        // 使用getPotentialMoves获取可能的移动，减少遍历次数
-        const potentialMoves = getPotentialMoves(board, fromPos, piece.type, player, true, gameType);
-        for (const toPos of potentialMoves) {
-          // 如果移动合法且可以解除将军状态
-          if (isValidMove(board, fromPos, toPos, gameType) &&
-              isMoveSafeFromCheck(board, fromPos, toPos, player, isSilent, gameType)) {
-            return false; // 找到了一个可以解除将军的移动
+        
+        // 揭棋模式特殊处理
+        if (gameType === 'hidden') {
+          // 如果是暗子，使用原始位置规则
+          if ((piece as HiddenPiece).isHidden) {
+            const originalPos = (piece as HiddenPiece).originalPosition || fromPos;
+            const pieceType = getPieceTypeByPosition(originalPos);
+            // 获取暗子的可能移动
+            const potentialMoves = getPotentialMoves(board, fromPos, pieceType, player, true, gameType);
+            
+            for (const toPos of potentialMoves) {
+              // 检查移动是否合法且可以解除将军状态
+              if (isValidHiddenPieceFirstMove(board, fromPos, toPos, piece) &&
+                  isMoveSafeFromCheck(board, fromPos, toPos, player, isSilent, gameType)) {
+                return false; // 找到了一个可以解除将军的移动
+              }
+            }
+          } else {
+            // 如果是明子，使用正常规则
+            const realType = getEffectivePieceType(piece, fromPos);
+            const potentialMoves = getPotentialMoves(board, fromPos, realType, player, true, gameType);
+            
+            for (const toPos of potentialMoves) {
+              if (isValidMove(board, fromPos, toPos, gameType) &&
+                  isMoveSafeFromCheck(board, fromPos, toPos, player, isSilent, gameType)) {
+                return false; // 找到了一个可以解除将军的移动
+              }
+            }
+          }
+        } else {
+          // 普通模式
+          const realType = getEffectivePieceType(piece, fromPos);
+          const potentialMoves = getPotentialMoves(board, fromPos, realType, player, true, gameType);
+          
+          for (const toPos of potentialMoves) {
+            if (isValidMove(board, fromPos, toPos, gameType) &&
+                isMoveSafeFromCheck(board, fromPos, toPos, player, isSilent, gameType)) {
+              return false; // 找到了一个可以解除将军的移动
+            }
           }
         }
       }
@@ -873,6 +904,43 @@ function quickEvaluate(board: Board, piece: Piece, movePos: Position, player: Pl
 
   let score = 0;
 
+  // 揭棋模式特殊处理
+  if (gameType === 'hidden') {
+    // 如果是暗子，增加探索价值
+    if ((piece as HiddenPiece).isHidden) {
+      // 基础探索价值
+      score += 300;
+      
+      // 如果这个暗子位置在对方半场，增加探索价值
+      const isInOpponentHalf = (player === 'red' && movePos.row < 5) || 
+                              (player === 'black' && movePos.row > 4);
+      if (isInOpponentHalf) {
+        score += 200;
+      }
+
+      // 如果这个暗子周围有己方明子，增加探索价值（协同作战）
+      const surroundingPieces = getSurroundingPieces(board, movePos);
+      const friendlyRevealedPieces = surroundingPieces.filter(p => 
+        p && p.player === player && !(p as HiddenPiece).isHidden
+      );
+      score += friendlyRevealedPieces.length * 100;
+
+      // 如果这个暗子周围有对方明子，增加探索价值（威胁对方）
+      const enemyRevealedPieces = surroundingPieces.filter(p => 
+        p && p.player === opponent && !(p as HiddenPiece).isHidden
+      );
+      score += enemyRevealedPieces.length * 150;
+
+      // 如果这个暗子在对方重要棋子附近，增加探索价值
+      const nearImportantPieces = isNearImportantPieces(board, movePos, opponent);
+      if (nearImportantPieces) {
+        score += 250;
+      }
+
+      return isMaximizing ? score : -score;
+    }
+  }
+
   // 1. 如果能吃子，加分
   const targetPiece = board[movePos.row][movePos.col];
   let targetType = targetPiece ? getEffectivePieceType(targetPiece, { row: movePos.row, col: movePos.col }) : null;
@@ -934,6 +1002,51 @@ function quickEvaluate(board: Board, piece: Piece, movePos: Position, player: Pl
   }
 
   return isMaximizing ? score : -score;
+}
+
+// 获取周围8个位置的棋子
+function getSurroundingPieces(board: Board, pos: Position): (Piece | null)[] {
+  const pieces: (Piece | null)[] = [];
+  const directions = [
+    [-1, -1], [-1, 0], [-1, 1],
+    [0, -1],           [0, 1],
+    [1, -1],  [1, 0],  [1, 1]
+  ];
+
+  for (const [dr, dc] of directions) {
+    const newRow = pos.row + dr;
+    const newCol = pos.col + dc;
+    if (newRow >= 0 && newRow < BOARD_ROWS && newCol >= 0 && newCol < BOARD_COLS) {
+      pieces.push(board[newRow][newCol]);
+    }
+  }
+
+  return pieces;
+}
+
+// 判断是否在对方重要棋子附近
+function isNearImportantPieces(board: Board, pos: Position, opponent: Player): boolean {
+  const directions = [
+    [-1, -1], [-1, 0], [-1, 1],
+    [0, -1],           [0, 1],
+    [1, -1],  [1, 0],  [1, 1]
+  ];
+
+  for (const [dr, dc] of directions) {
+    const newRow = pos.row + dr;
+    const newCol = pos.col + dc;
+    if (newRow >= 0 && newRow < BOARD_ROWS && newCol >= 0 && newCol < BOARD_COLS) {
+      const piece = board[newRow][newCol];
+      if (piece && piece.player === opponent && !(piece as HiddenPiece).isHidden) {
+        // 检查是否是重要棋子（车、马、炮、将）
+        if (['chariot', 'horse', 'cannon', 'general'].includes(piece.type)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
 }
 
 // 获取棋子可能的移动位置，减少遍历整个棋盘
@@ -1610,10 +1723,17 @@ export function isPlayerMoveAllowed(
 // 判断暗棋第一步走法是否合法
 function isValidHiddenPieceFirstMove(board: Board, from: Position, to: Position, piece: Piece): boolean {
   const targetPiece = board[to.row][to.col];
-  // 不能吃自己
+  // 不能吃自己的棋子
   if (targetPiece && targetPiece.player === piece.player) return false;
 
-  switch (piece.type) {
+  // 检查位置是否在棋盘内
+  if (!isPositionInBoard(to)) return false;
+
+  // 获取原始位置对应的棋子类型
+  const originalPos = (piece as HiddenPiece).originalPosition || from;
+  const pieceType = getPieceTypeByPosition(originalPos);
+
+  switch (pieceType) {
     case 'soldier':
       // 暗兵第一步只能向前一格
       if (piece.player === 'red') {

@@ -2206,19 +2206,21 @@ function App() {
                 )}
                 {gameMode === 'single' && (
                   <div className="flex gap-3">
-                    <button
-                      type={'button'}
-                      onClick={undoMove}
-                      disabled={moveHistory.length < 2 || isThinking || !!winInfo}
-                      className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                        moveHistory.length < 2 || isThinking || winInfo
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-amber-500 text-white hover:bg-amber-600'
-                      } transition-colors`}
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                      <span className="font-medium">悔棋</span>
-                    </button>
+                    {gameType !== 'hidden' && (
+                      <button
+                        type={'button'}
+                        onClick={undoMove}
+                        disabled={moveHistory.length < 2 || isThinking || !!winInfo}
+                        className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                          moveHistory.length < 2 || isThinking || winInfo
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-amber-500 text-white hover:bg-amber-600'
+                        } transition-colors`}
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span className="font-medium">悔棋</span>
+                      </button>
+                    )}
                     <button
                       type={'button'}
                       onClick={() => setShowRestartModal(true)}
