@@ -1,4 +1,3 @@
-import React from 'react';
 import { Piece, PIECE_NAMES } from '@/gameChineseChess';
 
 interface ChessPieceProps {
@@ -12,46 +11,49 @@ export function ChessPiece({
   piece,
   size,
   isSelected = false,
-  isStartPosition = false
+  isStartPosition = false,
 }: ChessPieceProps) {
-  const { type, player } = piece;
-  const pieceName = PIECE_NAMES[player][type];
+  const { type, player, isHidden } = piece;
 
-  // 棋子样式 - 红色为字体红色，黑色为字体黑色
-  const textColor = player === 'red' ? '#C41E3A' : '#000000';
-  const bgColor = player === 'red' ? '#FFFFE0' : '#FFFDD0';
+  // 暗棋的样式
+  if (isHidden) {
+    return (
+      <div
+        className={`relative flex items-center justify-center rounded-full transition-all duration-300 ${
+          isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''
+        }`}
+        style={{
+          width: size,
+          height: size,
+          backgroundColor: '#e5e7eb',
+          border: '2px solid #9ca3af',
+          boxShadow: isSelected ? '0 0 0 2px rgba(59, 130, 246, 0.5)' : 'none',
+        }}
+      >
+        <span className="text-gray-600 font-medium">暗</span>
+      </div>
+    );
+  }
 
-  // 选中效果使用高亮边框
-  const selectedStyle = isSelected ? {
-    border: `3px solid #3B82F6`,
-    boxShadow: `0 0 10px 2px rgba(59, 130, 246, 0.6)`,
-  } : {
-    border: `2px solid ${textColor}`,
-  };
-
+  // 明棋的样式
   return (
     <div
-      className={`
-        rounded-full flex items-center justify-center
-        transition-transform transform hover:scale-105
-        cursor-pointer shadow-md
-      `}
+      className={`relative flex items-center justify-center rounded-full transition-all duration-300 ${
+        isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''
+      }`}
       style={{
         width: size,
         height: size,
-        backgroundColor: bgColor,
-        ...selectedStyle
+        backgroundColor: player === 'red' ? '#fee2e2' : '#e5e7eb',
+        border: `2px solid ${player === 'red' ? '#dc2626' : '#000000'}`,
+        boxShadow: isSelected ? '0 0 0 2px rgba(59, 130, 246, 0.5)' : 'none',
       }}
     >
       <span
-        className="font-bold select-none"
-        style={{
-          color: textColor,
-          fontSize: Math.floor(size * 0.6),
-          lineHeight: 1,
-        }}
+        className="text-lg font-bold"
+        style={{ color: player === 'red' ? '#dc2626' : '#000000' }}
       >
-        {pieceName}
+        {PIECE_NAMES[player][type]}
       </span>
     </div>
   );
