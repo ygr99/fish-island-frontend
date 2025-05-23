@@ -1,23 +1,22 @@
 import {
-  updateMyUserUsingPost,
-  userLogoutUsingPost,
-  signInUsingPost,
   getLoginUserUsingGet,
+  signInUsingPost,
+  updateMyUserUsingPost,
   userEmailBindToAccountUsingPost,
+  userEmailResetPasswordUsingPost,
   userEmailSendUsingPost,
-  userEmailResetPasswordUsingPost
+  userLogoutUsingPost
 } from '@/services/backend/userController';
 import {listAvailableFramesUsingGet1, setCurrentFrameUsingPost1} from '@/services/backend/userTitleController';
-import {getCosCredentialUsingGet, uploadFileByMinioUsingPost} from '@/services/backend/fileController';
+import {uploadFileByMinioUsingPost} from '@/services/backend/fileController';
 import {
+  EditOutlined,
   LockOutlined,
   LogoutOutlined,
   SettingOutlined,
-  UserOutlined,
-  EditOutlined,
-  UploadOutlined,
-  AppstoreOutlined,
   SwapOutlined,
+  UploadOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import {history, useModel} from '@umijs/max';
 import {
@@ -28,15 +27,15 @@ import {
   Input,
   message,
   Modal,
+  Select,
   Space,
+  Switch,
   TimePicker,
   Tooltip,
-  Select,
-  Upload,
-  Switch
+  Upload
 } from 'antd';
 import type {MenuInfo} from 'rc-menu/lib/interface';
-import React, {useCallback, useEffect, useState, Suspense, lazy} from 'react';
+import React, {lazy, useCallback, useEffect, useState} from 'react';
 import {flushSync} from 'react-dom';
 import HeaderDropdown from '../HeaderDropdown';
 import {useEmotionCss} from "@ant-design/use-emotion-css";
@@ -44,9 +43,8 @@ import moment, {Moment} from "moment";
 import './app.css';
 import './money-button.css';
 import {RcFile} from "antd/lib/upload";
-import COS from 'cos-js-sdk-v5';
 import LoginRegister from '../LoginRegister';
-import {getNotificationEnabled, setNotificationEnabled} from '@/utils/notification';
+import {setNotificationEnabled} from '@/utils/notification';
 import FoodRecommender from '@/components/FoodRecommender';
 
 lazy(() => import('@/components/MusicPlayer'));
