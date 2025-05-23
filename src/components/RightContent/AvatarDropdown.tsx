@@ -202,7 +202,7 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
       currentWeekType: newCurrentWeekType,
     };
     localStorage.setItem('moYuData', JSON.stringify(dataToSave));
-    
+
     setMoYuData({
       startTime: moment(values.startTime?.format('HH:mm'), 'HH:mm'),
       endTime: moment(values.endTime?.format('HH:mm'), 'HH:mm'),
@@ -1458,6 +1458,7 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
           <Form.Item
             name="userName"
             label="用户名"
+            tooltip={'用户名每月只能修改一次，且消耗100积分'}
             rules={[
               {required: true, message: '请输入用户名！'},
               {max: 10, message: '用户名不能超过10个字符！'},
