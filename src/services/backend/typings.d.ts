@@ -1149,4 +1149,34 @@ declare namespace API {
     score?: number;
     rank?: number;
   };
+
+  type UserDataWebVO = {
+    totalUsers: number;
+    todayActiveUsers: number;
+    todayNewUsers: number;
+    thisMonthNewUsers:  number;
+  };
+
+  type BaseResponseGetUserDataWebVO_ = {
+    code?: number;
+    data?: UserDataWebVO;
+    message?: string;
+  };
+
+  type NewUserDataWebRequest = {
+    type: number;
+    beginTime: string;
+    endTime: string;
+  };
+
+  type NewUserDataWebVO = {
+    date: string;
+    newUserCount: number;
+  };
+
+  type BaseResponseGetNewUserDataWebVO_ = {
+    code?: number;
+    data?: NewUserDataWebVO[];
+    message?: string;
+  };
 }

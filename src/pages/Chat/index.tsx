@@ -641,54 +641,70 @@ const ChatRoom: React.FC = () => {
       });
 
       if (response.data?.records) {
+        // 创建一个临时集合来跟踪当前请求中的消息ID
+        const currentRequestMessageIds = new Set();
+
         const historyMessages = response.data.records
-          .map((record) => ({
-            id: String(record.messageWrapper?.message?.id),
-            content: record.messageWrapper?.message?.content || '',
-            sender: {
-              id: String(record.userId),
-              name: record.messageWrapper?.message?.sender?.name || '未知用户',
-              avatar:
-                record.messageWrapper?.message?.sender?.avatar ||
-                'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-              level: record.messageWrapper?.message?.sender?.level || 1,
-              points: record.messageWrapper?.message?.sender?.points || 0,
-              isAdmin: record.messageWrapper?.message?.sender?.isAdmin || false,
-              region: record.messageWrapper?.message?.sender?.region || '未知地区',
-              country: record.messageWrapper?.message?.sender?.country,
-              avatarFramerUrl: record.messageWrapper?.message?.sender?.avatarFramerUrl,
-              titleId: record.messageWrapper?.message?.sender?.titleId,
-              titleIdList: record.messageWrapper?.message?.sender?.titleIdList,
-            },
-            timestamp: new Date(record.messageWrapper?.message?.timestamp || Date.now()),
-            quotedMessage: record.messageWrapper?.message?.quotedMessage
-              ? {
-                  id: String(record.messageWrapper.message.quotedMessage.id),
-                  content: record.messageWrapper.message.quotedMessage.content || '',
-                  sender: {
-                    id: String(record.messageWrapper.message.quotedMessage.sender?.id),
-                    name: record.messageWrapper.message.quotedMessage.sender?.name || '未知用户',
-                    avatar:
-                      record.messageWrapper.message.quotedMessage.sender?.avatar ||
-                      'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-                    level: record.messageWrapper.message.quotedMessage.sender?.level || 1,
-                    points: record.messageWrapper.message.quotedMessage.sender?.points || 0,
-                    isAdmin: record.messageWrapper.message.quotedMessage.sender?.isAdmin || false,
-                    region:
-                      record.messageWrapper?.message.quotedMessage?.sender?.region || '未知地区',
-                    avatarFramerUrl:
-                      record.messageWrapper?.message.quotedMessage?.sender?.avatarFramerUrl,
-                    titleId: record.messageWrapper?.message.quotedMessage?.sender?.titleId,
-                    titleIdList: record.messageWrapper?.message.quotedMessage?.sender?.titleIdList,
-                  },
-                  timestamp: new Date(
-                    record.messageWrapper.message.quotedMessage.timestamp || Date.now(),
-                  ),
-                }
-              : undefined,
-            region: userIpInfo?.region || '未知地区',
-          }))
-          .filter((msg) => !loadedMessageIds.has(msg.id));
+          .map((record) => {
+            const messageId = String(record.messageWrapper?.message?.id);
+
+            // 如果这条消息已经在当前请求中出现过，或者已经在loadedMessageIds中，则跳过
+            if (currentRequestMessageIds.has(messageId) || loadedMessageIds.has(messageId)) {
+              return null;
+            }
+
+            // 将消息ID添加到当前请求的集合中
+            currentRequestMessageIds.add(messageId);
+
+            return {
+              id: messageId,
+              content: record.messageWrapper?.message?.content || '',
+              sender: {
+                id: String(record.userId),
+                name: record.messageWrapper?.message?.sender?.name || '未知用户',
+                avatar:
+                  record.messageWrapper?.message?.sender?.avatar ||
+                  'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+                level: record.messageWrapper?.message?.sender?.level || 1,
+                points: record.messageWrapper?.message?.sender?.points || 0,
+                isAdmin: record.messageWrapper?.message?.sender?.isAdmin || false,
+                region: record.messageWrapper?.message?.sender?.region || '未知地区',
+                country: record.messageWrapper?.message?.sender?.country,
+                avatarFramerUrl: record.messageWrapper?.message?.sender?.avatarFramerUrl,
+                titleId: record.messageWrapper?.message?.sender?.titleId,
+                titleIdList: record.messageWrapper?.message?.sender?.titleIdList,
+              },
+              timestamp: new Date(record.messageWrapper?.message?.timestamp || Date.now()),
+              quotedMessage: record.messageWrapper?.message?.quotedMessage
+                ? {
+                    id: String(record.messageWrapper.message.quotedMessage.id),
+                    content: record.messageWrapper.message.quotedMessage.content || '',
+                    sender: {
+                      id: String(record.messageWrapper.message.quotedMessage.sender?.id),
+                      name: record.messageWrapper.message.quotedMessage.sender?.name || '未知用户',
+                      avatar:
+                        record.messageWrapper.message.quotedMessage.sender?.avatar ||
+                        'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+                      level: record.messageWrapper.message.quotedMessage.sender?.level || 1,
+                      points: record.messageWrapper.message.quotedMessage.sender?.points || 0,
+                      isAdmin: record.messageWrapper.message.quotedMessage.sender?.isAdmin || false,
+                      region:
+                        record.messageWrapper?.message.quotedMessage?.sender?.region || '未知地区',
+                      avatarFramerUrl:
+                        record.messageWrapper?.message.quotedMessage?.sender?.avatarFramerUrl,
+                      titleId: record.messageWrapper?.message.quotedMessage?.sender?.titleId,
+                      titleIdList:
+                        record.messageWrapper?.message.quotedMessage?.sender?.titleIdList,
+                    },
+                    timestamp: new Date(
+                      record.messageWrapper.message.quotedMessage.timestamp || Date.now(),
+                    ),
+                  }
+                : undefined,
+              region: userIpInfo?.region || '未知地区',
+            };
+          })
+          .filter(Boolean); // 过滤掉null值
 
         // 将新消息的ID添加到已加载集合中
         historyMessages.forEach((msg) => loadedMessageIds.add(msg.id));
@@ -1155,7 +1171,7 @@ const ChatRoom: React.FC = () => {
     let content = customContent || inputValue;
 
     // 检查是否包含 iframe 标签
-    const iframeRegex = new RegExp('<iframe[^>]*>.*?</iframe>', 'gi');
+    const iframeRegex = /\<iframe.*?\>.*?\<\/iframe\>/gi;
     if (iframeRegex.test(content)) {
       messageApi.warning('为了安全考虑，不支持 iframe 标签');
       return;
@@ -1172,7 +1188,11 @@ const ChatRoom: React.FC = () => {
     }
 
     if (!content.trim() && !pendingImageUrl && !pendingFileUrl) {
-      message.warning('请输入消息内容');
+      // 使用一个唯一的key来确保消息只显示一次
+      messageApi.warning({
+        content: '请输入消息内容',
+        key: 'emptyMessage',
+      });
       return;
     }
 
@@ -1190,7 +1210,7 @@ const ChatRoom: React.FC = () => {
 
     // 解析@用户
     const mentionedUsers: User[] = [];
-    const mentionRegex = new RegExp('@([^@\\s]+)', 'g');
+    const mentionRegex = /@([a-zA-Z0-9_\u4e00-\u9fa5]+)/g;
     let match;
     while ((match = mentionRegex.exec(content)) !== null) {
       const mentionedName = match[1];
@@ -1687,7 +1707,10 @@ const ChatRoom: React.FC = () => {
         name: currentUser.userName || '游客',
         avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
         level: currentUser.level || 1,
+        points: currentUser.points || 0, // 确保这里设置了积分
         isAdmin: currentUser.userRole === 'admin',
+        region: userIpInfo?.region || '未知地区',
+        country: userIpInfo?.country || '未知国家',
         avatarFramerUrl: currentUser.avatarFramerUrl,
         titleId: currentUser.titleId,
         titleIdList: currentUser.titleIdList,
@@ -1871,8 +1894,8 @@ const ChatRoom: React.FC = () => {
   };
 
   const renderMessageContent = (content: string) => {
-    const musicMatch = content.match(/\[music\](.*?)\[\/music\]/);
-    const coverMatch = content.match(/\[cover\](.*?)\[\/cover\]/);
+    const musicMatch = /\[music\]([^\[\]]*)\[\/music\]/i.exec(content);
+    const coverMatch = /\[cover\]([^\[\]]*)\[\/cover\]/i.exec(content);
     if (musicMatch) {
       const musicUrl = musicMatch[1];
       const coverUrl = coverMatch ? coverMatch[1] : '';
@@ -1914,7 +1937,8 @@ const ChatRoom: React.FC = () => {
       );
     }
     // 检查是否是红包消息
-    const redPacketMatch = content.match(/\[redpacket\](.*?)\[\/redpacket\]/);
+    // const redPacketMatch = content.match(/\[redpacket\](.*?)\[\/redpacket\]/);
+    const redPacketMatch = /\[redpacket\]([^\[\]]*)\[\/redpacket\]/i.exec(content);
     if (redPacketMatch) {
       const redPacketId = redPacketMatch[1];
       const detail = redPacketDetailsMap.get(redPacketId);
@@ -1981,7 +2005,8 @@ const ChatRoom: React.FC = () => {
     }
 
     // 检查是否是邀请消息
-    const inviteMatch = content.match(/\[invite\/(\w+)\](\d+)\[\/invite\]/);
+    // const inviteMatch = content.match(/\[invite\/(\w+)\](\d+)\[\/invite\]/);
+    const inviteMatch = /\[invite\/([a-zA-Z0-9_]+)\]([0-9]+)\[\/invite\]/i.exec(content);
     if (inviteMatch) {
       const roomId = inviteMatch[2];
       const gameType = inviteMatch[1];
@@ -2010,7 +2035,8 @@ const ChatRoom: React.FC = () => {
         </div>
       );
     }
-    const imgMatch = content.match(/\[img\](.*?)\[\/img\]/);
+    // const imgMatch = content.match(/\[img\](.*?)\[\/img\]/);
+    const imgMatch = /\[img\]([^\[\]]*)\[\/img\]/i.exec(content);
     if (imgMatch) {
       return (
         <MessageContent
