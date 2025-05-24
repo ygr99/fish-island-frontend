@@ -269,9 +269,7 @@ const ChatRoom: React.FC = () => {
     setBilibiliFavlistProgress({ visible: true, percent: 0, status: '正在解析...', current: '' });
     try {
       const res = await fetch(
-        `http://123.60.153.252:99/api/bilibili-favlist?url=${encodeURIComponent(
-          bilibiliFavlistUrl,
-        )}`,
+        `http://123.60.153.252:99/bilibili-favlist?url=${encodeURIComponent(bilibiliFavlistUrl)}`,
       );
       const data = await res.json();
       if (!data.videos || data.videos.length === 0) {
@@ -2197,70 +2195,124 @@ const ChatRoom: React.FC = () => {
   };
 
   // 判断B站音频是否过期
-  function isBilibiliAudioExpired(song: Song): boolean {
+  async function isBilibiliAudioExpired(song: Song): Promise<boolean> {
     if (song.source !== 'bilibili') return false;
-    if (!song.deadline) return false;
-    const now = Date.now();
-    // 10分钟安全余量
-    return now + 10 * 60 * 1000 > Number(song.deadline) * 1000;
+
+    // 只检查URL中的deadline参数
+    const url = new URL(song.url, window.location.origin);
+    const deadlineParam = url.searchParams.get('deadline');
+    if (deadlineParam) {
+      const deadline = parseInt(deadlineParam) * 1000; // 转换为毫秒
+      const now = Date.now();
+      // 如果deadline已经过期，返回true
+      if (now > deadline) {
+        console.log('音频URL已过期(deadline):', { deadline, now });
+        return true;
+      }
+    }
+    return false;
   }
+
   // 刷新B站音频
   async function refreshBilibiliAudio(song: Song): Promise<Song> {
     const videoId = song.videoId || (song.id && song.id.replace(/^bilibili_/, '').split('_')[0]);
     const pageNum = song.pageNum || 1;
+    console.log('开始刷新B站音频:', { videoId, pageNum, originalUrl: song.url });
+
     const res = await fetch(
       `http://123.60.153.252:99/api/refresh-bilibili-audio?videoId=${videoId}&pageNum=${pageNum}`,
     );
+    if (!res.ok) {
+      throw new Error(`刷新失败: ${res.status} ${res.statusText}`);
+    }
+
     const data = await res.json();
+    console.log('刷新B站音频响应:', data);
+
     if (data && data.success) {
       // 更新song对象的url、deadline等
-      return {
+      const updatedSong = {
         ...song,
         url: data.proxyUrl,
         deadline: data.deadline,
         timestamp: data.timestamp,
       };
+      console.log('音频URL已更新:', {
+        oldUrl: song.url,
+        newUrl: updatedSong.url,
+        deadline: updatedSong.deadline,
+      });
+      return updatedSong;
     }
-    return song;
+    throw new Error(data?.message || '刷新失败');
   }
 
   // 修改playFromPlaylist，播放前自动刷新B站音频
   const playFromPlaylist = async (song: Song) => {
-    let songToPlay = song;
-    if (song.source === 'bilibili' && isBilibiliAudioExpired(song)) {
-      messageApi.info('正在刷新B站音频链接...');
-      songToPlay = await refreshBilibiliAudio(song);
-      // 更新歌单里的该歌曲
-      setPlaylist((prev) => prev.map((s) => (s.id === song.id ? songToPlay : s)));
-    }
-    // 确保APlayer已加载
-    if (typeof window.APlayer === 'undefined') {
-      messageApi.error('播放器加载中，请稍后再试');
-      return;
-    }
-    // 初始化APlayer（如果还没有实例）
-    if (!aPlayerInstanceRef.current && aPlayerContainerRef.current) {
-      aPlayerInstanceRef.current = new window.APlayer({
-        container: aPlayerContainerRef.current,
-        audio: [songToPlay],
-        autoplay: true,
-        theme: '#41b883',
-        listFolded: false,
-        listMaxHeight: '200px',
-      });
-    } else if (aPlayerInstanceRef.current) {
-      aPlayerInstanceRef.current.list.add(songToPlay);
-      const index = aPlayerInstanceRef.current.list.audios.findIndex(
-        (audio: any) => audio.id === songToPlay.id,
-      );
-      if (index !== -1) {
-        aPlayerInstanceRef.current.list.switch(index);
-        aPlayerInstanceRef.current.play();
+    try {
+      let songToPlay = song;
+      if (song.source === 'bilibili') {
+        console.log('检查B站音频是否过期:', {
+          songId: song.id,
+          url: song.url,
+        });
+
+        const isExpired = await isBilibiliAudioExpired(song);
+        if (isExpired) {
+          messageApi.info('正在刷新B站音频链接...');
+          try {
+            songToPlay = await refreshBilibiliAudio(song);
+            // 更新歌单里的该歌曲
+            setPlaylist((prev) => prev.map((s) => (s.id === song.id ? songToPlay : s)));
+            // 保存到localStorage
+            const updatedPlaylist = JSON.parse(localStorage.getItem('music_playlist') || '[]').map(
+              (s: Song) => (s.id === song.id ? songToPlay : s),
+            );
+            localStorage.setItem('music_playlist', JSON.stringify(updatedPlaylist));
+            messageApi.success('音频链接刷新成功');
+          } catch (error: any) {
+            console.error('刷新B站音频失败:', error);
+            messageApi.error(`刷新音频失败: ${error.message || '未知错误'}`);
+            return;
+          }
+        }
       }
+
+      // 确保APlayer已加载
+      if (typeof window.APlayer === 'undefined') {
+        messageApi.error('播放器加载中，请稍后再试');
+        return;
+      }
+
+      // 初始化APlayer（如果还没有实例）
+      if (!aPlayerInstanceRef.current && aPlayerContainerRef.current) {
+        console.log('初始化APlayer:', songToPlay);
+        aPlayerInstanceRef.current = new window.APlayer({
+          container: aPlayerContainerRef.current,
+          audio: [songToPlay],
+          autoplay: true,
+          theme: '#41b883',
+          listFolded: false,
+          listMaxHeight: '200px',
+        });
+      } else if (aPlayerInstanceRef.current) {
+        console.log('添加到播放列表:', songToPlay);
+        aPlayerInstanceRef.current.list.add(songToPlay);
+        const index = aPlayerInstanceRef.current.list.audios.findIndex(
+          (audio: any) => audio.id === songToPlay.id,
+        );
+        if (index !== -1) {
+          aPlayerInstanceRef.current.list.switch(index);
+          aPlayerInstanceRef.current.play();
+        }
+      }
+    } catch (error: any) {
+      console.error('播放歌曲失败:', error);
+      messageApi.error(`播放失败: ${error.message || '未知错误'}`);
     }
   };
 
-  // 修改playEntirePlaylist，批量刷新B站音频
+  // 修改playEntirePlaylist，优化刷新逻辑
   const playEntirePlaylist = async () => {
     if (playlist.length === 0) {
       messageApi.info('歌单为空');
@@ -2270,29 +2322,73 @@ const ChatRoom: React.FC = () => {
       messageApi.error('播放器加载中，请稍后再试');
       return;
     }
-    // 刷新所有B站音频
-    const refreshed = await Promise.all(
-      playlist.map(async (song: Song) => {
-        if (song.source === 'bilibili' && isBilibiliAudioExpired(song)) {
-          return await refreshBilibiliAudio(song);
-        }
-        return song;
-      }),
-    );
-    setPlaylist(refreshed);
-    // 销毁旧的播放器实例
-    if (aPlayerInstanceRef.current) {
-      aPlayerInstanceRef.current.destroy();
-    }
-    if (aPlayerContainerRef.current) {
-      aPlayerInstanceRef.current = new window.APlayer({
-        container: aPlayerContainerRef.current,
-        audio: refreshed,
-        autoplay: true,
-        theme: '#41b883',
-        listFolded: false,
-        listMaxHeight: '200px',
+
+    // 显示加载动画
+    const loadingKey = 'playlistLoading';
+    messageApi.loading({ content: '正在检查音频状态...', key: loadingKey, duration: 0 });
+
+    try {
+      // 检查deadline参数，这步很快
+      const songsToRefresh = playlist.filter((song) => {
+        if (song.source !== 'bilibili') return false;
+        const url = new URL(song.url, window.location.origin);
+        const deadlineParam = url.searchParams.get('deadline');
+        if (!deadlineParam) return false;
+        const deadline = parseInt(deadlineParam) * 1000;
+        return Date.now() > deadline;
       });
+
+      // 如果有需要刷新的歌曲，显示进度
+      if (songsToRefresh.length > 0) {
+        messageApi.loading({
+          content: `正在刷新 ${songsToRefresh.length} 个音频...`,
+          key: loadingKey,
+          duration: 0,
+        });
+
+        // 逐个刷新音频
+        const refreshedSongs = await Promise.all(
+          songsToRefresh.map(async (song) => {
+            try {
+              return await refreshBilibiliAudio(song);
+            } catch (error) {
+              console.error('刷新音频失败:', song.id, error);
+              return song; // 如果刷新失败，保持原样
+            }
+          }),
+        );
+
+        // 更新歌单中需要刷新的歌曲
+        const updatedPlaylist = playlist.map((song) => {
+          const refreshedSong = refreshedSongs.find((s) => s.id === song.id);
+          return refreshedSong || song;
+        });
+
+        setPlaylist(updatedPlaylist);
+        messageApi.success({ content: '音频刷新完成', key: loadingKey });
+      } else {
+        messageApi.success({ content: '所有音频状态正常', key: loadingKey });
+      }
+
+      // 销毁旧的播放器实例
+      if (aPlayerInstanceRef.current) {
+        aPlayerInstanceRef.current.destroy();
+      }
+
+      // 创建新的播放器实例
+      if (aPlayerContainerRef.current) {
+        aPlayerInstanceRef.current = new window.APlayer({
+          container: aPlayerContainerRef.current,
+          audio: playlist,
+          autoplay: true,
+          theme: '#41b883',
+          listFolded: false,
+          listMaxHeight: '200px',
+        });
+      }
+    } catch (error) {
+      console.error('播放歌单失败:', error);
+      messageApi.error({ content: '播放歌单失败', key: loadingKey });
     }
   };
 
