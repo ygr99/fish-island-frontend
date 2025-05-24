@@ -1456,13 +1456,13 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
           <Form.Item
             name="userName"
             label="用户名"
-            tooltip={'用户名每月只能修改一次，且消耗100积分'}
+            tooltip={'新用户免费修改一次用户名，后面每月只能修改一次，且消耗100积分'}
             rules={[
               {required: true, message: '请输入用户名！'},
               {max: 10, message: '用户名不能超过10个字符！'},
             ]}
           >
-            <Input maxLength={10} showCount placeholder="请输入用户名"/>
+            <Input maxLength={10} showCount placeholder="请输入用户名" />
           </Form.Item>
 
           <Form.Item
