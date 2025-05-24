@@ -24,6 +24,7 @@ import {
   PauseOutlined,
   PictureOutlined,
   PlayCircleOutlined,
+  PlusOutlined,
   RightOutlined,
   SendOutlined,
   SmileOutlined,
@@ -93,11 +94,6 @@ interface Song {
   url: string;
   cover: string;
   album?: string;
-  deadline?: string;
-  videoId?: string;
-  pageNum?: number;
-  source?: string;
-  timestamp?: number;
 }
 
 // 添加APlayer声明
@@ -183,161 +179,70 @@ const ChatRoom: React.FC = () => {
   const [isSelectingMusic, setIsSelectingMusic] = useState(false);
   const selectMusicDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 1. 新增B站相关状态
-  const [bilibiliUrl, setBilibiliUrl] = useState('');
-  const [bilibiliParsing, setBilibiliParsing] = useState(false);
-  const [bilibiliParsed, setBilibiliParsed] = useState<any>(null);
-  const [bilibiliFavlistUrl, setBilibiliFavlistUrl] = useState('');
-  const [bilibiliFavlistImporting, setBilibiliFavlistImporting] = useState(false);
-  const [bilibiliFavlistProgress, setBilibiliFavlistProgress] = useState({
-    visible: false,
-    percent: 0,
-    status: '',
-    current: '',
-  });
-
-  // 2. 禁用网易云音乐搜索
-  const handleMusicSearchDisabled = async () => {
-    messageApi.warning('网易云音乐解析暂不可用');
-  };
-  const handleSelectMusicDisabled = async () => {
-    messageApi.warning('网易云音乐解析暂不可用');
-  };
-  const addToPlaylistDisabled = async () => {
-    messageApi.warning('网易云音乐解析暂不可用');
+  // 添加搜索音乐的函数
+  const handleMusicSearch = async () => {
+    try {
+      const response = await fetch(
+        `https://api.kxzjoker.cn/api/163_search?name=${encodeURIComponent(searchKey)}&limit=20`,
+      );
+      const data = await response.json();
+      setSearchResults(data.data || []);
+    } catch (error) {
+      messageApi.error('搜索音乐失败');
+    }
   };
 
-  // 3. 哔哩哔哩解析逻辑
-  const handleBilibiliParse = async () => {
-    if (!bilibiliUrl.includes('bilibili.com/video')) {
-      messageApi.error('请输入有效的哔哩哔哩视频链接');
+  // 添加选择音乐的函数（带防抖）
+  const handleSelectMusic = async (music: any) => {
+    // 如果已经在处理中，直接返回
+    if (isSelectingMusic) {
+      messageApi.warning('正在处理上一首歌，请稍候...');
       return;
     }
-    setBilibiliParsing(true);
-    setBilibiliParsed(null);
-    try {
-      const res = await fetch(
-        `http://123.60.153.252:99/api/bilibili-audio?url=${encodeURIComponent(bilibiliUrl)}`,
-      );
-      const data = await res.json();
-      if (data.audioUrl && data.title) {
-        setBilibiliParsed({
-          id: `bilibili_${data.bvid || data.videoId}`,
-          name: data.title,
-          artist: data.owner?.name || '哔哩哔哩',
-          url: `http://123.60.153.252:99/api/proxy-audio?url=${encodeURIComponent(
-            data.audioUrl,
-          )}&referer=${encodeURIComponent('https://www.bilibili.com/')}`,
-          cover: `http://123.60.153.252:99/api/proxy/image?url=${encodeURIComponent(data.cover)}`,
-          album: data.title,
-          source: 'bilibili',
-          videoUrl: bilibiliUrl,
-        });
-        messageApi.success('解析成功');
-      } else {
-        messageApi.error('解析失败');
-      }
-    } catch (e) {
-      messageApi.error('解析失败');
+
+    // 清除之前的防抖定时器
+    if (selectMusicDebounceRef.current) {
+      clearTimeout(selectMusicDebounceRef.current);
     }
-    setBilibiliParsing(false);
-  };
-  const handleSendBilibiliMusic = (music: any) => {
-    handleSend(
-      `🎵 ${music.name} - ${music.artist} [music]${music.url}[/music][cover]${music.cover}[/cover]`,
-    );
-  };
-  const handleAddBilibiliToPlaylist = (music: any) => {
-    setPlaylist((prev) => {
-      if (prev.some((song) => song.id === music.id)) {
-        messageApi.info('歌曲已在歌单中');
-        return prev;
-      }
-      const updated = [...prev, music];
-      localStorage.setItem('music_playlist', JSON.stringify(updated));
-      messageApi.success('已添加到歌单');
-      return updated;
-    });
-  };
-  // 4. 收藏夹导入逻辑
-  const handleBilibiliFavlistImport = async () => {
-    if (!bilibiliFavlistUrl.includes('bilibili.com')) {
-      messageApi.error('请输入有效的哔哩哔哩收藏夹链接');
-      return;
-    }
-    setBilibiliFavlistImporting(true);
-    setBilibiliFavlistProgress({ visible: true, percent: 0, status: '正在解析...', current: '' });
+
     try {
-      const res = await fetch(
-        `http://123.60.153.252:99/bilibili-favlist?url=${encodeURIComponent(bilibiliFavlistUrl)}`,
-      );
-      const data = await res.json();
-      if (!data.videos || data.videos.length === 0) {
-        messageApi.error('收藏夹中没有找到视频');
-        setBilibiliFavlistImporting(false);
-        setBilibiliFavlistProgress({ visible: false, percent: 0, status: '', current: '' });
-        return;
-      }
-      let success = 0,
-        fail = 0;
-      for (let i = 0; i < data.videos.length; i++) {
-        setBilibiliFavlistProgress({
-          visible: true,
-          percent: Math.round((i / data.videos.length) * 100),
-          status: `正在导入: ${data.videos[i].title}`,
-          current: `${i + 1}/${data.videos.length}`,
-        });
+      setIsSelectingMusic(true);
+
+      // 设置防抖延迟
+      selectMusicDebounceRef.current = setTimeout(async () => {
         try {
-          const audioRes = await fetch(
-            `http://123.60.153.252:99/api/bilibili-audio?url=${encodeURIComponent(
-              data.videos[i].url,
-            )}`,
-          );
-          const audioData = await audioRes.json();
-          if (audioData.audioUrl && audioData.title) {
-            const music = {
-              id: `bilibili_${audioData.bvid || audioData.videoId}`,
-              name: audioData.title,
-              artist: audioData.owner?.name || '哔哩哔哩',
-              url: `http://123.60.153.252:99/api/proxy-audio?url=${encodeURIComponent(
-                audioData.audioUrl,
-              )}&referer=${encodeURIComponent('https://www.bilibili.com/')}`,
-              cover: `http://123.60.153.252:99/api/proxy/image?url=${encodeURIComponent(
-                audioData.cover,
-              )}`,
-              album: audioData.title,
-              source: 'bilibili',
-              videoUrl: data.videos[i].url,
-            };
-            setPlaylist((prev) => {
-              if (prev.some((song) => song.id === music.id)) return prev;
-              const updated = [...prev, music];
-              localStorage.setItem('music_playlist', JSON.stringify(updated));
-              return updated;
-            });
-            success++;
-          } else {
-            fail++;
+          const response = await fetch('https://api.kxzjoker.cn/api/163_music', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            },
+            body: new URLSearchParams({
+              url: music.id,
+              level: 'lossless',
+              type: 'json',
+            }).toString(),
+          });
+          const data = await response.json();
+          if (data.url) {
+            // 发送消息
+            const musicMessage = `🎵 ${music.name} - ${music.artists
+              .map((a: any) => a.name)
+              .join(',')} [music]${data.url}[/music][cover]${data.pic}[/cover]`;
+            handleSend(musicMessage);
+            setIsMusicSearchVisible(false);
+            setSearchKey('');
+            setSearchResults([]);
           }
-        } catch {
-          fail++;
+        } catch (error) {
+          messageApi.error('获取音乐链接失败');
+        } finally {
+          setIsSelectingMusic(false);
         }
-      }
-      setBilibiliFavlistProgress({
-        visible: true,
-        percent: 100,
-        status: `导入完成：${success}成功，${fail}失败`,
-        current: '',
-      });
-      messageApi.success(`导入完成：${success}成功，${fail}失败`);
-    } catch (e) {
-      messageApi.error('收藏夹导入失败');
+      }, 1000); // 1秒防抖延迟
+    } catch (error) {
+      setIsSelectingMusic(false);
+      messageApi.error('处理音乐选择时出错');
     }
-    setBilibiliFavlistImporting(false);
-    setTimeout(
-      () => setBilibiliFavlistProgress({ visible: false, percent: 0, status: '', current: '' }),
-      3000,
-    );
   };
 
   useEffect(() => {
@@ -2194,201 +2099,66 @@ const ChatRoom: React.FC = () => {
     }
   };
 
-  // 判断B站音频是否过期
-  async function isBilibiliAudioExpired(song: Song): Promise<boolean> {
-    if (song.source !== 'bilibili') return false;
-
-    // 只检查URL中的deadline参数
-    const url = new URL(song.url, window.location.origin);
-    const deadlineParam = url.searchParams.get('deadline');
-    if (deadlineParam) {
-      const deadline = parseInt(deadlineParam) * 1000; // 转换为毫秒
-      const now = Date.now();
-      // 如果deadline已经过期，返回true
-      if (now > deadline) {
-        console.log('音频URL已过期(deadline):', { deadline, now });
-        return true;
-      }
-    }
-    return false;
-  }
-
-  // 刷新B站音频
-  async function refreshBilibiliAudio(song: Song): Promise<Song> {
-    const videoId = song.videoId || (song.id && song.id.replace(/^bilibili_/, '').split('_')[0]);
-    const pageNum = song.pageNum || 1;
-    console.log('开始刷新B站音频:', { videoId, pageNum, originalUrl: song.url });
-
-    const res = await fetch(
-      `http://123.60.153.252:99/api/refresh-bilibili-audio?videoId=${videoId}&pageNum=${pageNum}`,
-    );
-    if (!res.ok) {
-      throw new Error(`刷新失败: ${res.status} ${res.statusText}`);
-    }
-
-    const data = await res.json();
-    console.log('刷新B站音频响应:', data);
-
-    if (data && data.success) {
-      // 更新song对象的url、deadline等
-      const updatedSong = {
-        ...song,
-        url: data.proxyUrl,
-        deadline: data.deadline,
-        timestamp: data.timestamp,
-      };
-      console.log('音频URL已更新:', {
-        oldUrl: song.url,
-        newUrl: updatedSong.url,
-        deadline: updatedSong.deadline,
-      });
-      return updatedSong;
-    }
-    throw new Error(data?.message || '刷新失败');
-  }
-
-  // 修改playFromPlaylist，播放前自动刷新B站音频
-  const playFromPlaylist = async (song: Song) => {
-    try {
-      let songToPlay = song;
-      if (song.source === 'bilibili') {
-        console.log('检查B站音频是否过期:', {
-          songId: song.id,
-          url: song.url,
-        });
-
-        const isExpired = await isBilibiliAudioExpired(song);
-        if (isExpired) {
-          messageApi.info('正在刷新B站音频链接...');
-          try {
-            songToPlay = await refreshBilibiliAudio(song);
-            // 更新歌单里的该歌曲
-            setPlaylist((prev) => prev.map((s) => (s.id === song.id ? songToPlay : s)));
-            // 保存到localStorage
-            const updatedPlaylist = JSON.parse(localStorage.getItem('music_playlist') || '[]').map(
-              (s: Song) => (s.id === song.id ? songToPlay : s),
-            );
-            localStorage.setItem('music_playlist', JSON.stringify(updatedPlaylist));
-            messageApi.success('音频链接刷新成功');
-          } catch (error: any) {
-            console.error('刷新B站音频失败:', error);
-            messageApi.error(`刷新音频失败: ${error.message || '未知错误'}`);
-            return;
-          }
-        }
-      }
-
-      // 确保APlayer已加载
-      if (typeof window.APlayer === 'undefined') {
-        messageApi.error('播放器加载中，请稍后再试');
-        return;
-      }
-
-      // 初始化APlayer（如果还没有实例）
-      if (!aPlayerInstanceRef.current && aPlayerContainerRef.current) {
-        console.log('初始化APlayer:', songToPlay);
-        aPlayerInstanceRef.current = new window.APlayer({
-          container: aPlayerContainerRef.current,
-          audio: [songToPlay],
-          autoplay: true,
-          theme: '#41b883',
-          listFolded: false,
-          listMaxHeight: '200px',
-        });
-      } else if (aPlayerInstanceRef.current) {
-        console.log('添加到播放列表:', songToPlay);
-        aPlayerInstanceRef.current.list.add(songToPlay);
-        const index = aPlayerInstanceRef.current.list.audios.findIndex(
-          (audio: any) => audio.id === songToPlay.id,
-        );
-        if (index !== -1) {
-          aPlayerInstanceRef.current.list.switch(index);
-          aPlayerInstanceRef.current.play();
-        }
-      }
-    } catch (error: any) {
-      console.error('播放歌曲失败:', error);
-      messageApi.error(`播放失败: ${error.message || '未知错误'}`);
-    }
-  };
-
-  // 修改playEntirePlaylist，优化刷新逻辑
-  const playEntirePlaylist = async () => {
-    if (playlist.length === 0) {
-      messageApi.info('歌单为空');
-      return;
-    }
+  // 播放歌单中的歌曲
+  const playFromPlaylist = (song: Song) => {
+    // 确保APlayer已加载
     if (typeof window.APlayer === 'undefined') {
       messageApi.error('播放器加载中，请稍后再试');
       return;
     }
 
-    // 显示加载动画
-    const loadingKey = 'playlistLoading';
-    messageApi.loading({ content: '正在检查音频状态...', key: loadingKey, duration: 0 });
-
-    try {
-      // 检查deadline参数，这步很快
-      const songsToRefresh = playlist.filter((song) => {
-        if (song.source !== 'bilibili') return false;
-        const url = new URL(song.url, window.location.origin);
-        const deadlineParam = url.searchParams.get('deadline');
-        if (!deadlineParam) return false;
-        const deadline = parseInt(deadlineParam) * 1000;
-        return Date.now() > deadline;
+    // 初始化APlayer（如果还没有实例）
+    if (!aPlayerInstanceRef.current && aPlayerContainerRef.current) {
+      aPlayerInstanceRef.current = new window.APlayer({
+        container: aPlayerContainerRef.current,
+        audio: [song],
+        autoplay: true,
+        theme: '#41b883',
+        listFolded: false,
+        listMaxHeight: '200px',
       });
-
-      // 如果有需要刷新的歌曲，显示进度
-      if (songsToRefresh.length > 0) {
-        messageApi.loading({
-          content: `正在刷新 ${songsToRefresh.length} 个音频...`,
-          key: loadingKey,
-          duration: 0,
-        });
-
-        // 逐个刷新音频
-        const refreshedSongs = await Promise.all(
-          songsToRefresh.map(async (song) => {
-            try {
-              return await refreshBilibiliAudio(song);
-            } catch (error) {
-              console.error('刷新音频失败:', song.id, error);
-              return song; // 如果刷新失败，保持原样
-            }
-          }),
-        );
-
-        // 更新歌单中需要刷新的歌曲
-        const updatedPlaylist = playlist.map((song) => {
-          const refreshedSong = refreshedSongs.find((s) => s.id === song.id);
-          return refreshedSong || song;
-        });
-
-        setPlaylist(updatedPlaylist);
-        messageApi.success({ content: '音频刷新完成', key: loadingKey });
-      } else {
-        messageApi.success({ content: '所有音频状态正常', key: loadingKey });
+    } else if (aPlayerInstanceRef.current) {
+      // 如果已有实例，直接添加并播放歌曲
+      aPlayerInstanceRef.current.list.add(song);
+      // 找到歌曲在列表中的索引
+      const index = aPlayerInstanceRef.current.list.audios.findIndex(
+        (audio: any) => audio.id === song.id,
+      );
+      if (index !== -1) {
+        aPlayerInstanceRef.current.list.switch(index);
+        aPlayerInstanceRef.current.play();
       }
+    }
+  };
 
-      // 销毁旧的播放器实例
-      if (aPlayerInstanceRef.current) {
-        aPlayerInstanceRef.current.destroy();
-      }
+  // 播放整个歌单
+  const playEntirePlaylist = () => {
+    if (playlist.length === 0) {
+      messageApi.info('歌单为空');
+      return;
+    }
 
-      // 创建新的播放器实例
-      if (aPlayerContainerRef.current) {
-        aPlayerInstanceRef.current = new window.APlayer({
-          container: aPlayerContainerRef.current,
-          audio: playlist,
-          autoplay: true,
-          theme: '#41b883',
-          listFolded: false,
-          listMaxHeight: '200px',
-        });
-      }
-    } catch (error) {
-      console.error('播放歌单失败:', error);
-      messageApi.error({ content: '播放歌单失败', key: loadingKey });
+    // 确保APlayer已加载
+    if (typeof window.APlayer === 'undefined') {
+      messageApi.error('播放器加载中，请稍后再试');
+      return;
+    }
+
+    // 销毁旧的播放器实例
+    if (aPlayerInstanceRef.current) {
+      aPlayerInstanceRef.current.destroy();
+    }
+
+    // 创建新的播放器实例，包含整个歌单
+    if (aPlayerContainerRef.current) {
+      aPlayerInstanceRef.current = new window.APlayer({
+        container: aPlayerContainerRef.current,
+        audio: playlist,
+        autoplay: true,
+        theme: '#41b883',
+        listFolded: false,
+        listMaxHeight: '200px',
+      });
     }
   };
 
@@ -2879,98 +2649,57 @@ const ChatRoom: React.FC = () => {
                     placeholder="输入歌曲名称"
                     value={searchKey}
                     onChange={(e) => setSearchKey(e.target.value)}
-                    onSearch={handleMusicSearchDisabled}
-                    enterButton="搜索（暂不可用）"
-                    disabled
+                    onSearch={handleMusicSearch}
+                    enterButton
                     style={{ marginBottom: '10px' }}
                   />
-                  <div style={{ color: '#faad14', marginBottom: 16 }}>接口已失效，暂不可用。</div>
-                  {/* 哔哩哔哩音乐解析 */}
-                  <div style={{ marginTop: 24 }}>
-                    <div style={{ fontWeight: 600, marginBottom: 8 }}>哔哩哔哩音乐解析</div>
-                    <Input.Group compact>
-                      <Input
-                        style={{ width: '70%' }}
-                        placeholder="输入哔哩哔哩视频链接（如 https://www.bilibili.com/video/BV...）"
-                        value={bilibiliUrl}
-                        onChange={(e) => setBilibiliUrl(e.target.value)}
-                        disabled={bilibiliParsing}
-                      />
-                      <Button
-                        type="primary"
-                        onClick={handleBilibiliParse}
-                        loading={bilibiliParsing}
-                      >
-                        解析
-                      </Button>
-                    </Input.Group>
-                    {bilibiliParsed && (
-                      <div style={{ marginTop: 12 }}>
-                        <div>标题：{bilibiliParsed.name}</div>
-                        <div>UP主：{bilibiliParsed.artist}</div>
-                        <img
-                          src={bilibiliParsed.cover}
-                          alt="cover"
-                          style={{ width: 80, margin: '8px 0' }}
-                        />
-                        <div>
-                          <Button
-                            size="small"
-                            onClick={() => handleSendBilibiliMusic(bilibiliParsed)}
-                          >
-                            发送
-                          </Button>
-                          <Button
-                            size="small"
-                            onClick={() => handleAddBilibiliToPlaylist(bilibiliParsed)}
-                            style={{ marginLeft: 8 }}
-                          >
-                            导入歌单
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                    <div style={{ fontWeight: 600, margin: '24px 0 8px' }}>哔哩哔哩收藏夹导入</div>
-                    <Input.Group compact>
-                      <Input
-                        style={{ width: '70%' }}
-                        placeholder="输入哔哩哔哩收藏夹链接"
-                        value={bilibiliFavlistUrl}
-                        onChange={(e) => setBilibiliFavlistUrl(e.target.value)}
-                        disabled={bilibiliFavlistImporting}
-                      />
-                      <Button
-                        type="primary"
-                        onClick={handleBilibiliFavlistImport}
-                        loading={bilibiliFavlistImporting}
-                      >
-                        导入
-                      </Button>
-                    </Input.Group>
-                    {bilibiliFavlistProgress.visible && (
-                      <div style={{ marginTop: 8 }}>
-                        <div>{bilibiliFavlistProgress.status}</div>
+                  <List
+                    className={styles.musicList}
+                    height={300}
+                    itemCount={searchResults.length}
+                    itemSize={60}
+                    width="100%"
+                  >
+                    {({ index, style }) => {
+                      const item = searchResults[index];
+                      return (
                         <div
                           style={{
-                            width: 200,
-                            background: '#f0f0f0',
-                            borderRadius: 4,
-                            overflow: 'hidden',
-                            margin: '4px 0',
+                            ...style,
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '5px 10px',
                           }}
+                          className={styles.musicListItem}
                         >
-                          <div
-                            style={{
-                              width: `${bilibiliFavlistProgress.percent}%`,
-                              height: 8,
-                              background: '#1890ff',
-                            }}
-                          />
+                          <div className={styles.musicInfo}>
+                            <div className={styles.musicTitle}>{item.name}</div>
+                            <div className={styles.musicDesc}>
+                              {`${item.artists.map((a: any) => a.name).join(',')} - ${
+                                item.album.name
+                              }`}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <Button
+                              type="primary"
+                              size="small"
+                              onClick={() => handleSelectMusic(item)}
+                            >
+                              发送
+                            </Button>
+                            <Button
+                              size="small"
+                              icon={<PlusOutlined />}
+                              onClick={() => addToPlaylist(item)}
+                            >
+                              添加到歌单
+                            </Button>
+                          </div>
                         </div>
-                        <div>{bilibiliFavlistProgress.current}</div>
-                      </div>
-                    )}
-                  </div>
+                      );
+                    }}
+                  </List>
                 </div>
               ),
             },
@@ -3031,7 +2760,7 @@ const ChatRoom: React.FC = () => {
                               type="text"
                               size="small"
                               icon={<PlayCircleOutlined />}
-                              onClick={async () => await playFromPlaylist(song)}
+                              onClick={() => playFromPlaylist(song)}
                             />
                             <Button
                               type="text"
