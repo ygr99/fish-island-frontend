@@ -178,17 +178,51 @@ const ChatRoom: React.FC = () => {
   // 添加防抖状态
   const [isSelectingMusic, setIsSelectingMusic] = useState(false);
   const selectMusicDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  // 添加音乐搜索加载状态
+  const [isSearchingMusic, setIsSearchingMusic] = useState(false);
+  // 添加音乐添加到歌单状态
+  const [addingToPlaylistId, setAddingToPlaylistId] = useState<string | null>(null);
+  // 添加API错误状态
+  const [musicApiError, setMusicApiError] = useState<string | null>(null);
+  // 添加是否已执行搜索的状态
+  const [hasSearched, setHasSearched] = useState(false);
 
   // 添加搜索音乐的函数
   const handleMusicSearch = async () => {
+    if (!searchKey.trim()) {
+      messageApi.warning('请输入搜索关键词');
+      return;
+    }
+
     try {
+      setIsSearchingMusic(true);
+      setMusicApiError(null);
+      setHasSearched(true); // 标记已执行搜索
+
       const response = await fetch(
         `https://api.kxzjoker.cn/api/163_search?name=${encodeURIComponent(searchKey)}&limit=20`,
       );
+
+      if (!response.ok) {
+        throw new Error(`搜索请求失败: ${response.status}`);
+      }
+
       const data = await response.json();
+      if (data.code !== 200) {
+        throw new Error('音乐API返回错误');
+      }
+
       setSearchResults(data.data || []);
+
+      if (data.data?.length === 0) {
+        messageApi.info('未找到相关歌曲');
+      }
     } catch (error) {
-      messageApi.error('搜索音乐失败');
+      console.error('搜索音乐失败:', error);
+      setMusicApiError('音乐搜索服务暂时不可用，请稍后再试');
+      messageApi.error('搜索音乐失败，音乐API可能暂时不可用');
+    } finally {
+      setIsSearchingMusic(false);
     }
   };
 
@@ -207,6 +241,7 @@ const ChatRoom: React.FC = () => {
 
     try {
       setIsSelectingMusic(true);
+      setMusicApiError(null);
 
       // 设置防抖延迟
       selectMusicDebounceRef.current = setTimeout(async () => {
@@ -222,23 +257,32 @@ const ChatRoom: React.FC = () => {
               type: 'json',
             }).toString(),
           });
-          const data = await response.json();
-          if (data.url) {
-            // 发送消息
-            const musicMessage = `🎵 ${music.name} - ${music.artists
-              .map((a: any) => a.name)
-              .join(',')} [music]${data.url}[/music][cover]${data.pic}[/cover]`;
-            handleSend(musicMessage);
-            setIsMusicSearchVisible(false);
-            setSearchKey('');
-            setSearchResults([]);
+
+          if (!response.ok) {
+            throw new Error(`获取音乐链接请求失败: ${response.status}`);
           }
+
+          const data = await response.json();
+          if (!data.url) {
+            throw new Error('未能获取到音乐链接');
+          }
+
+          // 发送消息
+          const musicMessage = `🎵 ${music.name} - ${music.artists
+            .map((a: any) => a.name)
+            .join(',')} [music]${data.url}[/music][cover]${data.pic}[/cover]`;
+          handleSend(musicMessage);
+          setIsMusicSearchVisible(false);
+          setSearchKey('');
+          setSearchResults([]);
         } catch (error) {
-          messageApi.error('获取音乐链接失败');
+          console.error('获取音乐链接失败:', error);
+          setMusicApiError('音乐解析服务暂时不可用，请稍后再试');
+          messageApi.error('获取音乐链接失败，音乐API可能暂时不可用');
         } finally {
           setIsSelectingMusic(false);
         }
-      }, 1000); // 1秒防抖延迟
+      }, 500); // 500毫秒防抖延迟
     } catch (error) {
       setIsSelectingMusic(false);
       messageApi.error('处理音乐选择时出错');
@@ -2057,6 +2101,9 @@ const ChatRoom: React.FC = () => {
   // 添加歌曲到歌单
   const addToPlaylist = async (music: any) => {
     try {
+      setAddingToPlaylistId(music.id);
+      setMusicApiError(null);
+
       const response = await fetch('https://api.kxzjoker.cn/api/163_music', {
         method: 'POST',
         headers: {
@@ -2069,33 +2116,43 @@ const ChatRoom: React.FC = () => {
         }).toString(),
       });
 
-      const data = await response.json();
-      if (data.url) {
-        const newSong: Song = {
-          id: music.id,
-          name: music.name,
-          artist: music.artists.map((a: any) => a.name).join(','),
-          url: data.url,
-          cover: data.pic,
-          album: music.album.name,
-        };
-
-        setPlaylist((prev) => {
-          // 检查是否已存在
-          if (prev.some((song) => song.id === newSong.id)) {
-            messageApi.info('歌曲已在歌单中');
-            return prev;
-          }
-
-          const updatedPlaylist = [...prev, newSong];
-          // 保存到localStorage
-          localStorage.setItem('music_playlist', JSON.stringify(updatedPlaylist));
-          messageApi.success('已添加到歌单');
-          return updatedPlaylist;
-        });
+      if (!response.ok) {
+        throw new Error(`获取音乐链接请求失败: ${response.status}`);
       }
+
+      const data = await response.json();
+      if (!data.url) {
+        throw new Error('未能获取到音乐链接');
+      }
+
+      const newSong: Song = {
+        id: music.id,
+        name: music.name,
+        artist: music.artists.map((a: any) => a.name).join(','),
+        url: data.url,
+        cover: data.pic,
+        album: music.album.name,
+      };
+
+      setPlaylist((prev) => {
+        // 检查是否已存在
+        if (prev.some((song) => song.id === newSong.id)) {
+          messageApi.info('歌曲已在歌单中');
+          return prev;
+        }
+
+        const updatedPlaylist = [...prev, newSong];
+        // 保存到localStorage
+        localStorage.setItem('music_playlist', JSON.stringify(updatedPlaylist));
+        messageApi.success('已添加到歌单');
+        return updatedPlaylist;
+      });
     } catch (error) {
-      messageApi.error('添加歌曲失败');
+      console.error('添加歌曲失败:', error);
+      setMusicApiError('音乐解析服务暂时不可用，请稍后再试');
+      messageApi.error('添加歌曲失败，音乐API可能暂时不可用');
+    } finally {
+      setAddingToPlaylistId(null);
     }
   };
 
@@ -2191,6 +2248,14 @@ const ChatRoom: React.FC = () => {
       if (audioIndex !== -1) {
         aPlayerInstanceRef.current.list.remove(audioIndex);
       }
+    }
+  };
+
+  // 当搜索关键词变化时重置搜索状态
+  const handleSearchKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchKey(e.target.value);
+    if (hasSearched && e.target.value !== searchKey) {
+      setHasSearched(false); // 如果关键词变化，重置搜索状态
     }
   };
 
@@ -2648,58 +2713,87 @@ const ChatRoom: React.FC = () => {
                   <Input.Search
                     placeholder="输入歌曲名称"
                     value={searchKey}
-                    onChange={(e) => setSearchKey(e.target.value)}
+                    onChange={handleSearchKeyChange}
                     onSearch={handleMusicSearch}
                     enterButton
+                    loading={isSearchingMusic}
                     style={{ marginBottom: '10px' }}
                   />
-                  <List
-                    className={styles.musicList}
-                    height={300}
-                    itemCount={searchResults.length}
-                    itemSize={60}
-                    width="100%"
-                  >
-                    {({ index, style }) => {
-                      const item = searchResults[index];
-                      return (
-                        <div
-                          style={{
-                            ...style,
-                            display: 'flex',
-                            alignItems: 'center',
-                            padding: '5px 10px',
-                          }}
-                          className={styles.musicListItem}
-                        >
-                          <div className={styles.musicInfo}>
-                            <div className={styles.musicTitle}>{item.name}</div>
-                            <div className={styles.musicDesc}>
-                              {`${item.artists.map((a: any) => a.name).join(',')} - ${
-                                item.album.name
-                              }`}
+
+                  {musicApiError && (
+                    <Alert
+                      message="API服务提示"
+                      description={musicApiError}
+                      type="warning"
+                      showIcon
+                      style={{ marginBottom: '10px' }}
+                      closable
+                      onClose={() => setMusicApiError(null)}
+                    />
+                  )}
+
+                  {isSearchingMusic ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+                      <Spin tip="正在搜索音乐..." />
+                    </div>
+                  ) : searchResults.length > 0 ? (
+                    <List
+                      className={styles.musicList}
+                      height={300}
+                      itemCount={searchResults.length}
+                      itemSize={60}
+                      width="100%"
+                    >
+                      {({ index, style }) => {
+                        const item = searchResults[index];
+                        return (
+                          <div
+                            style={{
+                              ...style,
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '5px 10px',
+                            }}
+                            className={styles.musicListItem}
+                          >
+                            <div className={styles.musicInfo}>
+                              <div className={styles.musicTitle}>{item.name}</div>
+                              <div className={styles.musicDesc}>
+                                {`${item.artists.map((a: any) => a.name).join(',')} - ${
+                                  item.album.name
+                                }`}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <Button
+                                type="primary"
+                                size="small"
+                                onClick={() => handleSelectMusic(item)}
+                                loading={isSelectingMusic}
+                                disabled={isSelectingMusic}
+                              >
+                                {isSelectingMusic ? '处理中' : '发送'}
+                              </Button>
+                              <Button
+                                size="small"
+                                icon={<PlusOutlined />}
+                                onClick={() => addToPlaylist(item)}
+                                loading={addingToPlaylistId === item.id}
+                                disabled={addingToPlaylistId !== null}
+                              >
+                                添加到歌单
+                              </Button>
                             </div>
                           </div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <Button
-                              type="primary"
-                              size="small"
-                              onClick={() => handleSelectMusic(item)}
-                            >
-                              发送
-                            </Button>
-                            <Button
-                              size="small"
-                              icon={<PlusOutlined />}
-                              onClick={() => addToPlaylist(item)}
-                            >
-                              添加到歌单
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    }}
-                  </List>
+                        );
+                      }}
+                    </List>
+                  ) : (
+                    <Empty
+                      description={hasSearched ? '未找到相关歌曲' : '请输入关键词并点击搜索'}
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                  )}
                 </div>
               ),
             },
