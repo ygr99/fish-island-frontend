@@ -129,7 +129,7 @@ const ChatRoom: React.FC = () => {
   const loadingRef = useRef(false); // 添加loadingRef防止重复请求
 
   const [announcement, setAnnouncement] = useState<string>(
-    '欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢：感谢 yovvis 大佬赞助的服务器资源🌟，域名9月份过期，请移步新域名：<a href="https://yucoder.cn/" target="_blank" rel="noopener noreferrer">https://yucoder.cn/</a>。<br/>留言区🌟：🐟友 7878 留言：打倒绿头龟 渣男老 b 登',
+    '欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢：感谢 yovvis 大佬赞助的服务器资源🌟，域名9月份过期，请移步新域名：<a href="https://yucoder.cn/" target="_blank" rel="noopener noreferrer">https://yucoder.cn/</a>',
   );
   const [showAnnouncement, setShowAnnouncement] = useState<boolean>(true);
 

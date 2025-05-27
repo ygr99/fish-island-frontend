@@ -19,6 +19,7 @@ export default [
     routes: [
       {path: '/game', redirect: '/game/piece', requireAuth: true},
       {icon: 'DesktopOutlined', path: '/game/piece', component: './Game/Piece', name: '五子棋', requireAuth: true},
+      // {icon: 'DesktopOutlined', path: '/game/draw', component: './Game/Draw', name: '你画我猜', requireAuth: true},
       {
         icon: 'DesktopOutlined',
         path: '/game/chineseChess',
