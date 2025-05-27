@@ -5,7 +5,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
 import '@umijs/max';
-import { Button, message, Space, Typography } from 'antd';
+import {Button, message, Popconfirm, Space, Typography} from 'antd';
 import React, { useRef, useState } from 'react';
 
 /**
@@ -121,9 +121,14 @@ const UserAdminPage: React.FC = () => {
           >
             修改
           </Typography.Link>
-          <Typography.Link type="danger" onClick={() => handleDelete(record)}>
-            删除
-          </Typography.Link>
+          <Popconfirm
+            title="确定要删除该用户吗？"
+            onConfirm={() => handleDelete(record)}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Typography.Link type="danger">删除</Typography.Link>
+          </Popconfirm>
         </Space>
       ),
     },
