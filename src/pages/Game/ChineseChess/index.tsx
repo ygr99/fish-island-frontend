@@ -45,7 +45,7 @@ function formatPlayerInfo(user: any) {
 
 function App() {
   // 新增类型定义
-  type GameMode = 'single' | 'online';
+  type GameMode = 'single' | 'online' | 'self';
   type OnlineStatus = 'connecting' | 'waiting' | 'playing';
   type GameType = 'normal' | 'hidden'; // 添加游戏类型
 
@@ -494,12 +494,20 @@ function App() {
         return;
       }
 
+      // 自对弈模式下，允许选择任何颜色的棋子，只要是当前回合颜色
+      if (gameMode === 'self' && position) {
+        const piece = board[position.row][position.col];
+        if (piece && piece.player !== currentPlayer) {
+          return;
+        }
+      }
+
       setSelectedPosition(position);
 
       if (position) {
         const piece = board[position.row][position.col];
 
-        // 只能选择当前玩家颜色的棋子
+        // 只能选择当前玩家颜色的棋子（自对弈模式下是当前回合的颜色）
         if (piece && piece.player === currentPlayer) {
           // 计算有效移动位置
           const moves: Position[] = [];
@@ -570,8 +578,11 @@ function App() {
 
       // 检查移动是否有效
       if (validMoves.some((move) => move.row === toPosition.row && move.col === toPosition.col)) {
-        if (gameMode === 'single') {
-          // 单机模式逻辑 - 保持不变
+        // 根据游戏模式采用不同的处理逻辑
+        const isSingleOrSelfMode = gameMode === 'single' || gameMode === 'self';
+
+        if (isSingleOrSelfMode) {
+          // 单机模式和自对弈模式逻辑
           // 获取移动的棋子和可能被吃掉的棋子
           const movingPiece = board[selectedPosition.row][selectedPosition.col];
           const capturedPiece = board[toPosition.row][toPosition.col];
@@ -615,19 +626,6 @@ function App() {
               });
               // 游戏结束时显示弹框
               setShowGameEndModal(true);
-              // 向对方发送游戏结束通知
-              wsService.send({
-                type: 2,
-                userId: opponentUserId,
-                data: {
-                  type: 'gameEnd',
-                  content: {
-                    roomId: roomId,
-                    winner: currentPlayer,
-                    reason: 'capture',
-                  },
-                },
-              });
               return;
             }
 
@@ -655,19 +653,6 @@ function App() {
               });
               // 游戏结束时显示弹框
               setShowGameEndModal(true);
-              // 向对方发送游戏结束通知
-              wsService.send({
-                type: 2,
-                userId: opponentUserId,
-                data: {
-                  type: 'gameEnd',
-                  content: {
-                    roomId: roomId,
-                    winner: currentPlayer,
-                    reason: 'checkmate',
-                  },
-                },
-              });
               return;
             }
 
@@ -685,12 +670,12 @@ function App() {
           setSelectedPosition(null);
           setValidMoves([]);
 
-          // AI轮次
+          // 在单机模式下，AI轮次
           if (gameMode === 'single' && !winInfo) {
             setIsThinking(true);
           }
-        } else if (gameMode === 'online') {
-          // 联机模式逻辑 - 完全重写
+        } else {
+          // 联机模式逻辑
           if (onlineStatus !== 'playing') {
             messageApi.open({
               type: 'info',
@@ -876,6 +861,7 @@ function App() {
       saveGameState,
       currentUser,
       winInfo,
+      gameType,
     ],
   );
 
@@ -1527,7 +1513,7 @@ function App() {
 
     const initialBoard = createInitialBoard(gameType);
 
-    // 如果玩家选择黑方，AI先行
+    // 如果玩家选择黑方，AI先行（仅在单机模式下）
     if (color === 'black' && gameMode === 'single') {
       setIsThinking(true);
       setTimeout(() => {
@@ -1696,21 +1682,38 @@ function App() {
 
   // 添加悔棋函数
   const undoMove = () => {
-    if (moveHistory.length < 2 || isThinking || winInfo) return;
+    if (
+      (gameMode === 'single' && moveHistory.length < 2) ||
+      (gameMode === 'self' && moveHistory.length < 1) ||
+      isThinking ||
+      winInfo
+    )
+      return;
 
-    // 移除最后两步（玩家和AI的走棋）
-    const newMoveHistory = moveHistory.slice(0, -2);
+    // 确定要回退的步数
+    const stepsToUndo = gameMode === 'single' ? 2 : 1;
+
+    // 移除最后的步数（单人模式下是玩家和AI的走棋，自我对弈模式下只移除一步）
+    const newMoveHistory = moveHistory.slice(0, -stepsToUndo);
     setMoveHistory(newMoveHistory);
 
     // 重建棋盘
-    const newBoard = createInitialBoard();
+    const newBoard = createInitialBoard(gameType);
     newMoveHistory.forEach((move) => {
       newBoard[move.to.row][move.to.col] = move.piece;
       newBoard[move.from.row][move.from.col] = null;
     });
 
     setBoard(newBoard);
-    setCurrentPlayer(playerColor);
+
+    // 在单人模式下，始终回到玩家回合；在自我对弈模式下，切换到上一步的对手
+    if (gameMode === 'single') {
+      setCurrentPlayer(playerColor);
+    } else {
+      // 在自我对弈模式下，切换到上一步的对手
+      setCurrentPlayer(currentPlayer === 'red' ? 'black' : 'red');
+    }
+
     setLastMove(
       newMoveHistory.length > 0
         ? {
@@ -1930,6 +1933,25 @@ function App() {
                 </div>
                 <span className="text-sm text-gray-400 group-hover:text-gray-600">本地对弈</span>
               </button>
+
+              <button
+                type={'button'}
+                onClick={() => setGameMode('self')}
+                className="group px-8 py-4 bg-white border-2 border-gray-200 rounded-xl hover:border-gray-300 transition-all duration-200 transform hover:scale-105"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div
+                    style={{
+                      backgroundColor: gameMode === 'self' ? 'rgba(172,229,178,0.95)' : 'white',
+                      color: 'white',
+                    }}
+                    className="w-5 h-5 rounded-full border-2 border-gray-800"
+                  ></div>
+                  <span className="font-medium text-gray-800">自我对弈</span>
+                </div>
+                <span className="text-sm text-gray-400 group-hover:text-gray-600">本地对弈</span>
+              </button>
+
               <button
                 type={'button'}
                 onClick={switchToOnlineMode}
@@ -1965,50 +1987,8 @@ function App() {
               </Button>
             </div>
           )}
-          {gameMode === 'single' && (
-            <div>
-              <h2 className="text-xl font-medium mb-8 text-gray-800">选择您的执子颜色</h2>
-              <div className="flex gap-6 justify-center mb-6">
-                <button
-                  type={'button'}
-                  onClick={() => {
-                    setSelectedColor('red');
-                    startGame('red');
-                  }}
-                  style={{ backgroundColor: '#c12c1f' }}
-                  className="group px-8 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all duration-200 transform hover:scale-105"
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <div
-                      className="w-5 h-5 rounded-full border-2 border-gray-700"
-                      style={{ backgroundColor: '#c12c1f', borderColor: '#dd7694' }}
-                    ></div>
-                    <span className="font-medium">执红先手</span>
-                  </div>
-                  <span className="text-sm text-gray-400 group-hover:text-gray-300">
-                    First Move
-                  </span>
-                </button>
-                <button
-                  type={'button'}
-                  onClick={() => {
-                    setSelectedColor('black');
-                    startGame('black');
-                  }}
-                  className="group px-8 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all duration-200 transform hover:scale-105"
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-5 h-5 rounded-full bg-black border-2 border-gray-700"></div>
-                    <span className="font-medium">执黑后手</span>
-                  </div>
-                  <span className="text-sm text-gray-400 group-hover:text-gray-600">
-                    Second Move
-                  </span>
-                </button>
-              </div>
-            </div>
-          )}
-          {gameMode === 'single' && (
+
+          {(gameMode === 'single' || gameMode === 'self') && (
             <div className="mb-8">
               <h2 className="text-xl font-medium mb-4">选择游戏类型</h2>
               <div className="flex gap-4 justify-center">
@@ -2053,6 +2033,50 @@ function App() {
                 ) : (
                   <p>揭棋模式：所有棋子初始为暗棋，移动时翻开，按规则移动。</p>
                 )}
+              </div>
+            </div>
+          )}
+
+          {(gameMode === 'single' || gameMode === 'self') && (
+            <div>
+              <h2 className="text-xl font-medium mb-8 text-gray-800">选择您的执子颜色</h2>
+              <div className="flex gap-6 justify-center mb-6">
+                <button
+                  type={'button'}
+                  onClick={() => {
+                    setSelectedColor('red');
+                    startGame('red');
+                  }}
+                  style={{ backgroundColor: '#c12c1f' }}
+                  className="group px-8 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all duration-200 transform hover:scale-105"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div
+                      className="w-5 h-5 rounded-full border-2 border-gray-700"
+                      style={{ backgroundColor: '#c12c1f', borderColor: '#dd7694' }}
+                    ></div>
+                    <span className="font-medium">执红先手</span>
+                  </div>
+                  <span className="text-sm text-gray-400 group-hover:text-gray-300">
+                    First Move
+                  </span>
+                </button>
+                <button
+                  type={'button'}
+                  onClick={() => {
+                    setSelectedColor('black');
+                    startGame('black');
+                  }}
+                  className="group px-8 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all duration-200 transform hover:scale-105"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-5 h-5 rounded-full bg-black border-2 border-gray-700"></div>
+                    <span className="font-medium">执黑后手</span>
+                  </div>
+                  <span className="text-sm text-gray-400 group-hover:text-gray-600">
+                    Second Move
+                  </span>
+                </button>
               </div>
             </div>
           )}
@@ -2204,15 +2228,30 @@ function App() {
                     </div>
                   </div>
                 )}
-                {gameMode === 'single' && (
+                {gameMode === 'self' && (
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-800">中国象棋</h1>
+                    <div className="mt-1 flex items-center gap-2">
+                      <div
+                        className={`w-3 h-3 rounded-full ${
+                          currentPlayer === 'red' ? 'bg-red-500' : 'bg-black'
+                        }`}
+                      />
+                      <span className="text-sm text-gray-600">
+                        {currentPlayer === 'red' ? '红方回合' : '黑方回合'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {(gameMode === 'single' || gameMode === 'self') && (
                   <div className="flex gap-3">
                     {gameType !== 'hidden' && (
                       <button
                         type={'button'}
                         onClick={undoMove}
-                        disabled={moveHistory.length < 2 || isThinking || !!winInfo}
+                        disabled={moveHistory.length < 1 || isThinking || !!winInfo}
                         className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                          moveHistory.length < 2 || isThinking || winInfo
+                          moveHistory.length < 1 || isThinking || winInfo
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             : 'bg-amber-500 text-white hover:bg-amber-600'
                         } transition-colors`}
@@ -2237,7 +2276,9 @@ function App() {
                 <div className="mb-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center justify-center gap-3">
                   <Trophy className="w-6 h-6 text-yellow-600" />
                   <span className="text-lg font-medium text-yellow-800">
-                    {winInfo.winner === playerColor
+                    {gameMode === 'self'
+                      ? `${winInfo.winner === 'red' ? '红方' : '黑方'}获胜！`
+                      : winInfo.winner === playerColor
                       ? '恭喜你赢了！'
                       : gameMode === 'online'
                       ? '对手小胜，再接再厉'
@@ -2251,12 +2292,12 @@ function App() {
                   <div className="flex items-center gap-3">
                     <div
                       className={`w-8 h-8 rounded-full ${
-                        currentPlayer === playerColor ? 'animate-pulse' : ''
+                        currentPlayer === playerColor || gameMode === 'self' ? 'animate-pulse' : ''
                       }`}
                       style={{
                         backgroundColor: currentPlayer === 'red' ? '#dc2626' : '#000000',
                         boxShadow:
-                          currentPlayer === playerColor
+                          currentPlayer === playerColor || gameMode === 'self'
                             ? '0 0 8px 3px rgba(59, 130, 246, 0.5)'
                             : 'none',
                       }}
@@ -2264,18 +2305,30 @@ function App() {
                     <div>
                       <div
                         className={`font-medium text-gray-900 flex items-center gap-2 ${
-                          currentPlayer === playerColor ? 'text-blue-600' : ''
+                          currentPlayer === playerColor || gameMode === 'self'
+                            ? 'text-blue-600'
+                            : ''
                         }`}
                       >
-                        {currentPlayer === playerColor ? (
+                        {currentPlayer === playerColor || gameMode === 'self' ? (
                           <>
                             <span className="relative flex h-3 w-3 mr-1">
                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
                               <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-600"></span>
                             </span>
-                            <span>你的回合</span>
+                            <span>
+                              {gameMode === 'self'
+                                ? `${currentPlayer === 'red' ? '红方' : '黑方'}回合`
+                                : '你的回合'}
+                            </span>
                             {isInCheck(board, currentPlayer).inCheck && (
-                              <span className="text-red-500 text-xs ml-2">（你正在被将军！）</span>
+                              <span className="text-red-500 text-xs ml-2">
+                                （
+                                {gameMode === 'self'
+                                  ? `${currentPlayer === 'red' ? '红方' : '黑方'}`
+                                  : '你'}
+                                正在被将军！）
+                              </span>
                             )}
                           </>
                         ) : (
@@ -2318,7 +2371,11 @@ function App() {
                     validMoves={validMoves}
                     lastMove={lastMove}
                     checkPosition={checkPosition}
-                    disabled={isThinking || currentPlayer !== playerColor || !!winInfo}
+                    disabled={
+                      gameMode === 'self'
+                        ? !!winInfo
+                        : isThinking || currentPlayer !== playerColor || !!winInfo
+                    }
                     isFlipped={playerColor === 'black' ? !forceBoardFlip : forceBoardFlip} // 根据玩家颜色和手动翻转设置决定是否翻转棋盘
                   />
                 </div>
