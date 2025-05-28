@@ -49,6 +49,7 @@ const UserAdminPage: React.FC = () => {
     }
   }, [location.search]);
 
+
   /**
    * 删除节点
    *
@@ -123,6 +124,16 @@ const UserAdminPage: React.FC = () => {
       dataIndex: 'createTimeRange',
       valueType: 'dateRange',
       hideInTable: true,
+      fieldProps: {
+        onChange: (dates:  [moment.Moment, moment.Moment]) => {
+          if (dates) {
+            const [start, end] = dates.map(date => date.format('YYYY-MM-DD'));
+            setCreateTimeRange([start, end]);
+            // 手动触发刷新
+            setTimeout(() => actionRef.current?.reload(), 0);
+          }
+        },
+      },
     },
     {
       title: '注册时间',
@@ -137,6 +148,16 @@ const UserAdminPage: React.FC = () => {
       dataIndex: 'updateTimeRange',
       valueType: 'dateRange',
       hideInTable: true,
+      fieldProps: {
+        onChange: (dates:  [moment.Moment, moment.Moment]) => {
+          if (dates) {
+            const [start, end] = dates.map(date => date.format('YYYY-MM-DD'));
+            setUpdateTimeRange([start, end]);
+            // 手动触发刷新
+            setTimeout(() => actionRef.current?.reload(), 0);
+          }
+        },
+      }
     },
     {
       title: '更新时间',
@@ -177,11 +198,14 @@ const UserAdminPage: React.FC = () => {
       <ProTable<API.User>
         headerTitle={'查询表格'}
         actionRef={actionRef}
-
         rowKey="key"
         search={{
           labelWidth: 120,
           defaultCollapsed: false,
+        }}
+        onReset={() => {
+          setCreateTimeRange([]);
+          setUpdateTimeRange([]);
         }}
         toolBarRender={() => [
           <Button
@@ -197,8 +221,12 @@ const UserAdminPage: React.FC = () => {
         request={async (params, sort, filter) => {
           const sortField = Object.keys(sort)?.[0];
           const sortOrder = sort?.[sortField] ?? undefined;
-          params.createTimeRange = createTimeRange;
-          params.updateTimeRange = updateTimeRange;
+          if (createTimeRange){
+            params.createTimeRange = createTimeRange;
+          }
+          if (updateTimeRange){
+            params.updateTimeRange = updateTimeRange;
+          }
           const { data, code } = await listUserByPageUsingPost({
             ...params,
             sortField,
