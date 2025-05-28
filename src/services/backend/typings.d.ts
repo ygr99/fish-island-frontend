@@ -1030,6 +1030,8 @@ declare namespace API {
     userName?: string;
     userProfile?: string;
     userRole?: string;
+    createTimeRange?: string[];
+    updateTimeRange?: string[];
   };
 
   type UserRegisterRequest = {
@@ -1154,7 +1156,7 @@ declare namespace API {
     totalUsers: number;
     todayActiveUsers: number;
     todayNewUsers: number;
-    thisMonthNewUsers:  number;
+    thisMonthActiveUsers:  number;
   };
 
   type BaseResponseGetUserDataWebVO_ = {

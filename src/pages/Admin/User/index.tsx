@@ -1,12 +1,14 @@
 import CreateModal from '@/pages/Admin/User/components/CreateModal';
 import UpdateModal from '@/pages/Admin/User/components/UpdateModal';
-import { deleteUserUsingPost, listUserByPageUsingPost } from '@/services/backend/userController';
-import { PlusOutlined } from '@ant-design/icons';
-import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import { PageContainer, ProTable } from '@ant-design/pro-components';
+import {deleteUserUsingPost, listUserByPageUsingPost} from '@/services/backend/userController';
+import {PlusOutlined} from '@ant-design/icons';
+import type {ActionType, ProColumns} from '@ant-design/pro-components';
+import {PageContainer, ProTable} from '@ant-design/pro-components';
 import '@umijs/max';
 import {Button, message, Popconfirm, Space, Typography} from 'antd';
-import React, { useRef, useState } from 'react';
+import React, {useEffect, useRef, useState} from 'react';
+import {useLocation} from "@umijs/max";
+import moment from "moment";
 
 /**
  * 用户管理页面
@@ -21,6 +23,32 @@ const UserAdminPage: React.FC = () => {
   const actionRef = useRef<ActionType>();
   // 当前用户点击的数据
   const [currentRow, setCurrentRow] = useState<API.User>();
+  const location = useLocation();
+  const [createTimeRange, setCreateTimeRange] = useState<string[]>([]);
+  const [updateTimeRange, setUpdateTimeRange]=  useState<string[]>([]);
+
+  useEffect(() => {
+    const queryParams = location.search;
+    // 解析查询参数，取出等号后面字符串
+    if  (!queryParams) return;
+    const parts = queryParams.split('=');
+    const value = parts[1];
+    const today = moment().format('YYYY-MM-DD');
+    const monthStart = moment().startOf('month').format('YYYY-MM-DD');
+    const monthEnd = moment().endOf('month').format('YYYY-MM-DD');
+    switch (value) {
+      case '1':
+        setCreateTimeRange([today, today])
+        break;
+      case '2':
+        setUpdateTimeRange([today, today])
+        break;
+      case '3':
+        setUpdateTimeRange([monthStart, monthEnd])
+        break;
+    }
+  }, [location.search]);
+
 
   /**
    * 删除节点
@@ -92,12 +120,44 @@ const UserAdminPage: React.FC = () => {
       },
     },
     {
-      title: '创建时间',
+      title: '注册时间',
+      dataIndex: 'createTimeRange',
+      valueType: 'dateRange',
+      hideInTable: true,
+      fieldProps: {
+        onChange: (dates:  [moment.Moment, moment.Moment]) => {
+          if (dates) {
+            const [start, end] = dates.map(date => date.format('YYYY-MM-DD'));
+            setCreateTimeRange([start, end]);
+            // 手动触发刷新
+            setTimeout(() => actionRef.current?.reload(), 0);
+          }
+        },
+      },
+    },
+    {
+      title: '注册时间',
       sorter: true,
       dataIndex: 'createTime',
       valueType: 'dateTime',
       hideInSearch: true,
       hideInForm: true,
+    },
+    {
+      title: '更新时间',
+      dataIndex: 'updateTimeRange',
+      valueType: 'dateRange',
+      hideInTable: true,
+      fieldProps: {
+        onChange: (dates:  [moment.Moment, moment.Moment]) => {
+          if (dates) {
+            const [start, end] = dates.map(date => date.format('YYYY-MM-DD'));
+            setUpdateTimeRange([start, end]);
+            // 手动触发刷新
+            setTimeout(() => actionRef.current?.reload(), 0);
+          }
+        },
+      }
     },
     {
       title: '更新时间',
@@ -141,6 +201,11 @@ const UserAdminPage: React.FC = () => {
         rowKey="key"
         search={{
           labelWidth: 120,
+          defaultCollapsed: false,
+        }}
+        onReset={() => {
+          setCreateTimeRange([]);
+          setUpdateTimeRange([]);
         }}
         toolBarRender={() => [
           <Button
@@ -156,7 +221,12 @@ const UserAdminPage: React.FC = () => {
         request={async (params, sort, filter) => {
           const sortField = Object.keys(sort)?.[0];
           const sortOrder = sort?.[sortField] ?? undefined;
-
+          if (createTimeRange){
+            params.createTimeRange = createTimeRange;
+          }
+          if (updateTimeRange){
+            params.updateTimeRange = updateTimeRange;
+          }
           const { data, code } = await listUserByPageUsingPost({
             ...params,
             sortField,
