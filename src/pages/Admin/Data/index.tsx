@@ -22,7 +22,7 @@ const DataAdminPage: React.FC = () => {
   const [totalUsers, setTotalUsers] = useState(0);
   const [todayActiveUsers, setTodayActiveUsers] = useState(0);
   const [todayNewUsers, setTodayNewUsers] = useState(0);
-  const [thisMonthActiveUsers, setthisMonthActiveUsers] = useState(0);
+  const [thisMonthActiveUsers, setMonthActiveUsers] = useState(0);
 
 
   const [type] = useState(0);
@@ -55,7 +55,7 @@ const DataAdminPage: React.FC = () => {
           setTotalUsers(res.data.totalUsers);
           setTodayActiveUsers(res.data.todayActiveUsers);
           setTodayNewUsers(res.data.todayNewUsers);
-          setthisMonthActiveUsers(res.data.thisMonthActiveUsers);
+          setMonthActiveUsers(res.data.thisMonthActiveUsers);
         }
       });
     } catch (error: any) {
