@@ -125,6 +125,7 @@ const UserAdminPage: React.FC = () => {
       valueType: 'dateRange',
       hideInTable: true,
       fieldProps: {
+        value: createTimeRange?.map(date => moment(date)),
         onChange: (dates:  [moment.Moment, moment.Moment]) => {
           if (dates) {
             const [start, end] = dates.map(date => date.format('YYYY-MM-DD'));
@@ -149,6 +150,7 @@ const UserAdminPage: React.FC = () => {
       valueType: 'dateRange',
       hideInTable: true,
       fieldProps: {
+        value: updateTimeRange?.map(date => moment(date)),
         onChange: (dates:  [moment.Moment, moment.Moment]) => {
           if (dates) {
             const [start, end] = dates.map(date => date.format('YYYY-MM-DD'));
