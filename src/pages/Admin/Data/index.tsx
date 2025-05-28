@@ -9,7 +9,7 @@ import {getNewUserDataWebVO, getUserDataWebVO} from '@/services/backend/userCont
 
 const { Divider } = ProCard;
 const { RangePicker } = DatePicker;
-
+import "./index.css"
 /**
  * 数据分析
  *
@@ -22,11 +22,11 @@ const DataAdminPage: React.FC = () => {
   const [totalUsers, setTotalUsers] = useState(0);
   const [todayActiveUsers, setTodayActiveUsers] = useState(0);
   const [todayNewUsers, setTodayNewUsers] = useState(0);
-  const [thisMonthNewUsers, setThisMonthNewUsers] = useState(0);
+  const [thisMonthActiveUsers, setThisMonthActiveUsers] = useState(0);
 
 
   const [type] = useState(0);
-  const [data, setData]=useState([]);
+  const [data, setData] = useState([]);
   const config = {
     data,
     xField: '日期',
@@ -45,37 +45,17 @@ const DataAdminPage: React.FC = () => {
     },
   };
 
-  const handleRangeChange = (dates: [moment.Moment, moment.Moment] | null) => {
-    setTimeRange(dates);
-  };
-
-  const options = [
-    { label: '本周', value: 0 },
-    { label: '本月', value: 1 },
-    { label: '今年', value: 2 },
-  ];
-
-
-
-  /**
-   * 首次加载时执行一次
-   */
-  useEffect(() => {
-    getUserData();
-    getNewUserData(type, '', '');
-  }, []);
-
   /**
    * 首页-用户数据
    */
   const getUserData = async () => {
     try {
       getUserDataWebVO().then((res) => {
-        if (res.data){
+        if (res.data) {
           setTotalUsers(res.data.totalUsers);
           setTodayActiveUsers(res.data.todayActiveUsers);
           setTodayNewUsers(res.data.todayNewUsers);
-          setThisMonthNewUsers(res.data.thisMonthNewUsers);
+          setThisMonthActiveUsers(res.data.thisMonthActiveUsers);
         }
       });
     } catch (error: any) {
@@ -105,12 +85,29 @@ const DataAdminPage: React.FC = () => {
     }
   };
 
+  /**
+   * 首次加载时执行一次
+   */
+  useEffect(() => {
+    getUserData();
+    getNewUserData(type, '', '');
+  }, []);
+
+  const handleRangeChange = (dates: [moment.Moment, moment.Moment] | null) => {
+    setTimeRange(dates);
+  };
+
+  const options = [
+    { label: '本周', value: 0 },
+    { label: '本月', value: 1 },
+    { label: '今年', value: 2 },
+  ];
 
   /**
    * 获取新增用户走势图
    * @param e
    */
-  function handleRadioChange(e : any) {
+  function handleRadioChange(e: any) {
     getNewUserData(e.target.value, '', '');
   }
 
@@ -118,7 +115,7 @@ const DataAdminPage: React.FC = () => {
    * 查询按钮点击事件
    */
   function handleButtonClick() {
-    if (timeRange === null){
+    if (timeRange === null) {
       message.error('请选择时间范围');
       return;
     }
@@ -135,23 +132,41 @@ const DataAdminPage: React.FC = () => {
         <Space size="large" style={{ display: 'flex', justifyContent: 'space-between', overflow: 'hidden' }}>
           <ProCard
             title={'全部用户'}
-            extra={'>'}
+            className="clickable-card"
             onClick={() => {
-              history.push('/admin/user');
+              history.push('/admin/user?type=0');
             }}
-            style={{ width: '40vh' }}
           >
             <Statistic value={totalUsers} suffix={'人'} />
           </ProCard>
-          <ProCard title={'今日活跃'} style={{ width: '40vh' }}>
-            <Statistic value={todayActiveUsers} suffix={'人'} />
-          </ProCard>
-          <ProCard title={'今日新增'} style={{ width: '40vh' }}>
+          <ProCard
+            title={'今日新增'}
+            className="clickable-card"
+            onClick={() => {
+              history.push('/admin/user?type=1');
+            }}
+          >
             <Statistic value={todayNewUsers} suffix={'人'} />
           </ProCard>
-          <ProCard title={'本月新增'} style={{ width: '40vh' }}>
-            <Statistic value={thisMonthNewUsers} suffix={'人'} />
+          <ProCard
+            title={'今日活跃'}
+            className="clickable-card"
+            onClick={() => {
+              history.push('/admin/user?type=2');
+            }}
+          >
+            <Statistic value={todayActiveUsers} suffix={'人'} />
           </ProCard>
+          <ProCard
+            title={'本月活跃'}
+            className="clickable-card"
+            onClick={() => {
+              history.push('/admin/user?type=3');
+            }}
+          >
+            <Statistic value={thisMonthActiveUsers} suffix={'人'} />
+          </ProCard>
+
         </Space>
         <Divider type={responsive ? 'horizontal' : 'vertical'} />
         <Descriptions title="新增用户走势图">
