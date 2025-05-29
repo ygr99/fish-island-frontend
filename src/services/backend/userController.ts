@@ -127,6 +127,29 @@ export async function getLoginUserUsingGet(options?: { [key: string]: any }) {
   });
 }
 
+/** 新增用户走势图（仅管理员） POST /api/user/get/NewUserDataWebVO */
+export async function getNewUserDataWebVoUsingPost(
+  body: API.NewUserDataWebRequest,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseListNewUserDataWebVO_>('/api/user/get/NewUserDataWebVO', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
+
+/** 用户数据（仅管理员） POST /api/user/get/UserDataWebVO */
+export async function getUserDataWebVoUsingPost(options?: { [key: string]: any }) {
+  return request<API.BaseResponseUserDataWebVO_>('/api/user/get/UserDataWebVO', {
+    method: 'POST',
+    ...(options || {}),
+  });
+}
+
 /** 根据 id 获取包装类 GET /api/user/get/vo */
 export async function getUserVoByIdUsingGet(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
@@ -254,34 +277,6 @@ export async function updateMyUserUsingPost(
   options?: { [key: string]: any },
 ) {
   return request<API.BaseResponseBoolean_>('/api/user/update/my', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    data: body,
-    ...(options || {}),
-  });
-}
-
-/** 用户数据（仅管理员） POST /api/user/get/UserDataWebVO */
-export async function getUserDataWebVO(
-  options?: { [key: string]: any },
-) {
-  return request<API.BaseResponseGetUserDataWebVO_>('/api/user/get/UserDataWebVO', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    ...(options || {}),
-  });
-}
-
-/** 新增用户走势图（仅管理员） POST /api/user/get/NewUserDataWebVO */
-export async function getNewUserDataWebVO(
-  body: API.NewUserDataWebRequest,
-  options?: { [key: string]: any },
-) {
-  return request<API.BaseResponseGetNewUserDataWebVO_>('/api/user/get/NewUserDataWebVO', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

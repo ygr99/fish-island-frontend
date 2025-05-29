@@ -5,11 +5,11 @@ import React, {useEffect, useState} from 'react';
 import {Line} from '@ant-design/charts';
 import {history} from '@umijs/max';
 import moment from 'moment';
-import {getNewUserDataWebVO, getUserDataWebVO} from '@/services/backend/userController';
 
 const { Divider } = ProCard;
 const { RangePicker } = DatePicker;
 import "./index.css"
+import {getNewUserDataWebVoUsingPost, getUserDataWebVoUsingPost} from "@/services/backend/userController";
 /**
  * 数据分析
  *
@@ -50,7 +50,7 @@ const DataAdminPage: React.FC = () => {
    */
   const getUserData = async () => {
     try {
-      getUserDataWebVO().then((res) => {
+      getUserDataWebVoUsingPost().then((res) => {
         if (res.data) {
           setTotalUsers(res.data.totalUsers);
           setTodayActiveUsers(res.data.todayActiveUsers);
@@ -71,7 +71,7 @@ const DataAdminPage: React.FC = () => {
    */
   const getNewUserData = async (type: number, beginTime: string, endTime: string) => {
     try {
-      const res = await getNewUserDataWebVO({ type, beginTime: beginTime, endTime: endTime });
+      const res = await getNewUserDataWebVoUsingPost({ type, beginTime: beginTime, endTime: endTime });
       if (res.data) {
         const transformedData = res.data.map((item: any) => ({
           '日期': item.date,
