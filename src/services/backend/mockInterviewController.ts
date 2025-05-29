@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import {request} from '@umijs/max';
+import { request } from '@umijs/max';
 
 /** addMockInterview POST /api/mockInterview/add */
 export async function addMockInterviewUsingPost(

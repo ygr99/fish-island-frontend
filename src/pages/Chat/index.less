@@ -2175,3 +2175,173 @@
     }
   }
 }
+
+// 添加用户详情弹窗样式
+.userDetailModal {
+  padding: 10px;
+
+  .userDetailHeader {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+
+    .avatarWrapper {
+      position: relative;
+      display: inline-block;
+      width: 64px;
+      height: 64px;
+
+      .avatarWithFrame {
+        position: relative;
+        width: 64px;
+        height: 64px;
+        display: inline-block;
+
+        .ant-avatar {
+          z-index: 0;
+        }
+
+        .avatarFrame {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 160%;
+          height: 160%;
+          pointer-events: none;
+          z-index: 1;
+          transition: all 0.3s ease;
+        }
+      }
+    }
+
+    .userDetailInfo {
+      flex: 1;
+
+      .userDetailName {
+        font-size: 18px;
+        font-weight: 500;
+        margin-bottom: 4px;
+        color: #1a1c1e;
+      }
+
+      .userDetailId {
+        font-size: 12px;
+        color: #999;
+        margin-bottom: 8px;
+        font-family: monospace;
+      }
+    }
+  }
+
+  .userDetailContent {
+    background-color: #f7f8fa;
+    border-radius: 8px;
+    padding: 15px;
+
+    .userDetailItem {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .itemLabel {
+        width: 80px;
+        font-size: 14px;
+        color: #666;
+        flex-shrink: 0;
+      }
+
+      .itemValue {
+        font-size: 14px;
+        color: #333;
+        font-weight: 500;
+      }
+
+      .pointsContainer {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .ant-btn-link {
+          color: #1890ff;
+          font-size: 12px;
+          opacity: 0.8;
+
+          &:hover {
+            opacity: 1;
+            text-decoration: underline;
+          }
+        }
+      }
+
+      .pointsEditContainer {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .ant-input-number, .ant-input {
+          border-radius: 4px;
+        }
+
+        .ant-btn {
+          padding: 0 8px;
+          font-size: 12px;
+        }
+      }
+    }
+  }
+}
+
+.userDetailActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+
+  @media screen and (max-width: 768px) {
+    justify-content: center;
+  }
+
+  .ant-btn {
+    transition: all 0.3s;
+
+    &.ant-btn-dangerous {
+      background: #ff4d4f;
+      border-color: #ff4d4f;
+
+      &:hover {
+        background: #ff7875;
+        border-color: #ff7875;
+        box-shadow: 0 2px 8px rgba(255, 77, 79, 0.2);
+      }
+    }
+
+    &.ant-btn-default {
+      &:hover {
+        color: #40a9ff;
+        border-color: #40a9ff;
+        background: rgba(24, 144, 255, 0.05);
+      }
+    }
+  }
+}
+
+.senderName {
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.quotedMessageSender {
+  font-weight: 500;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

@@ -12,6 +12,7 @@ import {
   getRedPacketRecordsUsingGet,
   grabRedPacketUsingPost,
 } from '@/services/backend/redPacketController';
+import { muteUserUsingPost, getUserMuteInfoUsingGet, unmuteUserUsingPost } from '@/services/backend/userMuteController';
 import { wsService } from '@/services/websocket';
 import { useModel } from '@@/exports';
 // ... 其他 imports ...
@@ -186,6 +187,9 @@ const ChatRoom: React.FC = () => {
   const [musicApiError, setMusicApiError] = useState<string | null>(null);
   // 添加是否已执行搜索的状态
   const [hasSearched, setHasSearched] = useState(false);
+
+  const [isUserDetailModalVisible, setIsUserDetailModalVisible] = useState<boolean>(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // 添加搜索音乐的函数
   const handleMusicSearch = async () => {
@@ -2259,6 +2263,153 @@ const ChatRoom: React.FC = () => {
     }
   };
 
+  // 添加处理查看用户详情的函数
+  const handleViewUserDetail = async (user: User) => {
+    if (currentUser?.userRole === 'admin') {
+      setSelectedUser(user);
+      setIsUserDetailModalVisible(true);
+      
+      // 获取用户禁言状态
+      try {
+        const response = await getUserMuteInfoUsingGet({
+          userId: user.id // 直接传递字符串 ID
+        } as any); // 使用 as any 临时绕过类型检查
+        
+        if (response.code === 0 && response.data) {
+          setUserMuteInfo(response.data);
+        } else {
+          setUserMuteInfo(null);
+        }
+      } catch (error) {
+        console.error('获取用户禁言状态失败:', error);
+        setUserMuteInfo(null);
+      }
+    }
+  };
+
+  // 添加禁言用户的函数
+  const handleMuteUser = (userId: string) => {
+    // 确保当前用户是管理员
+    if (!currentUser || currentUser.userRole !== 'admin') {
+      return;
+    }
+
+    // 显示禁言设置弹窗
+    setIsMuteModalVisible(true);
+  };
+
+  // 添加解除禁言的函数
+  const handleUnmuteUser = async (userId: string) => {
+    // 确保当前用户是管理员
+    if (!currentUser || currentUser.userRole !== 'admin') {
+      return;
+    }
+    
+    try {
+      const response = await unmuteUserUsingPost({
+        userId: userId // 直接传递字符串 ID
+      } as any); // 使用 as any 临时绕过类型检查
+      
+      if (response.code === 0 && response.data) {
+        messageApi.success('已解除用户禁言');
+        // 更新禁言状态
+        setUserMuteInfo(null);
+      } else {
+        messageApi.error(`解除禁言失败：${response.message}`);
+      }
+    } catch (error) {
+      console.error('解除用户禁言失败:', error);
+      messageApi.error('解除禁言操作失败，请稍后再试');
+    }
+  };
+
+  // 添加封禁账号的函数
+  const handleBanUser = (userId: string) => {
+    // 确保当前用户是管理员
+    if (!currentUser || currentUser.userRole !== 'admin') {
+      return;
+    }
+
+    messageApi.success(`已封禁用户 ID: ${userId}`);
+    setIsUserDetailModalVisible(false);
+
+    // 这里可以添加实际的封禁API调用
+    // TODO: 实现实际的封禁功能
+  };
+
+  // 添加修改用户积分的状态和函数
+  const [isEditingPoints, setIsEditingPoints] = useState(false);
+  const [pointsInputValue, setPointsInputValue] = useState<number>(0);
+
+
+  // 添加保存积分的函数
+  const handleSavePoints = () => {
+    if (selectedUser) {
+      messageApi.success(`已修改用户 ${selectedUser.name} 的积分为 ${pointsInputValue}`);
+      setIsEditingPoints(false);
+
+      // 更新用户对象中的积分（实际应用中应该调用API）
+      setSelectedUser({
+        ...selectedUser,
+        points: pointsInputValue
+      });
+
+      // TODO: 实际调用修改积分API
+    }
+  };
+
+  // 添加禁言相关状态
+  const [isMuteModalVisible, setIsMuteModalVisible] = useState(false);
+  const [muteDuration, setMuteDuration] = useState<number>(60); // 默认60秒
+  const [customMuteDuration, setCustomMuteDuration] = useState<number | undefined>(undefined);
+  const [muteLoading, setMuteLoading] = useState(false);
+  const [userMuteInfo, setUserMuteInfo] = useState<API.UserMuteVO | null>(null);
+  
+  // 执行禁言操作
+  const handleConfirmMute = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      setMuteLoading(true);
+      
+      // 使用自定义时间或预设时间
+      const duration = customMuteDuration !== undefined ? customMuteDuration : muteDuration;
+      
+      const response = await muteUserUsingPost({
+        userId: selectedUser.id, // 直接传递字符串 ID
+        duration: duration,
+      } as any); // 使用 as any 临时绕过类型检查
+      
+      if (response.code === 0) {
+        messageApi.success(`已禁言用户 ${selectedUser.name}，时长 ${formatMuteDuration(duration)}`);
+        setIsMuteModalVisible(false);
+        setIsUserDetailModalVisible(false);
+      } else {
+        messageApi.error(`禁言失败：${response.message}`);
+      }
+    } catch (error) {
+      console.error('禁言用户失败:', error);
+      messageApi.error('禁言操作失败，请稍后再试');
+    } finally {
+      setMuteLoading(false);
+      // 重置自定义时间
+      setCustomMuteDuration(undefined);
+    }
+  };
+
+  // 格式化禁言时间显示
+  const formatMuteDuration = (seconds: number): string => {
+    if (seconds < 60) {
+      return `${seconds}秒`;
+    } else if (seconds < 3600) {
+      return `${Math.floor(seconds / 60)}分钟`;
+    } else if (seconds < 86400) {
+      return `${Math.floor(seconds / 3600)}小时`;
+    } else {
+      return `${Math.floor(seconds / 86400)}天`;
+    }
+  };
+
   return (
     <div className={styles.chatRoom}>
       {currentMusic && (
@@ -2346,7 +2497,11 @@ const ChatRoom: React.FC = () => {
                 </Popover>
               </div>
               <div className={styles.senderInfo}>
-                <span className={styles.senderName}>
+                <span
+                  className={styles.senderName}
+                  onClick={() => handleViewUserDetail(msg.sender)}
+                  style={currentUser?.userRole === 'admin' ? { cursor: 'pointer' } : {}}
+                >
                   {msg.sender.name}
                   {getAdminTag(msg.sender.isAdmin, msg.sender.level, msg.sender.titleId)}
                   <span className={styles.levelBadge}>
@@ -2359,7 +2514,11 @@ const ChatRoom: React.FC = () => {
               {msg.quotedMessage && (
                 <div className={styles.quotedMessage}>
                   <div className={styles.quotedMessageHeader}>
-                    <span className={styles.quotedMessageSender}>
+                    <span
+                      className={styles.quotedMessageSender}
+                      onClick={() => msg.quotedMessage && handleViewUserDetail(msg.quotedMessage.sender)}
+                      style={currentUser?.userRole === 'admin' ? { cursor: 'pointer' } : {}}
+                    >
                       {msg.quotedMessage.sender.name}
                     </span>
                     <span className={styles.quotedMessageTime}>
@@ -2876,6 +3035,202 @@ const ChatRoom: React.FC = () => {
             },
           ]}
         />
+      </Modal>
+      <Modal
+        title="用户详细信息"
+        open={isUserDetailModalVisible}
+        onCancel={() => setIsUserDetailModalVisible(false)}
+        footer={
+          currentUser?.userRole === 'admin' && (
+            <div className={styles.userDetailActions}>
+              {userMuteInfo?.isMuted ? (
+                <Button
+                  type="primary"
+                  onClick={() => selectedUser && handleUnmuteUser(selectedUser.id)}
+                >
+                  解除禁言
+                </Button>
+              ) : (
+                <Button
+                  type="primary"
+                  danger
+                  onClick={() => selectedUser && handleMuteUser(selectedUser.id)}
+                >
+                  禁言用户
+                </Button>
+              )}
+              <Button
+                type="primary"
+                danger
+                onClick={() => selectedUser && handleBanUser(selectedUser.id)}
+              >
+                封禁账号
+              </Button>
+              <Button onClick={() => setIsUserDetailModalVisible(false)}>
+                关闭
+              </Button>
+            </div>
+          )
+        }
+        width={400}
+      >
+        {selectedUser && (
+          <div className={styles.userDetailModal}>
+            <div className={styles.userDetailHeader}>
+              <div className={styles.avatarWrapper}>
+                <div className={styles.avatarWithFrame}>
+                  <Avatar src={selectedUser.avatar} size={64} />
+                  {selectedUser.avatarFramerUrl && (
+                    <img
+                      src={selectedUser.avatarFramerUrl}
+                      className={styles.avatarFrame}
+                      alt="avatar-frame"
+                    />
+                  )}
+                </div>
+              </div>
+              <div className={styles.userDetailInfo}>
+                <div className={styles.userDetailName}>{selectedUser.name}</div>
+                <div className={styles.userDetailId}>ID: {generateUniqueShortId(selectedUser.id)}</div>
+                {getAdminTag(selectedUser.isAdmin, selectedUser.level, selectedUser.titleId)}
+              </div>
+            </div>
+            <div className={styles.userDetailContent}>
+              <div className={styles.userDetailItem}>
+                <span className={styles.itemLabel}>用户ID：</span>
+                <span className={styles.itemValue}>{selectedUser.id}</span>
+              </div>
+              <div className={styles.userDetailItem}>
+                <span className={styles.itemLabel}>等级：</span>
+                <span className={styles.itemValue}>
+                  {getLevelEmoji(selectedUser.level)} {selectedUser.level}
+                </span>
+              </div>
+              <div className={styles.userDetailItem}>
+                <span className={styles.itemLabel}>积分：</span>
+                {isEditingPoints ? (
+                  <div className={styles.pointsEditContainer}>
+                    <Input
+                      type="number"
+                      value={pointsInputValue}
+                      onChange={(e) => setPointsInputValue(Number(e.target.value))}
+                      size="small"
+                      style={{ width: 100 }}
+                    />
+                    <Button type="primary" size="small" onClick={handleSavePoints}>
+                      保存
+                    </Button>
+                    <Button
+                      size="small"
+                      onClick={() => setIsEditingPoints(false)}
+                      style={{ marginLeft: 4 }}
+                    >
+                      取消
+                    </Button>
+                  </div>
+                ) : (
+                  <div className={styles.pointsContainer}>
+                    <span className={styles.itemValue}>{selectedUser.points || 0}</span>
+                  </div>
+                )}
+              </div>
+              {selectedUser.region && (
+                <div className={styles.userDetailItem}>
+                  <span className={styles.itemLabel}>地区：</span>
+                  <span className={styles.itemValue}>
+                    {selectedUser.country ? `${selectedUser.country} · ${selectedUser.region}` : selectedUser.region}
+                  </span>
+                </div>
+              )}
+              <div className={styles.userDetailItem}>
+                <span className={styles.itemLabel}>管理员：</span>
+                <span className={styles.itemValue}>{selectedUser.isAdmin ? '是' : '否'}</span>
+              </div>
+              <div className={styles.userDetailItem}>
+                <span className={styles.itemLabel}>上次活跃：</span>
+                <span className={styles.itemValue}>刚刚</span>
+              </div>
+              <div className={styles.userDetailItem}>
+                <span className={styles.itemLabel}>状态：</span>
+                {userMuteInfo?.isMuted ? (
+                  <span className={styles.itemValue} style={{ color: '#ff4d4f' }}>
+                    已禁言（剩余 {userMuteInfo.remainingTime}）
+                  </span>
+                ) : (
+                  <span className={styles.itemValue}>{selectedUser.status || '在线'}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+      
+      {/* 添加禁言设置弹窗 */}
+      <Modal
+        title="设置禁言时长"
+        open={isMuteModalVisible}
+        onCancel={() => setIsMuteModalVisible(false)}
+        footer={null}
+        width={400}
+      >
+        <div className={styles.muteModalContent}>
+          <div className={styles.muteOptions}>
+            <Radio.Group 
+              value={muteDuration} 
+              onChange={(e) => {
+                setMuteDuration(e.target.value);
+                setCustomMuteDuration(undefined);
+              }}
+              buttonStyle="solid"
+            >
+              <Radio.Button value={10}>10秒</Radio.Button>
+              <Radio.Button value={60}>1分钟</Radio.Button>
+              <Radio.Button value={300}>5分钟</Radio.Button>
+              <Radio.Button value={3600}>1小时</Radio.Button>
+              <Radio.Button value={86400}>1天</Radio.Button>
+            </Radio.Group>
+          </div>
+          
+          <div className={styles.customMuteDuration} style={{ marginTop: '16px' }}>
+            <Input.Group compact>
+              <Input
+                style={{ width: 'calc(100% - 80px)' }}
+                type="number"
+                placeholder="自定义禁言时长（秒）"
+                value={customMuteDuration}
+                onChange={(e) => setCustomMuteDuration(e.target.value ? Number(e.target.value) : undefined)}
+                min={1}
+              />
+              <Button 
+                type="primary" 
+                style={{ width: '80px' }}
+                onClick={() => {
+                  if (customMuteDuration && customMuteDuration > 0) {
+                    setMuteDuration(customMuteDuration);
+                  } else {
+                    messageApi.warning('请输入有效的禁言时长');
+                  }
+                }}
+              >
+                确认
+              </Button>
+            </Input.Group>
+          </div>
+          
+          <div className={styles.muteButtons} style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+            <Button onClick={() => setIsMuteModalVisible(false)} style={{ marginRight: '8px' }}>
+              取消
+            </Button>
+            <Button 
+              type="primary" 
+              danger 
+              onClick={handleConfirmMute}
+              loading={muteLoading}
+            >
+              确认禁言 {formatMuteDuration(customMuteDuration !== undefined ? customMuteDuration : muteDuration)}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

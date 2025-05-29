@@ -218,6 +218,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseUserMuteVO_ = {
+    code?: number;
+    data?: UserMuteVO;
+    message?: string;
+  };
+
   type BaseResponseUserVO_ = {
     code?: number;
     data?: UserVO;
@@ -427,6 +433,11 @@ declare namespace API {
   type getUserByIdUsingGETParams = {
     /** id */
     id?: number;
+  };
+
+  type getUserMuteInfoUsingGETParams = {
+    /** userId */
+    userId: number;
   };
 
   type getUserVoByIdUsingGETParams = {
@@ -1013,6 +1024,11 @@ declare namespace API {
     source: string;
   };
 
+  type unmuteUserUsingPOSTParams = {
+    /** userId */
+    userId: number;
+  };
+
   type uploadFileByMinioUsingPOSTParams = {
     biz?: string;
   };
@@ -1109,6 +1125,20 @@ declare namespace API {
     email?: string;
     userAccount?: string;
     userPassword?: string;
+  };
+
+  type UserMuteRequest = {
+    /** 禁言时间（秒） */
+    duration?: number;
+    /** 用户id */
+    userId?: number;
+  };
+
+  type UserMuteVO = {
+    /** 是否被禁言 */
+    isMuted?: boolean;
+    /** 剩余禁言时间（格式化为时分秒） */
+    remainingTime?: string;
   };
 
   type UserQueryRequest = {

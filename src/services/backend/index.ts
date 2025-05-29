@@ -17,6 +17,7 @@ import * as redPacketController from './redPacketController';
 import * as restAuthController from './restAuthController';
 import * as todoController from './todoController';
 import * as userController from './userController';
+import * as userMuteController from './userMuteController';
 import * as userTitleController from './userTitleController';
 import * as webParserController from './webParserController';
 export default {
@@ -36,5 +37,6 @@ export default {
   redPacketController,
   todoController,
   userController,
+  userMuteController,
   userTitleController,
 };
