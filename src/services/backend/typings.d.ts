@@ -44,6 +44,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseHeroVO_ = {
+    code?: number;
+    data?: HeroVO;
+    message?: string;
+  };
+
   type BaseResponseInt_ = {
     code?: number;
     data?: number;
@@ -56,9 +62,27 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseListHeroRankingVO_ = {
+    code?: number;
+    data?: HeroRankingVO[];
+    message?: string;
+  };
+
   type BaseResponseListHotPostVO_ = {
     code?: number;
     data?: HotPostVO[];
+    message?: string;
+  };
+
+  type BaseResponseListNewUserDataWebVO_ = {
+    code?: number;
+    data?: NewUserDataWebVO[];
+    message?: string;
+  };
+
+  type BaseResponseListSimpleHeroVO_ = {
+    code?: number;
+    data?: SimpleHeroVO[];
     message?: string;
   };
 
@@ -185,6 +209,12 @@ declare namespace API {
   type BaseResponseUser_ = {
     code?: number;
     data?: User;
+    message?: string;
+  };
+
+  type BaseResponseUserDataWebVO_ = {
+    code?: number;
+    data?: UserDataWebVO;
     message?: string;
   };
 
@@ -364,6 +394,11 @@ declare namespace API {
     id?: number;
   };
 
+  type getHeroByIdUsingGETParams = {
+    /** id */
+    id?: number;
+  };
+
   type getMinioPresignedUsingGETParams = {
     /** fileName */
     fileName?: string;
@@ -402,6 +437,36 @@ declare namespace API {
   type grabRedPacketUsingPOSTParams = {
     /** 红包ID */
     redPacketId: string;
+  };
+
+  type HeroRankingVO = {
+    rank?: number;
+    score?: number;
+    userAvatar?: string;
+    userId?: number;
+    userName?: string;
+  };
+
+  type HeroVO = {
+    ability?: string;
+    cname?: string;
+    ename?: string;
+    faction?: string;
+    height?: string;
+    id?: string;
+    identity?: string;
+    mossId?: number;
+    newType?: number;
+    officialLink?: string;
+    primaryType?: number;
+    quote?: string;
+    race?: string;
+    region?: string;
+    releaseDate?: string;
+    secondaryType?: number;
+    skins?: string;
+    skinsNum?: number;
+    title?: string;
   };
 
   type HotPostDataVO = {
@@ -576,6 +641,17 @@ declare namespace API {
       | 'NETWORK_AUTHENTICATION_REQUIRED';
     view?: View;
     viewName?: string;
+  };
+
+  type NewUserDataWebRequest = {
+    beginTime?: string;
+    endTime?: string;
+    type?: number;
+  };
+
+  type NewUserDataWebVO = {
+    date?: string;
+    newUserCount?: number;
   };
 
   type OrderItem = {
@@ -812,6 +888,11 @@ declare namespace API {
     userId?: number;
   };
 
+  type recordGuessSuccessUsingPOSTParams = {
+    /** heroId */
+    heroId?: number;
+  };
+
   type RedPacket = {
     amountPerPacket?: number;
     count?: number;
@@ -895,6 +976,11 @@ declare namespace API {
   type setCurrentFrameUsingPOSTParams = {
     /** frameId */
     frameId: number;
+  };
+
+  type SimpleHeroVO = {
+    cname?: string;
+    id?: number;
   };
 
   type streamChatDemoUsingGETParams = {
@@ -992,6 +1078,13 @@ declare namespace API {
     userProfile?: string;
   };
 
+  type UserDataWebVO = {
+    thisMonthActiveUsers?: number;
+    todayActiveUsers?: number;
+    todayNewUsers?: number;
+    totalUsers?: number;
+  };
+
   type UserEmailResetPasswordRequest = {
     checkPassword?: string;
     code?: string;
@@ -1019,6 +1112,7 @@ declare namespace API {
   };
 
   type UserQueryRequest = {
+    createTimeRange?: string[];
     current?: number;
     id?: number;
     mpOpenId?: string;
@@ -1026,12 +1120,11 @@ declare namespace API {
     sortField?: string;
     sortOrder?: string;
     unionId?: string;
+    updateTimeRange?: string[];
     userAccount?: string;
     userName?: string;
     userProfile?: string;
     userRole?: string;
-    createTimeRange?: string[];
-    updateTimeRange?: string[];
   };
 
   type UserRegisterRequest = {
@@ -1099,86 +1192,5 @@ declare namespace API {
     description?: string;
     favicon?: string;
     title?: string;
-  };
-
-  type BaseResponseHeroVO_ = {
-    code?: number;
-    data?: string;
-    message?: string;
-  };
-
-  type HeroVO = {
-    id?: string;
-    ename?: string;
-    cname?: string;
-    title?: string;
-    releaseDate?: string;
-    newType?: number;
-    primaryType?: number;
-    secondaryType?: number;
-    skins?: string;
-    officialLink?: string;
-    mossId?: number;
-    race?: string;
-    faction?: string;
-    identity?: string;
-    region?: string;
-    ability?: string;
-    height?: string;
-    quote?: string;
-    skinsNum?: number;
-  };
-
-  type BaseResponseListSimpleHeroVO_ = {
-    code?: number;
-    data?: SimpleHeroVO[];
-    message?: string;
-  };
-  type SimpleHeroVO = {
-    id?: number;
-    cname?: string;
-  };
-
-  type BaseResponseListHeroRankingVO_ = {
-    code?: number;
-    data?: HeroRankingVO[];
-    message?: string;
-  };
-  type HeroRankingVO = {
-    userId?: number;
-    userName?: string;
-    userAvatar?: string;
-    score?: number;
-    rank?: number;
-  };
-
-  type UserDataWebVO = {
-    totalUsers: number;
-    todayActiveUsers: number;
-    todayNewUsers: number;
-    thisMonthActiveUsers:  number;
-  };
-
-  type BaseResponseGetUserDataWebVO_ = {
-    code?: number;
-    data?: UserDataWebVO;
-    message?: string;
-  };
-
-  type NewUserDataWebRequest = {
-    type: number;
-    beginTime: string;
-    endTime: string;
-  };
-
-  type NewUserDataWebVO = {
-    date: string;
-    newUserCount: number;
-  };
-
-  type BaseResponseGetNewUserDataWebVO_ = {
-    code?: number;
-    data?: NewUserDataWebVO[];
-    message?: string;
   };
 }

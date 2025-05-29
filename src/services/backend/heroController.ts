@@ -2,41 +2,18 @@
 /* eslint-disable */
 import { request } from '@umijs/max';
 
-/** getRandomHero GET /api/hero/get/random */
-export async function getRandomHero(
-  options?: { [key: string]: any },
-) {
-  return request<API.BaseResponseHeroVO_>('/api/hero/get/random', {
-    method: 'GET',
-    ...(options || {}),
-  });
-}
-
-/** getNewHero GET /api/hero/get/new */
-export async function getNewHero(
-  options?: { [key: string]: any },
-) {
-  return request<API.BaseResponseHeroVO_>('/api/hero/get/new', {
-    method: 'GET',
-    ...(options || {}),
-  });
-}
-
-/** listSimpleHero GET /api/hero/list/simple */
-export async function listSimpleHero(
-  options?: { [key: string]: any },
-) {
-  return request<API.BaseResponseListSimpleHeroVO_>('/api/hero/list/simple', {
-    method: 'GET',
+/** addHeroList POST /api/hero/add */
+export async function addHeroListUsingPost(options?: { [key: string]: any }) {
+  return request<API.BaseResponseBoolean_>('/api/hero/add', {
+    method: 'POST',
     ...(options || {}),
   });
 }
 
 /** getHeroById GET /api/hero/get */
-export async function getHeroById(
-  params: {
-    id: number;
-  },
+export async function getHeroByIdUsingGet(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getHeroByIdUsingGETParams,
   options?: { [key: string]: any },
 ) {
   return request<API.BaseResponseHeroVO_>('/api/hero/get', {
@@ -48,11 +25,42 @@ export async function getHeroById(
   });
 }
 
-/** 记录猜对英雄次数 POST /api/hero/guess/success */
-export async function recordGuessSuccess(
-  params: {
-    heroId: number;
-  },
+/** getNewHero GET /api/hero/get/new */
+export async function getNewHeroUsingGet(options?: { [key: string]: any }) {
+  return request<API.BaseResponseHeroVO_>('/api/hero/get/new', {
+    method: 'GET',
+    ...(options || {}),
+  });
+}
+
+/** getRandomHero GET /api/hero/get/random */
+export async function getRandomHeroUsingGet(options?: { [key: string]: any }) {
+  return request<API.BaseResponseString_>('/api/hero/get/random', {
+    method: 'GET',
+    ...(options || {}),
+  });
+}
+
+/** getGuessCount GET /api/hero/guess/count */
+export async function getGuessCountUsingGet(options?: { [key: string]: any }) {
+  return request<API.BaseResponseInt_>('/api/hero/guess/count', {
+    method: 'GET',
+    ...(options || {}),
+  });
+}
+
+/** getGuessRanking GET /api/hero/guess/ranking */
+export async function getGuessRankingUsingGet(options?: { [key: string]: any }) {
+  return request<API.BaseResponseListHeroRankingVO_>('/api/hero/guess/ranking', {
+    method: 'GET',
+    ...(options || {}),
+  });
+}
+
+/** recordGuessSuccess POST /api/hero/guess/success */
+export async function recordGuessSuccessUsingPost(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.recordGuessSuccessUsingPOSTParams,
   options?: { [key: string]: any },
 ) {
   return request<API.BaseResponseBoolean_>('/api/hero/guess/success', {
@@ -60,28 +68,13 @@ export async function recordGuessSuccess(
     params: {
       ...params,
     },
-    headers: {
-      'Content-Type': 'application/json',
-    },
     ...(options || {}),
   });
 }
 
-/** 获取猜对英雄次数 GET /api/hero/guess/count */
-export async function getGuessCount(
-  options?: { [key: string]: any },
-) {
-  return request<API.BaseResponseInt_>('/api/hero/guess/count', {
-    method: 'GET',
-    ...(options || {}),
-  });
-}
-
-/** 获取英雄排行榜 GET /api/hero/guess/ranking */
-export async function getGuessRanking(
-  options?: { [key: string]: any },
-) {
-  return request<API.BaseResponseListHeroRankingVO_>('/api/hero/guess/ranking', {
+/** listSimpleHero GET /api/hero/list/simple */
+export async function listSimpleHeroUsingGet(options?: { [key: string]: any }) {
+  return request<API.BaseResponseListSimpleHeroVO_>('/api/hero/list/simple', {
     method: 'GET',
     ...(options || {}),
   });

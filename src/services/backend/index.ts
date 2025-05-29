@@ -7,6 +7,7 @@ import * as chatController from './chatController';
 import * as donationRecordsController from './donationRecordsController';
 import * as emoticonFavourController from './emoticonFavourController';
 import * as fileController from './fileController';
+import * as heroController from './heroController';
 import * as hotPostController from './hotPostController';
 import * as mockInterviewController from './mockInterviewController';
 import * as postController from './postController';
@@ -25,6 +26,7 @@ export default {
   donationRecordsController,
   emoticonFavourController,
   fileController,
+  heroController,
   hotPostController,
   mockInterviewController,
   restAuthController,
