@@ -1,14 +1,5 @@
 import React, {useEffect, useState} from 'react';
 import {Button, Card, Collapse, Form, List, message, Modal, Select, Space, Tooltip} from 'antd';
-import {
-  getGuessCount,
-  getGuessRanking,
-  getHeroById,
-  getNewHero,
-  getRandomHero,
-  listSimpleHero,
-  recordGuessSuccess
-} from '@/services/backend/heroController';
 import "./index.css"
 import {
   ArrowDownOutlined,
@@ -20,6 +11,12 @@ import {
 } from "@ant-design/icons";
 import {aesDecrypt} from "@/utils/cryptoUtils";
 import pinyin from 'pinyin';
+import {
+  getGuessCountUsingGet, getGuessRankingUsingGet, getHeroByIdUsingGet,
+  getNewHeroUsingGet,
+  getRandomHeroUsingGet,
+  listSimpleHeroUsingGet, recordGuessSuccessUsingPost
+} from "@/services/backend/heroController";
 
 const GuessHero: React.FC = () => {
   const [form] = Form.useForm();
@@ -46,7 +43,7 @@ const GuessHero: React.FC = () => {
   useEffect(() => {
     const fetchHeroes = async () => {
       try {
-        const response = await listSimpleHero();
+        const response = await listSimpleHeroUsingGet();
         if (response.code === 0) {
           setHeroList(response.data || []);
         }
@@ -58,7 +55,7 @@ const GuessHero: React.FC = () => {
     const fetchNewHero = async () => {
       setLoadingNewHero(true);
       try {
-        const response = await getNewHero();
+        const response = await getNewHeroUsingGet();
         if (response.code === 0) {
           setNewHero(response.data);
         } else {
@@ -72,7 +69,7 @@ const GuessHero: React.FC = () => {
     };
     const fetchGuessCount = async () => {
       try {
-        const response = await getGuessCount();
+        const response = await getGuessCountUsingGet();
         if (response.code === 0) {
           setGuessCount(response.data || 0);
         }
@@ -89,7 +86,7 @@ const GuessHero: React.FC = () => {
   const handleStartGame = async () => {
     try {
       setLoading(true);
-      const response = await getRandomHero();
+      const response = await getRandomHeroUsingGet();
       if (response.code === 0) {
         // aes解密
         aesDecrypt(response.data).then((hero) => {
@@ -134,8 +131,8 @@ const GuessHero: React.FC = () => {
         resetGame();
         if (token) {
           try {
-            await recordGuessSuccess({heroId: values.heroId}); // 记录猜中
-            const response = await getGuessCount(); // 更新统计
+            await recordGuessSuccessUsingPost({heroId: values.heroId}); // 记录猜中
+            const response = await getGuessCountUsingGet(); // 更新统计
             if (response.code === 0) {
               setGuessCount(response.data || 0);
             }
@@ -145,7 +142,7 @@ const GuessHero: React.FC = () => {
         }
       } else {
         // 未猜中逻辑
-        const response = await getHeroById({id: values.heroId});
+        const response = await getHeroByIdUsingGet({id: values.heroId});
         if (response.code === 0) {
           setGuessList(prev => [response.data, ...prev]); // 使用函数式更新
         }
@@ -187,7 +184,7 @@ const GuessHero: React.FC = () => {
   const fetchRanking = async () => {
     setLoadingRanking(true);
     try {
-      const response = await getGuessRanking();
+      const response = await getGuessRankingUsingGet();
       if (response.code === 0) {
         setRankingList(response.data || []);
       }
