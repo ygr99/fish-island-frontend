@@ -4,12 +4,12 @@ import {Button, DatePicker, Descriptions, message, Radio, Space, Statistic,} fro
 import React, {useEffect, useState} from 'react';
 import {Line} from '@ant-design/charts';
 import {history} from '@umijs/max';
-import moment from 'moment';
+import type {Dayjs} from 'dayjs';
+import "./index.css"
+import {getNewUserDataWebVoUsingPost, getUserDataWebVoUsingPost} from "@/services/backend/userController";
 
 const { Divider } = ProCard;
 const { RangePicker } = DatePicker;
-import "./index.css"
-import {getNewUserDataWebVoUsingPost, getUserDataWebVoUsingPost} from "@/services/backend/userController";
 /**
  * 数据分析
  *
@@ -17,8 +17,7 @@ import {getNewUserDataWebVoUsingPost, getUserDataWebVoUsingPost} from "@/service
  */
 const DataAdminPage: React.FC = () => {
   const [responsive] = useState(false);
-  const [timeRange, setTimeRange] = useState<[moment.Moment, moment.Moment] | null>(null);
-
+  const [timeRange, setTimeRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [totalUsers, setTotalUsers] = useState(0);
   const [todayActiveUsers, setTodayActiveUsers] = useState(0);
   const [todayNewUsers, setTodayNewUsers] = useState(0);
@@ -52,10 +51,10 @@ const DataAdminPage: React.FC = () => {
     try {
       getUserDataWebVoUsingPost().then((res) => {
         if (res.data) {
-          setTotalUsers(res.data.totalUsers);
-          setTodayActiveUsers(res.data.todayActiveUsers);
-          setTodayNewUsers(res.data.todayNewUsers);
-          setThisMonthActiveUsers(res.data.thisMonthActiveUsers);
+          setTotalUsers(res.data?.totalUsers ?? 0);
+          setTodayActiveUsers(res.data?.todayActiveUsers ?? 0);
+          setTodayNewUsers(res.data?.todayNewUsers ?? 0);
+          setThisMonthActiveUsers(res.data?.thisMonthActiveUsers ?? 0);
         }
       });
     } catch (error: any) {
@@ -93,7 +92,7 @@ const DataAdminPage: React.FC = () => {
     getNewUserData(type, '', '');
   }, []);
 
-  const handleRangeChange = (dates: [moment.Moment, moment.Moment] | null) => {
+  const handleRangeChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
     setTimeRange(dates);
   };
 
@@ -115,14 +114,12 @@ const DataAdminPage: React.FC = () => {
    * 查询按钮点击事件
    */
   function handleButtonClick() {
-    if (timeRange === null) {
-      message.error('请选择时间范围');
+    if (!timeRange || !timeRange[0] || !timeRange[1]) {
+      message.error('请选择完整的时间范围');
       return;
     }
-    //时间戳转成日期格式
     const beginTime = timeRange[0].format('YYYY-MM-DD');
     const endTime = timeRange[1].format('YYYY-MM-DD');
-    //用户数据新增类型 3 - 时间范围
     getNewUserData(3, beginTime, endTime);
   }
 
