@@ -1462,7 +1462,15 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
               {max: 10, message: '用户名不能超过10个字符！'},
             ]}
           >
-            <Input maxLength={10} showCount placeholder="请输入用户名" />
+            <Input
+              maxLength={10}
+              showCount
+              placeholder="请输入用户名"
+              onChange={(e) => {
+                const value = e.target.value.replace(/\s/g, '');
+                editProfileForm.setFieldValue('userName', value);
+              }}
+            />
           </Form.Item>
 
           <Form.Item
