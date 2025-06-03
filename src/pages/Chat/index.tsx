@@ -164,6 +164,9 @@ const ChatRoom: React.FC = () => {
   const [redPacketCount, setRedPacketCount] = useState<number>(1);
   const [redPacketMessage, setRedPacketMessage] = useState<string>('恭喜发财，大吉大利！');
   const [redPacketType, setRedPacketType] = useState<number>(1); // 1-随机红包 2-平均红包
+  // 添加发红包防抖相关的状态
+  const [isRedPacketSending, setIsRedPacketSending] = useState(false);
+  const redPacketDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // 添加红包记录相关状态
   const [isRedPacketRecordsVisible, setIsRedPacketRecordsVisible] = useState(false);
@@ -1710,6 +1713,12 @@ const ChatRoom: React.FC = () => {
 
   // 添加发送红包的处理函数
   const handleSendRedPacket = async () => {
+    // 如果正在发送中，直接返回
+    if (isRedPacketSending) {
+      messageApi.warning('正在处理红包发送，请稍候...');
+      return;
+    }
+
     if (!currentUser?.id) {
       messageApi.error('请先登录！');
       return;
@@ -1720,58 +1729,77 @@ const ChatRoom: React.FC = () => {
       return;
     }
 
+    // 清除之前的防抖计时器
+    if (redPacketDebounceRef.current) {
+      clearTimeout(redPacketDebounceRef.current);
+    }
+
     try {
-      const response = await createRedPacketUsingPost({
-        totalAmount: redPacketAmount,
-        count: redPacketCount,
-        type: redPacketType, // 使用选择的红包类型
-        name: redPacketMessage,
-      });
+      // 设置发送状态为true
+      setIsRedPacketSending(true);
 
-      if (response.data) {
-        // 发送红包消息
-        const newMessage: Message = {
-          id: `${Date.now()}`,
-          content: `[redpacket]${response.data}[/redpacket]`,
-          sender: {
-            id: String(currentUser.id),
-            name: currentUser.userName || '游客',
-            avatar:
-              currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-            level: currentUser.level || 1,
-            points: currentUser.points || 0,
-            isAdmin: currentUser.userRole === 'admin',
-            region: userIpInfo?.region || '未知地区',
-            country: userIpInfo?.country || '未知国家',
-            avatarFramerUrl: currentUser.avatarFramerUrl,
-            titleId: currentUser.titleId,
-            titleIdList: currentUser.titleIdList,
-          },
-          timestamp: new Date(),
-        };
+      // 使用防抖技术，延迟执行实际的红包发送
+      redPacketDebounceRef.current = setTimeout(async () => {
+        try {
+          const response = await createRedPacketUsingPost({
+            totalAmount: redPacketAmount,
+            count: redPacketCount,
+            type: redPacketType, // 使用选择的红包类型
+            name: redPacketMessage,
+          });
 
-        wsService.send({
-          type: 2,
-          userId: -1,
-          data: {
-            type: 'chat',
-            content: {
-              message: newMessage,
-            },
-          },
-        });
+          if (response.data) {
+            // 发送红包消息
+            const newMessage: Message = {
+              id: `${Date.now()}`,
+              content: `[redpacket]${response.data}[/redpacket]`,
+              sender: {
+                id: String(currentUser.id),
+                name: currentUser.userName || '游客',
+                avatar:
+                  currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+                level: currentUser.level || 1,
+                points: currentUser.points || 0,
+                isAdmin: currentUser.userRole === 'admin',
+                region: userIpInfo?.region || '未知地区',
+                country: userIpInfo?.country || '未知国家',
+                avatarFramerUrl: currentUser.avatarFramerUrl,
+                titleId: currentUser.titleId,
+                titleIdList: currentUser.titleIdList,
+              },
+              timestamp: new Date(),
+            };
 
-        setMessages((prev) => [...prev, newMessage]);
-        setTotal((prev) => prev + 1);
-        setHasMore(true);
+            wsService.send({
+              type: 2,
+              userId: -1,
+              data: {
+                type: 'chat',
+                content: {
+                  message: newMessage,
+                },
+              },
+            });
 
-        messageApi.success('红包发送成功！');
-        setIsRedPacketModalVisible(false);
-        setRedPacketAmount(0);
-        setRedPacketCount(1);
-        setRedPacketMessage('恭喜发财，大吉大利！');
-      }
+            setMessages((prev) => [...prev, newMessage]);
+            setTotal((prev) => prev + 1);
+            setHasMore(true);
+
+            messageApi.success('红包发送成功！');
+            setIsRedPacketModalVisible(false);
+            setRedPacketAmount(0);
+            setRedPacketCount(1);
+            setRedPacketMessage('恭喜发财，大吉大利！');
+          }
+        } catch (error) {
+          messageApi.error('红包发送失败！');
+        } finally {
+          // 重置发送状态
+          setIsRedPacketSending(false);
+        }
+      }, 500); // 500毫秒防抖延迟
     } catch (error) {
+      setIsRedPacketSending(false);
       messageApi.error('红包发送失败！');
     }
   };
@@ -2028,6 +2056,10 @@ const ChatRoom: React.FC = () => {
     return () => {
       if (newMessageTimerRef.current) {
         clearTimeout(newMessageTimerRef.current);
+      }
+      // 清理红包防抖定时器
+      if (redPacketDebounceRef.current) {
+        clearTimeout(redPacketDebounceRef.current);
       }
     };
   }, []);
@@ -2755,8 +2787,9 @@ const ChatRoom: React.FC = () => {
         open={isRedPacketModalVisible}
         onOk={handleSendRedPacket}
         onCancel={() => setIsRedPacketModalVisible(false)}
-        okText="发送"
+        okText={isRedPacketSending ? "发送中..." : "发送"}
         cancelText="取消"
+        okButtonProps={{ loading: isRedPacketSending }}
         width={400}
         className={styles.redPacketModal}
       >

@@ -1098,8 +1098,47 @@
   }
 
   &.titleTagChief {
-    background: linear-gradient(135deg, #ffd700 0%, #daa520 100%);
-    box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
+    background: linear-gradient(135deg, #f5af19, #f12711, #ff9966, #ff5e62, #f9d423, #f5af19);
+    background-size: 500% 500%;
+    animation: flowingLight 10s ease infinite, glowing 3s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 15px rgba(245, 175, 25, 0.6);
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 70%);
+      opacity: 0.4;
+      transform: rotate(30deg);
+      animation: rotate 8s linear infinite;
+      pointer-events: none;
+      z-index: 1;
+    }
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(45deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 70%);
+      z-index: 1;
+      animation: pulse 3s ease-in-out infinite alternate;
+    }
+    
+    .adminText {
+      position: relative;
+      z-index: 2;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-weight: 600;
+    }
   }
 
   &.titleTagPlatinum {
@@ -1138,6 +1177,48 @@
   }
   100% {
     left: 100%;
+  }
+}
+
+@keyframes flowingLight {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes glowing {
+  0% {
+    box-shadow: 0 0 5px rgba(245, 175, 25, 0.5), 0 0 10px rgba(241, 39, 17, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(255, 94, 98, 0.7), 0 0 25px rgba(249, 212, 35, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(245, 175, 25, 0.5), 0 0 10px rgba(241, 39, 17, 0.3);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
   }
 }
 
@@ -1760,18 +1841,6 @@
       font-size: 48px;
       margin-bottom: 16px;
     }
-  }
-}
-
-@keyframes shine {
-  0% {
-    background: #fff1f0;
-  }
-  50% {
-    background: #ffccc7;
-  }
-  100% {
-    background: #fff1f0;
   }
 }
 
