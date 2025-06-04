@@ -201,65 +201,99 @@ const GuessHero: React.FC = () => {
         <div>
           <span>排行榜</span>
           <span style={{paddingLeft: 8}}>
-            <Tooltip title="仅展示猜中次数最高的前10名玩家">
-              <QuestionCircleOutlined style={{color: '#888', cursor: 'pointer'}}/>
-            </Tooltip>
-          </span>
+          <Tooltip title="仅展示猜中次数最高的前10名玩家">
+            <QuestionCircleOutlined style={{color: '#888', cursor: 'pointer'}}/>
+          </Tooltip>
+        </span>
         </div>
       }
       visible={isRankingModalVisible}
       onOk={() => setIsRankingModalVisible(false)}
       onCancel={() => setIsRankingModalVisible(false)}
-      width={400}
+      className="ranking-modal"
+      width={600}
     >
       {loadingRanking ? (
-        <div style={{textAlign: 'center', padding: 24}}>
-          <RocketOutlined spin style={{fontSize: 24, color: '#597ef7'}}/>
+        <div className="ranking-loading">
+          <RocketOutlined spin style={{color: '#597ef7'}}/>
           <p>加载中...</p>
         </div>
       ) : rankingList.length > 0 ? (
-        <List
-          dataSource={rankingList}
-          renderItem={(item, index) => (
-            <List.Item style={{padding: '8px 0'}}>
-              <div className="no-wrap-container">
-                <div className="no-wrap">
-                  <span style={{
-                    width: 24,
-                    display: 'inline-block',
-                    textAlign: 'center',
-                    marginRight: 8,
-                    fontSize: index < 3 ? 18 : 14,
-                    verticalAlign: 'middle',
-                    color: '#888'
-                  }}>
-                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
-                  </span>
+        <div className="ranking-container">
+          {/* 领奖台区块 */}
+          <div className="podium-wrapper">
+            <div className="podium-container">
+              {/* 第二名 */}
+              {rankingList[1] && (
+                <div className="podium-item silver">
+                  <div className="podium-avatar">
+                    <img src={rankingList[1].userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'} />
+                    <div className="podium-name">{rankingList[1].userName || '游客'}</div>
+                  </div>
+                  <div className="podium-body">
+                    <span className="podium-medal">🥈</span>
+                    <span className="podium-count">{rankingList[1].score}次</span>
+                  </div>
+                </div>
+              )}
+
+              {/* 第一名 */}
+              {rankingList[0] && (
+                <div className="podium-item gold">
+                  <div className="podium-avatar">
+                    <img src={rankingList[0].userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'} />
+                    <div className="podium-name">{rankingList[0].userName || '游客'}</div>
+                  </div>
+                  <div className="podium-body">
+                    <span className="podium-medal">🥇</span>
+                    <span className="podium-count">{rankingList[0].score}次</span>
+                  </div>
+                </div>
+              )}
+
+              {/* 第三名 */}
+              {rankingList[2] && (
+                <div className="podium-item bronze">
+                  <div className="podium-avatar">
+                    <img src={rankingList[2].userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'} />
+                    <div className="podium-name">{rankingList[2].userName || '游客'}</div>
+                  </div>
+                  <div className="podium-body">
+                    <span className="podium-medal">🥉</span>
+                    <span className="podium-count">{rankingList[2].score}次</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 其他排名列表 */}
+          <List
+            className="ranking-list"
+            dataSource={rankingList.slice(3)}
+            renderItem={(item, index) => (
+              <List.Item className="ranking-list-item">
+                <div className="list-item-content">
+                  <span className="ranking-position">{index + 4}</span>
                   <img
                     src={item.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'}
-                    alt="头像"
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: '50%',
-                      marginRight: 8,
-                      border: '1px solid #eee'
-                    }}
+                    className="ranking-avatar"
                   />
-                  {item.userName || '游客'}
+                  <span className="ranking-name">{item.userName || '游客'}</span>
+                  <span className="ranking-score">{item.score}次</span>
                 </div>
-                <span style={{color: '#597ef7', fontWeight: 500}}>{item.score} 次</span>
-              </div>
-            </List.Item>
-          )}
-        />
+              </List.Item>
+            )}
+          />
+        </div>
       ) : (
-        <div style={{textAlign: 'center', color: '#888', padding: 24}}>
+        <div className="ranking-empty">
           暂无排行榜数据
         </div>
       )}
     </Modal>
   );
+
 
   const gameRules = (
     <Modal
