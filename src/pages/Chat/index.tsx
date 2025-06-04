@@ -2706,7 +2706,7 @@ const ChatRoom: React.FC = () => {
             className={styles.musicButton}
             onClick={() => setIsMusicSearchVisible(true)}
           />
-          {currentUser?.userRole === 'admin' && (
+          {(currentUser?.userRole === 'admin' || (currentUser?.level && currentUser.level >= 6)) && (
             <Button
               icon={<GiftOutlined />}
               className={styles.redPacketButton}
