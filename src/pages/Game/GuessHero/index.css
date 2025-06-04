@@ -197,7 +197,7 @@
 
 /* 背景图样式 */
 .card-background {
-  background: linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.6)), url('/img/guessHerobg.jpg'); /* 添加透明度 */
+  background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)), url('/img/guessHerobg.jpg'); /* 添加透明度 */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -432,4 +432,36 @@
   .podium-medal {
     font-size: 24px;
   }
+}
+
+/* 排行榜模态框背景图 */
+.ranking-modal .ant-modal-content {
+  background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
+  url('/img/guessHerobg.jpg') no-repeat center center;
+  background-size: cover;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* 优化内容可读性 */
+.ranking-modal .ant-modal-header,
+.ranking-modal .ant-modal-body {
+  background: transparent;
+}
+
+.ranking-modal .ant-modal-title {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+/* 领奖台文字增强 */
+.podium-name {
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* 加载状态适配 */
+.ranking-loading {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  padding: 24px;
 }
