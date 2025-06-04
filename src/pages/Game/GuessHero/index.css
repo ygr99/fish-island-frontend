@@ -197,7 +197,7 @@
 
 /* 背景图样式 */
 .card-background {
-  background: linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.6)), url('/img/guessHerobg.jpg'); /* 添加透明度 */
+  background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)), url('/img/guessHerobg.jpg'); /* 添加透明度 */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -226,8 +226,242 @@
   width: 100%;
 }
 
+/* 排行榜领奖台样式 */
+.podium-wrapper {
+  padding: 20px 0;
+  /*background: #f8f9fa;*/
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.podium-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 20px;
+  min-height: 320px;
+}
+
+.podium-item {
+  flex: 1;
+  max-width: 200px;
+  text-align: center;
+  position: relative;
+}
+
+.podium-item.gold {
+  height: 240px;
+}
+.podium-item.silver {
+  height: 200px;
+}
+.podium-item.bronze {
+  height: 180px;
+}
+
+.podium-avatar {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  padding: 0 10px;
+}
+
+.podium-avatar img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  margin-bottom: 8px;
+}
+
+.podium-name {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.podium-body {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border-radius: 8px 8px 0 0;
+}
+
+.podium-item.gold .podium-body {
+  background: linear-gradient(to bottom, #ffd700, #fff3b0);
+}
+.podium-item.silver .podium-body {
+  background: linear-gradient(to bottom, #c0c0c0, #e8e8e8);
+}
+.podium-item.bronze .podium-body {
+  background: linear-gradient(to bottom, #cd7f32, #e9c8a9);
+}
+
+.podium-medal {
+  font-size: 32px;
+  margin-top: 16px;
+}
+
+.podium-count {
+  font-size: 16px;
+  font-weight: bold;
+  color: #595959;
+  margin: 8px 0;
+}
+
+/* 其他排名列表 */
+.ranking-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
 
 
+.list-item-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
 
+.ranking-position {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  text-align: center;
+  line-height: 32px;
+  color: #888;
+  background-color: rgba(124, 124, 124, 0.3);
+}
 
+.ranking-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin: 0 12px;
+}
 
+.ranking-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking-score {
+  font-size: 16px;
+  font-weight: bold;
+  color: #595959;
+  margin: 8px 0;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .podium-container {
+    flex-direction: row; /* 保持水平布局 */
+    flex-wrap: wrap; /* 允许换行 */
+    justify-content: space-around; /* 均匀分布 */
+    min-height: 240px;
+    gap: 15px; /* 减小间距 */
+    padding: 0 10px;
+  }
+
+  .podium-item {
+    flex: 0 1 30%; /* 允许弹性收缩 */
+    max-width: 150px; /* 调整最大宽度 */
+  }
+
+  /* 调整金银铜高度比例 */
+  .podium-item.gold { height: 200px; }
+  .podium-item.silver { height: 160px; }
+  .podium-item.bronze { height: 140px; }
+
+  .podium-avatar {
+    bottom: calc(100% + 5px);
+  }
+
+  .podium-avatar img {
+    width: 50px;
+    height: 50px;
+    border-width: 2px;
+  }
+
+  .podium-name {
+    font-size: 13px;
+    white-space: normal;
+    line-height: 1.2;
+    -webkit-line-clamp: 2;
+  }
+
+  .podium-medal {
+    font-size: 28px;
+    margin-top: 12px;
+  }
+
+  .podium-count {
+    font-size: 14px;
+  }
+  .ranking-list{
+    padding: 0 16px;
+  }
+}
+
+/* 超小屏幕优化 */
+@media (max-width: 480px) {
+  .podium-container {
+    gap: 8px;
+  }
+
+  .podium-item {
+    flex-basis: 28%; /* 增加弹性基础值 */
+  }
+
+  .podium-avatar img {
+    width: 40px;
+    height: 40px;
+  }
+
+  .podium-name {
+    font-size: 12px;
+  }
+
+  .podium-medal {
+    font-size: 24px;
+  }
+}
+
+/* 排行榜模态框背景图 */
+.ranking-modal .ant-modal-content {
+  background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
+  url('/img/guessHerobg.jpg') no-repeat center center;
+  background-size: cover;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* 优化内容可读性 */
+.ranking-modal .ant-modal-header,
+.ranking-modal .ant-modal-body {
+  background: transparent;
+}
+
+.ranking-modal .ant-modal-title {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+/* 领奖台文字增强 */
+.podium-name {
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* 加载状态适配 */
+.ranking-loading {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  padding: 24px;
+}
