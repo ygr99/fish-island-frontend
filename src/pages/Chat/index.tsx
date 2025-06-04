@@ -1,4 +1,4 @@
-import zhData from '@/assets/emoji/zh.json';
+import zhData from '@emoji-mart/data/i18n/zh.json';
 import EmoticonPicker from '@/components/EmoticonPicker';
 import MessageContent from '@/components/MessageContent';
 import {
