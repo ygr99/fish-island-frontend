@@ -146,7 +146,7 @@
   background-position: center;
   background-repeat: no-repeat;
   position: relative;
-  height: 90vh;
+  min-height: 90vh;
 }
 
 .no-wrap {
