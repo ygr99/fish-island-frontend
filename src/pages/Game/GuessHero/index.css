@@ -161,10 +161,8 @@
     font-size: 13px;
   }
 }
-/* 排行榜特殊样式 */
 .ranking-list {
-  max-height: 400px;
-  overflow-y: auto;
+  padding: 0;
 }
 
 .ranking-list::-webkit-scrollbar {
@@ -239,7 +237,7 @@
   justify-content: center;
   align-items: flex-end;
   gap: 20px;
-  min-height: 320px;
+  min-height: 220px;
 }
 
 .podium-item {
@@ -250,13 +248,13 @@
 }
 
 .podium-item.gold {
-  height: 240px;
+  height: 160px;
 }
 .podium-item.silver {
-  height: 200px;
+  height: 120px;
 }
 .podium-item.bronze {
-  height: 180px;
+  height: 100px;
 }
 
 .podium-avatar {
@@ -317,8 +315,8 @@
 
 /* 其他排名列表 */
 .ranking-list {
-  max-height: 300px;
-  overflow-y: auto;
+  max-height: none; /* 移除高度限制 */
+  overflow-y: visible; /* 取消滚动 */
 }
 
 
@@ -365,7 +363,7 @@
     flex-direction: row; /* 保持水平布局 */
     flex-wrap: wrap; /* 允许换行 */
     justify-content: space-around; /* 均匀分布 */
-    min-height: 240px;
+    min-height: 220px;
     gap: 15px; /* 减小间距 */
     padding: 0 10px;
   }
@@ -376,9 +374,9 @@
   }
 
   /* 调整金银铜高度比例 */
-  .podium-item.gold { height: 200px; }
-  .podium-item.silver { height: 160px; }
-  .podium-item.bronze { height: 140px; }
+  .podium-item.gold { height: 160px; }
+  .podium-item.silver { height: 120px; }
+  .podium-item.bronze { height: 100px; }
 
   .podium-avatar {
     bottom: calc(100% + 5px);
@@ -404,9 +402,6 @@
 
   .podium-count {
     font-size: 14px;
-  }
-  .ranking-list{
-    padding: 0 16px;
   }
 }
 
