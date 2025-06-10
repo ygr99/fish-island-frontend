@@ -2026,6 +2026,19 @@ const [moYuData, setMoYuData] = useState<MoYuTimeType>({
             />
           </Form.Item>
 
+          <Form.Item
+            label="图片显示设置"
+            name="imageDisplayMode"
+            help="设置聊天记录中图片的显示方式"
+          >
+            <Select
+              options={[
+                { label: '显示所有图片', value: 'show' },
+                { label: '隐藏所有图片', value: 'hide' }
+              ]}
+            />
+          </Form.Item>
+
           <Form.Item>
             <Space>
               <Button type="primary" htmlType="submit">
