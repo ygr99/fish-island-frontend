@@ -212,8 +212,36 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
     document.body.removeChild(link);
   };
 
-  // 渲染图片
+  // 在组件顶部添加状态
+  const [imageDisplayMode, setImageDisplayMode] = useState('show');
+  const [shownImages, setShownImages] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const siteConfig = localStorage.getItem('siteConfig');
+    if (siteConfig) {
+      const { imageDisplayMode: mode } = JSON.parse(siteConfig);
+      setImageDisplayMode(mode || 'show');
+    }
+  }, []);
+
+  // 修改renderImage函数
   const renderImage = (url: string, key: string) => {
+    const isHidden = imageDisplayMode === 'hide' && !shownImages.has(url);
+
+    if (isHidden) {
+      return (
+        <div 
+          key={key} 
+          className={styles.imageText}
+          onClick={() => {
+            setShownImages(prev => new Set([...prev, url]));
+          }}
+        >
+          图片（点击显示）
+        </div>
+      );
+    }
+
     return (
       <div key={key} className={styles.imageContainer}>
         <Image
@@ -227,6 +255,24 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
             onImageLoad?.();
           }}
         />
+        <div>
+          {imageDisplayMode === 'hide' && (
+            <Button
+              type="text"
+              size="small"
+              className={styles.hideButton}
+              onClick={() => {
+                setShownImages(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(url);
+                  return newSet;
+                });
+              }}
+            >
+              隐藏
+            </Button>
+          )}
+        </div>
         <Button
           type="text"
           size="small"
