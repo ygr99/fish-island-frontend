@@ -371,10 +371,17 @@
     }
   }
 
-  .favoriteButton {
+  .imageControlButtons {
     position: absolute;
     top: 4px;
     right: 4px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .favoriteButton, .collapseButton {
     background-color: rgba(255, 255, 255, 0.9);
     border-radius: 50%;
     width: 28px;
@@ -383,7 +390,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0;
     transition: all 0.3s ease;
     border: 1px solid rgba(0, 0, 0, 0.1);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
@@ -400,33 +406,37 @@
     }
   }
 
+  .collapseButton {
+    .anticon {
+      color: #1890ff;
+    }
+    
+    &:hover .anticon {
+      color: #096dd9;
+    }
+  }
+
   &:hover {
-    .favoriteButton {
+    .imageControlButtons {
       opacity: 1;
     }
   }
 }
 
-
-.imageContainer {
-  position: relative;
-  display: inline-block;
-}
-
-
-.imageContainer:hover .favoriteButton {
-  opacity: 1;
-}
 .imageText {
   padding: 8px;
   background: #f5f5f5;
   border-radius: 4px;
   cursor: pointer;
   color: #666;
+  margin: 4px 0;
+  display: inline-block;
+  
   &:hover {
     background: #e8e8e8;
   }
 }
+
 .imageControls {
   position: absolute;
   top: 4px;
@@ -440,6 +450,7 @@
   padding: 4px;
   border-radius: 2px;
 }
+
 .hideButton {
   color: #ff4d4f !important;
   background-color: #cfcfcf;

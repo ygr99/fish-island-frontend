@@ -12,6 +12,8 @@ import {
   LinkOutlined,
   StarFilled,
   StarOutlined,
+  UpOutlined,
+  DownOutlined,
 } from '@ant-design/icons';
 import { useModel } from '@umijs/max';
 import { Button, Card, Image, message } from 'antd';
@@ -63,6 +65,8 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
   const imgRegex = new RegExp('\\[img\\](.*?)\\[/img\\]', 'g');
   // 文件标签匹配正则表达式
   const fileRegex = new RegExp('\\[file\\](.*?)\\[/file\\]', 'g');
+  // 添加折叠状态管理
+  const [collapsedImages, setCollapsedImages] = useState<Set<string>>(new Set());
 
   // 获取收藏的表情包
   const fetchFavoriteEmoticons = async () => {
@@ -227,6 +231,7 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
   // 修改renderImage函数
   const renderImage = (url: string, key: string) => {
     const isHidden = imageDisplayMode === 'hide' && !shownImages.has(url);
+    const isCollapsed = collapsedImages.has(url);
 
     if (isHidden) {
       return (
@@ -238,6 +243,24 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
           }}
         >
           图片（点击显示）
+        </div>
+      );
+    }
+
+    if (isCollapsed) {
+      return (
+        <div 
+          key={key} 
+          className={styles.imageText}
+          onClick={() => {
+            setCollapsedImages(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(url);
+              return newSet;
+            });
+          }}
+        >
+          图片已折叠（点击展开）
         </div>
       );
     }
@@ -255,7 +278,7 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
             onImageLoad?.();
           }}
         />
-        <div>
+        <div className={styles.imageControlButtons}>
           {imageDisplayMode === 'hide' && (
             <Button
               type="text"
@@ -272,17 +295,33 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
               隐藏
             </Button>
           )}
+          <Button
+            type="text"
+            size="small"
+            icon={<DownOutlined />}
+            className={styles.collapseButton}
+            onClick={(e) => {
+              e.stopPropagation();
+              setCollapsedImages(prev => {
+                const newSet = new Set(prev);
+                newSet.add(url);
+                return newSet;
+              });
+            }}
+            title="折叠图片"
+          />
+          <Button
+            type="text"
+            size="small"
+            icon={isFavorite(url) ? <StarFilled style={{ color: '#ffd700' }} /> : <StarOutlined />}
+            className={styles.favoriteButton}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFavorite(url);
+            }}
+            title={isFavorite(url) ? "取消收藏" : "收藏图片"}
+          />
         </div>
-        <Button
-          type="text"
-          size="small"
-          icon={isFavorite(url) ? <StarFilled style={{ color: '#ffd700' }} /> : <StarOutlined />}
-          className={styles.favoriteButton}
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleFavorite(url);
-          }}
-        />
       </div>
     );
   };
