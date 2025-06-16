@@ -5,7 +5,8 @@ import {
   DeleteOutlined,
   ColumnHeightOutlined,
   BorderOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  BlockOutlined
 } from '@ant-design/icons';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
@@ -108,6 +109,10 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
   const [showChapterList, setShowChapterList] = useState(false);
   const [isClickThrough, setIsClickThrough] = useState(true);
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  // 添加画中画状态
+  const [isPipSupported, setIsPipSupported] = useState(false);
+  const [isPipActive, setIsPipActive] = useState(false);
+  const pipWindowRef = useRef<Window | null>(null);
 
   // 辅助状态 - 不直接触发渲染的引用
   const chaptersRef = useRef<Chapter[]>([]);
@@ -138,6 +143,10 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
   const readerRef = useRef<HTMLDivElement>(null);
   const virtualListRef = useRef<any>(null);
   const lastLoadTimeRef = useRef(0);
+  // 为画中画添加引用
+  const readerContentRef = useRef<any>(null);
+  // 跟踪最新的章节内容
+  const chapterContentRef = useRef<string>('');
 
     // 更新本地存储中的书籍
     const updateBookInStorage = useCallback((updatedBook: Book) => {
@@ -471,17 +480,18 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
     }
   };
 
-  // 增强版关闭函数，确保在关闭时保存阅读进度
-  const handleClose = useCallback(() => {
-    // 保存阅读进度
-    if (contentRef.current && bookRef.current) {
-      // 强制同步阅读进度
-      forceUpdateReadingProgress();
-    }
-
-    // 调用原始的onClose
-    onClose();
-  }, [onClose]);
+  // 在组件卸载时关闭画中画窗口
+  useEffect(() => {
+    return () => {
+      if (pipWindowRef.current) {
+        try {
+          pipWindowRef.current.close();
+        } catch (e) {
+          console.error('关闭画中画窗口失败:', e);
+        }
+      }
+    };
+  }, []);
 
   // 同步引用和状态
   useEffect(() => {
@@ -491,6 +501,11 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
   useEffect(() => {
     chapterIndexRef.current = chapterIndex;
   }, [chapterIndex]);
+  
+  // 同步章节内容引用
+  useEffect(() => {
+    chapterContentRef.current = chapterContent;
+  }, [chapterContent]);
 
   useEffect(() => {
     filteredChaptersRef.current = filteredChapters;
@@ -504,10 +519,32 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
     chapterListSearchTextRef.current = chapterListSearchText;
   }, [chapterListSearchText]);
 
+  // 增强版关闭函数，确保在关闭时保存阅读进度并关闭画中画
+  const enhancedHandleClose = useCallback(() => {
+    // 保存阅读进度
+    if (contentRef.current && bookRef.current) {
+      // 强制同步阅读进度
+      forceUpdateReadingProgress();
+    }
+
+    // 关闭画中画窗口
+    if (pipWindowRef.current) {
+      try {
+        pipWindowRef.current.close();
+      } catch (e) {
+        console.error('关闭画中画窗口失败:', e);
+      }
+      setIsPipActive(false);
+      pipWindowRef.current = null;
+    }
+
+    // 调用原始的onClose
+    onClose();
+  }, [onClose]);
 
   // 重构切换章节函数
   const changeChapter = useCallback(async (newIndex: number): Promise<boolean> => {
-
+    console.log(`[changeChapter] 切换到章节索引: ${newIndex}`);
 
     // 使用ref获取最新的book值，避免依赖引起的无限循环
     const currentBook = bookRef.current;
@@ -535,8 +572,9 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
         return false;
       }
 
-      // 设置章节索引
+      // 设置章节索引和更新引用
       setChapterIndex(newIndex);
+      chapterIndexRef.current = newIndex;
 
 
       // 获取章节
@@ -557,11 +595,13 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
       });
 
       // 检查是否已有内容
-      if (chapter.content) {
+              if (chapter.content) {
 
 
-        // 直接使用缓存内容
-        setChapterContent(chapter.content);
+          // 直接使用缓存内容
+          setChapterContent(chapter.content);
+          // 同时更新引用
+          chapterContentRef.current = chapter.content;
 
         // 强制保存进度到localStorage，确保页内阅读器可以读取
         try {
@@ -604,9 +644,11 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
         // 需要加载章节内容
         const chapterWithContent = await loadChapterContent(currentBook, chapter);
 
-        if (chapterWithContent && chapterWithContent.content) {
+                  if (chapterWithContent && chapterWithContent.content) {
 
-          setChapterContent(chapterWithContent.content);
+            setChapterContent(chapterWithContent.content);
+            // 同时更新引用
+            chapterContentRef.current = chapterWithContent.content;
 
           // 异步强制更新一次进度，确保页内阅读器能够读取到最新进度
           setTimeout(() => {
@@ -965,8 +1007,6 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
   const openChapterList = useCallback(() => {
     // 先设置显示状态
     setShowChapterList(true);
-
-
   }, []);
 
   // 添加专门处理章节列表显示状态变化的useEffect
@@ -991,7 +1031,6 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
   const closeChapterList = useCallback(() => {
     // 只改变显示状态，不清空数据
     setShowChapterList(false);
-
   }, []);
 
   // 重构刷新章节列表函数
@@ -1066,7 +1105,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
           break;
         case 'Escape':
           // 退出阅读器
-          handleClose();
+          enhancedHandleClose();
           break;
         case 'c':
           // 打开章节列表
@@ -1092,7 +1131,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [visible, book, chapterIndex, chapterLoadingState.isLoading]);
+  }, [visible, book, chapterIndex, chapterLoadingState.isLoading, enhancedHandleClose]);
 
   // 处理右键菜单
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -1119,7 +1158,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
       { text: '章节列表', action: openChapterList },
       { text: `${isClickThrough ? '禁用' : '启用'}点击穿透`, action: toggleClickThrough },
       { text: '刷新内容', action: handleReload },
-      { text: '关闭阅读器', action: handleClose }
+      { text: '关闭阅读器', action: enhancedHandleClose }
     ];
 
     // 创建菜单项
@@ -1188,11 +1227,8 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
 
   // 重构处理章节点击的函数
   const handleChapterClick = useCallback(async (index: number) => {
-
-
     // 如果当前正在加载，则忽略此次点击
     if (chapterLoadingState.isLoading) {
-
       message.info('章节加载中，请稍等...');
       return;
     }
@@ -1204,20 +1240,15 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
       return;
     }
 
-
-
     // 加载章节
     const success = await changeChapter(index);
 
     if (success) {
-
-
       // 成功后关闭章节列表
       if (showChapterList) {
         closeChapterList();
       }
     } else {
-
       message.error('章节加载失败，请重试');
     }
   }, [chapterLoadingState.isLoading, changeChapter, showChapterList, closeChapterList]);
@@ -1361,6 +1392,388 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
     </>
   );
 
+  // 检查画中画API是否可用
+  useEffect(() => {
+    setIsPipSupported('documentPictureInPicture' in window);
+  }, []);
+
+  // 处理画中画模式
+  const handlePictureInPicture = async () => {
+    if (!isPipSupported) {
+      message.warning('您的浏览器不支持画中画功能');
+      return;
+    }
+
+    try {
+      if (isPipActive && pipWindowRef.current) {
+        // 关闭画中画窗口
+        pipWindowRef.current.close();
+        return;
+      }
+
+      // 显示加载提示
+      message.loading({ content: '正在准备画中画模式...', key: 'pipLoading' });
+
+      // 打开画中画窗口
+      // @ts-ignore - TypeScript可能不认识这个API
+      const pipWindow = await window.documentPictureInPicture.requestWindow({
+        width: 400,
+        height: 500,
+      });
+
+      // 保存窗口引用
+      pipWindowRef.current = pipWindow;
+      setIsPipActive(true);
+
+      // 创建样式
+      const style = document.createElement('style');
+      style.textContent = `
+        body {
+          margin: 0;
+          padding: 0;
+          background-color: ${settings.backgroundColor};
+          color: ${settings.fontColor};
+          font-family: ${settings.fontFamily};
+          font-size: ${settings.fontSize}px;
+          line-height: ${settings.lineHeight};
+          overflow: auto;
+          scroll-behavior: auto;
+        }
+        .chapter-title {
+          text-align: center;
+          margin: 0;
+          padding-top: 10px;
+          margin-bottom: 10px;
+        }
+        .chapter-content {
+          padding: 0;
+          white-space: pre-wrap;
+        }
+        .chapter-content p {
+          text-indent: 2em;
+          margin: 0.5em 0;
+        }
+        .controls {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          background-color: rgba(240, 240, 240, 0.8);
+          padding: 8px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 1px solid #ddd;
+          z-index: 100;
+          height: 20px;
+        }
+        .controls button {
+          background: white;
+          border: 1px solid #ddd;
+          padding: 4px 8px;
+          cursor: pointer;
+          border-radius: 4px;
+          margin: 0 2px;
+        }
+        .controls button:hover {
+          background: #f0f0f0;
+        }
+        .controls button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        .loading-indicator {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100%;
+          flex-direction: column;
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: ${settings.backgroundColor};
+          padding-top: 60px;
+          z-index: 10;
+        }
+        .spinner {
+          border: 3px solid rgba(0, 0, 0, 0.1);
+          border-top: 3px solid #1890ff;
+          border-radius: 50%;
+          width: 24px;
+          height: 24px;
+          animation: spin 1s linear infinite;
+          margin-bottom: 10px;
+        }
+        .loading-text {
+          font-size: 14px;
+          color: #666;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `;
+      pipWindow.document.head.appendChild(style);
+
+      // 创建内容容器
+      const contentContainer = document.createElement('div');
+      contentContainer.className = 'chapter-content';
+
+      // 创建章节标题
+      const chapterTitle = document.createElement('h2');
+      chapterTitle.className = 'chapter-title';
+      chapterTitle.textContent = book?.chapters ? 
+        book.chapters[chapterIndex]?.title || `第${chapterIndex + 1}章` : 
+        '加载中...';
+
+      // 创建控制栏
+      const controls = document.createElement('div');
+      controls.className = 'controls';
+
+      // 添加加载状态变量到画中画窗口中
+      pipWindow.isLoading = false;
+
+      // 创建加载指示器函数
+      const showLoadingIndicator = () => {
+        // 标记为加载状态
+        pipWindow.isLoading = true;
+        
+        // 获取当前内容区域高度，避免内容切换时的抖动
+        const currentHeight = contentContainer.scrollHeight;
+        
+        // 创建加载指示器，但保留原内容
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'loading-indicator';
+        loadingDiv.id = 'pip-loading-indicator';
+        
+        const spinner = document.createElement('div');
+        spinner.className = 'spinner';
+        
+        const loadingText = document.createElement('div');
+        loadingText.className = 'loading-text';
+        loadingText.textContent = '章节加载中...';
+        
+        loadingDiv.appendChild(spinner);
+        loadingDiv.appendChild(loadingText);
+        
+        // 先检查是否已经存在加载指示器
+        const existingIndicator = pipWindow.document.getElementById('pip-loading-indicator');
+        if (!existingIndicator) {
+          // 添加加载指示器，但不清空原有内容
+          contentContainer.style.minHeight = `${currentHeight}px`;
+          contentContainer.appendChild(loadingDiv);
+        }
+      };
+
+      // 添加上一章按钮
+      const prevButton = document.createElement('button');
+      prevButton.textContent = '上一章';
+      prevButton.disabled = chapterIndex <= 0;
+      prevButton.addEventListener('click', () => {
+        // 如果正在加载中，不响应点击
+        if (pipWindow.isLoading) return;
+        
+        // 显示加载指示器
+        showLoadingIndicator();
+        
+        // 使用当前的引用值而不是闭包中的值
+        const currentIndex = chapterIndexRef.current;
+        if (currentIndex > 0) {
+          const newIndex = currentIndex - 1;
+          // 先在主窗口中更新章节索引
+          setChapterIndex(newIndex);
+          // 然后异步加载章节内容
+          setTimeout(() => {
+            changeChapter(newIndex).then(() => {
+              setTimeout(() => {
+                updatePipContent(true);
+                pipWindow.isLoading = false;
+              }, 300);
+            });
+          }, 0);
+        }
+      });
+
+      // 添加下一章按钮
+      const nextButton = document.createElement('button');
+      nextButton.textContent = '下一章';
+      nextButton.disabled = !book?.chapters || chapterIndex >= (book.chapters.length - 1);
+      nextButton.addEventListener('click', () => {
+        // 如果正在加载中，不响应点击
+        if (pipWindow.isLoading) return;
+        
+        // 显示加载指示器
+        showLoadingIndicator();
+        
+        // 使用当前的引用值而不是闭包中的值
+        const currentIndex = chapterIndexRef.current;
+        const currentBook = bookRef.current;
+        if (currentBook?.chapters && currentIndex < currentBook.chapters.length - 1) {
+          const newIndex = currentIndex + 1;
+          // 先在主窗口中更新章节索引
+          setChapterIndex(newIndex);
+          // 然后异步加载章节内容
+          setTimeout(() => {
+            changeChapter(newIndex).then(() => {
+              setTimeout(() => {
+                updatePipContent(true);
+                pipWindow.isLoading = false;
+              }, 300);
+            });
+          }, 0);
+        }
+      });
+
+      // 添加按钮到控制栏
+      controls.appendChild(prevButton);
+      controls.appendChild(document.createTextNode(`${chapterIndex + 1}/${book?.chapters?.length || '?'}`));
+      controls.appendChild(nextButton);
+
+      // 填充内容
+      const content = document.createElement('div');
+      content.style.marginTop = '40px'; // 为控制栏留出空间
+      chapterContent.split('\n').forEach((paragraph) => {
+        if (paragraph.trim()) {
+          const p = document.createElement('p');
+          p.textContent = paragraph;
+          content.appendChild(p);
+        } else {
+          content.appendChild(document.createElement('br'));
+        }
+      });
+
+      contentContainer.appendChild(content);
+
+      // 添加到画中画窗口
+      pipWindow.document.body.appendChild(controls);
+      pipWindow.document.body.appendChild(contentContainer);
+
+      // 监听窗口关闭事件
+      pipWindow.addEventListener('pagehide', () => {
+        setIsPipActive(false);
+        pipWindowRef.current = null;
+      });
+
+      // 在章节或内容更改时更新画中画内容的函数
+      const updatePipContent = (forceUpdate = false) => {
+        if (!pipWindowRef.current) return;
+        
+        try {
+          // 始终使用最新的引用值
+          const currentIndex = chapterIndexRef.current;
+          const currentBook = bookRef.current;
+          
+          // 记录内容容器的当前高度
+          const currentHeight = contentContainer.scrollHeight;
+
+          // 先删除加载指示器
+          const loadingIndicator = pipWindowRef.current.document.getElementById('pip-loading-indicator');
+          if (loadingIndicator) {
+            loadingIndicator.remove();
+          }
+
+          // 清空现有内容
+          while (contentContainer.firstChild) {
+            contentContainer.removeChild(contentContainer.firstChild);
+          }
+
+          // 重置滚动位置
+          if (pipWindowRef.current) {
+            pipWindowRef.current.document.body.scrollTop = 0;
+            pipWindowRef.current.document.documentElement.scrollTop = 0;
+            pipWindowRef.current.scrollTo({
+              top: 0,
+              left: 0,
+              behavior: 'auto'
+            });
+          }
+
+          // 更新章节标题
+          chapterTitle.textContent = currentBook?.chapters ? 
+            currentBook.chapters[currentIndex]?.title || `第${currentIndex + 1}章` : 
+            '加载中...';
+
+          // 更新章节导航状态
+          prevButton.disabled = currentIndex <= 0 || pipWindow.isLoading;
+          nextButton.disabled = !currentBook?.chapters || currentIndex >= (currentBook.chapters.length - 1) || pipWindow.isLoading;
+          controls.childNodes[1].textContent = `${currentIndex + 1}/${currentBook?.chapters?.length || '?'}`;
+
+          // 填充内容
+          const content = document.createElement('div');
+          content.id = 'pip-content';
+          // 恢复原有的边距样式
+          content.style.paddingTop = '35px'; // 仅保留控制栏所需的空间
+          content.style.paddingLeft = '16px'; // 添加左边距
+          content.style.paddingRight = '16px'; // 添加右边距
+          
+          // 始终使用最新的章节内容引用
+          const currentChapterContent = chapterContentRef.current;
+          if (currentChapterContent) {
+            currentChapterContent.split('\n').forEach((paragraph) => {
+              if (paragraph.trim()) {
+                const p = document.createElement('p');
+                p.textContent = paragraph;
+                content.appendChild(p);
+              } else {
+                content.appendChild(document.createElement('br'));
+              }
+            });
+          }
+          
+          contentContainer.appendChild(content);
+          
+          // 恢复自动高度，不设置margin和padding
+          contentContainer.style.minHeight = 'auto';
+          
+          // 立即滚动到顶部（不使用延时）
+          pipWindowRef.current.document.body.scrollTop = 0;
+          pipWindowRef.current.document.documentElement.scrollTop = 0;
+          pipWindowRef.current.scrollTo({
+            top: 0,
+            left: 0,
+            behavior: 'auto'
+          });
+          contentContainer.scrollTop = 0;
+          
+          // 重置加载状态
+          pipWindow.isLoading = false;
+        } catch (error) {
+          console.error('更新画中画内容失败:', error);
+        }
+      };
+
+      // 将更新函数和加载指示器函数存储到ref中，以便后续使用
+      readerContentRef.current = {
+        updatePipContent,
+        showLoadingIndicator,
+        pipWindow: pipWindowRef.current // 存储窗口引用
+      };
+
+      message.success({ content: '已打开画中画模式', key: 'pipLoading' });
+    } catch (error) {
+      console.error('画中画模式启动失败:', error);
+      message.error({ content: '画中画模式启动失败', key: 'pipLoading' });
+      setIsPipActive(false);
+      pipWindowRef.current = null;
+    }
+  };
+
+  // 当章节内容或索引改变时，更新画中画内容
+  useEffect(() => {
+    if (isPipActive && readerContentRef.current && pipWindowRef.current) {
+      console.log(`[PIP] 检测到章节更改: 索引=${chapterIndex}, 内容长度=${chapterContent.length}`);
+      // 确保等待状态更新完成后再更新画中画内容
+      setTimeout(() => {
+        if (readerContentRef.current && pipWindowRef.current) {
+          console.log(`[PIP] 更新画中画内容`);
+          readerContentRef.current.updatePipContent?.(true);
+        }
+      }, 100);
+    }
+  }, [chapterContent, chapterIndex, isPipActive]);
+
   // 如果不可见则不渲染
   if (!visible) return null;
 
@@ -1378,7 +1791,7 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
           zIndex: 1000,
           pointerEvents: isClickThrough ? 'none' : 'auto'
         }}
-        onClick={isClickThrough ? undefined : handleClose}
+        onClick={isClickThrough ? undefined : enhancedHandleClose}
       />
 
       {/* 阅读器窗口 */}
@@ -1457,13 +1870,24 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }) => {
               />
             </Tooltip>
 
+            {isPipSupported && (
+              <Tooltip title={isPipActive ? "退出画中画模式" : "画中画模式"}>
+                <Button
+                  type={isPipActive ? "primary" : "text"}
+                  size="small"
+                  icon={<BlockOutlined />}
+                  onClick={handlePictureInPicture}
+                />
+              </Tooltip>
+            )}
+
             <Tooltip title="关闭">
               <Button
                 type="text"
                 size="small"
                 danger
                 icon={<DeleteOutlined />}
-                onClick={handleClose}
+                onClick={enhancedHandleClose}
               />
             </Tooltip>
           </div>
