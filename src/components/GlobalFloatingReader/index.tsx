@@ -7,7 +7,9 @@ import {
   BorderOutlined,
   ReloadOutlined,
   BlockOutlined,
-  SettingOutlined
+  SettingOutlined,
+  SoundOutlined,
+  PauseOutlined
 } from '@ant-design/icons';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
@@ -57,6 +59,10 @@ interface ReaderSettings {
   lineHeight: number;
   letterSpacing?: number; // 添加字间距
   themeId?: string; // 当前使用的主题ID
+  speechRate?: number; // 语速
+  speechPitch?: number; // 音调
+  speechVolume?: number; // 音量
+  ttsEnabled?: boolean; // 是否启用朗读功能
 }
 
 // 定义一个主题接口
@@ -86,7 +92,11 @@ const DEFAULT_SETTINGS: ReaderSettings = {
   fontFamily: 'Arial, sans-serif',
   lineHeight: 1.5,
   letterSpacing: 0,
-  themeId: 'default'
+  themeId: 'default',
+  speechRate: 1, // 默认语速
+  speechPitch: 1, // 默认音调
+  speechVolume: 1, // 默认音量
+  ttsEnabled: false // 默认不启用朗读功能
 };
 
 // 预定义主题列表
@@ -195,6 +205,17 @@ const GlobalReader: React.FC<ReaderProps> = ({ visible, onClose }): React.ReactN
   const chapterContentRef = useRef<string>('');
 
   const [showSettings, setShowSettings] = useState(false);
+
+  // 添加TTS相关状态
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState<string>("");
+  const [currentHighlightedIndex, setCurrentHighlightedIndex] = useState<number>(-1);
+  const [paragraphs, setParagraphs] = useState<string[]>([]);
+  
+  // TTS引用
+  const speechSynthesisRef = useRef<SpeechSynthesis | null>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   // 更新本地存储中的书籍
   const updateBookInStorage = useCallback((updatedBook: Book) => {
@@ -610,6 +631,11 @@ const enhancedHandleClose = useCallback(() => {
     }
     setIsPipActive(false);
     pipWindowRef.current = null;
+  }
+
+  // 停止朗读
+  if (speechSynthesisRef.current) {
+    speechSynthesisRef.current.cancel();
   }
 
   // 调用原始的onClose
@@ -2206,143 +2232,261 @@ const renderThemesPanel = () => {
 
 // 渲染设置面板内容
 const renderSettingsPanel = () => {
+  // 增加一个状态用于标签切换
+  const [settingsTab, setSettingsTab] = useState<'reading' | 'theme' | 'tts'>('reading');
+
   return (
     <div style={{ width: 300, padding: '8px 0', backgroundColor: '#ffffff', borderRadius: '4px' }}>
       <div style={{ display: 'flex', marginBottom: 16, backgroundColor: '#f5f5f5' }}>
         <div 
-          onClick={() => setShowThemes(false)} 
+          onClick={() => setSettingsTab('reading')} 
           style={{ 
             padding: '8px 16px', 
             cursor: 'pointer', 
-            fontWeight: !showThemes ? 'bold' : 'normal',
-            borderBottom: !showThemes ? '2px solid #1890ff' : '2px solid transparent',
-            backgroundColor: !showThemes ? '#ffffff' : 'transparent',
-            color: '#333333'
+            fontWeight: settingsTab === 'reading' ? 'bold' : 'normal',
+            borderBottom: settingsTab === 'reading' ? '2px solid #1890ff' : '2px solid transparent',
+            backgroundColor: settingsTab === 'reading' ? '#ffffff' : 'transparent',
+            color: '#333333',
+            flex: 1,
+            textAlign: 'center'
           }}
         >
           阅读设置
         </div>
         <div 
-          onClick={() => setShowThemes(true)} 
+          onClick={() => setSettingsTab('theme')} 
           style={{ 
             padding: '8px 16px', 
             cursor: 'pointer', 
-            fontWeight: showThemes ? 'bold' : 'normal',
-            borderBottom: showThemes ? '2px solid #1890ff' : '2px solid transparent',
-            backgroundColor: showThemes ? '#ffffff' : 'transparent',
-            color: '#333333'
+            fontWeight: settingsTab === 'theme' ? 'bold' : 'normal',
+            borderBottom: settingsTab === 'theme' ? '2px solid #1890ff' : '2px solid transparent',
+            backgroundColor: settingsTab === 'theme' ? '#ffffff' : 'transparent',
+            color: '#333333',
+            flex: 1,
+            textAlign: 'center'
           }}
         >
           主题设置
         </div>
+        <div 
+          onClick={() => setSettingsTab('tts')} 
+          style={{ 
+            padding: '8px 16px', 
+            cursor: 'pointer', 
+            fontWeight: settingsTab === 'tts' ? 'bold' : 'normal',
+            borderBottom: settingsTab === 'tts' ? '2px solid #1890ff' : '2px solid transparent',
+            backgroundColor: settingsTab === 'tts' ? '#ffffff' : 'transparent',
+            color: '#333333',
+            flex: 1,
+            textAlign: 'center'
+          }}
+        >
+          朗读设置
+        </div>
       </div>
 
       <div style={{ padding: '0 16px', backgroundColor: '#ffffff', color: '#333333' }}>
-      {showThemes ? (
-        renderThemesPanel()
-      ) : (
-        <>
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ marginBottom: 8, fontWeight: 'bold' }}>字体选择</div>
-            <Select
-              value={settings.fontFamily}
-              onChange={(value) => saveSettings({ ...settings, fontFamily: value })}
-              style={{ width: '100%' }}
-              options={FONT_FAMILIES}
-            />
-          </div>
-          
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ marginBottom: 8, fontWeight: 'bold' }}>字体大小: {settings.fontSize}px</div>
-            <Slider
-              min={12}
-              max={28}
-              value={settings.fontSize}
-              onChange={(value) => saveSettings({ ...settings, fontSize: value })}
-            />
-          </div>
-          
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ marginBottom: 8, fontWeight: 'bold' }}>行高: {settings.lineHeight}</div>
-            <Slider
-              min={1}
-              max={3}
-              step={0.1}
-              value={settings.lineHeight}
-              onChange={(value) => saveSettings({ ...settings, lineHeight: value })}
-            />
-          </div>
-          
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ marginBottom: 8, fontWeight: 'bold' }}>字间距: {settings.letterSpacing !== undefined ? settings.letterSpacing : 0}px</div>
-            <Slider
-              min={0}
-              max={2}
-              step={0.1}
-              value={settings.letterSpacing !== undefined ? settings.letterSpacing : 0}
-              onChange={(value) => saveSettings({ ...settings, letterSpacing: value })}
-            />
-          </div>
-          
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ marginBottom: 8, fontWeight: 'bold' }}>不透明度: {Math.round(settings.opacity * 100)}%</div>
-            <Slider
-              min={0.5}
-              max={1}
-              step={0.05}
-              value={settings.opacity}
-              onChange={(value) => saveSettings({ ...settings, opacity: value })}
-            />
-          </div>
-          
-          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ marginBottom: 8, fontWeight: 'bold' }}>字体颜色</div>
-              <ColorPicker
-                value={settings.fontColor}
-                onChange={(color, hex) => saveSettings({ ...settings, fontColor: hex as string })}
-                presets={[
-                  {
-                    label: '推荐',
-                    colors: [
-                      '#000000', '#333333', '#666666', '#999999',
-                      '#594433', '#4C3D2E', '#5C4033', '#3C2F2F'
-                    ],
-                  }
-                ]}
+        {settingsTab === 'theme' && renderThemesPanel()}
+        {settingsTab === 'reading' && (
+          <>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 8, fontWeight: 'bold' }}>字体选择</div>
+              <Select
+                value={settings.fontFamily}
+                onChange={(value) => saveSettings({ ...settings, fontFamily: value })}
+                style={{ width: '100%' }}
+                options={FONT_FAMILIES}
               />
             </div>
             
-            <div>
-              <div style={{ marginBottom: 8, fontWeight: 'bold' }}>背景颜色</div>
-              <ColorPicker
-                value={settings.backgroundColor}
-                onChange={(color, hex) => saveSettings({ ...settings, backgroundColor: hex as string })}
-                presets={[
-                  {
-                    label: '推荐',
-                    colors: [
-                      '#FFFFFF', '#F5F5DC', '#FAF9DE', '#FFF2E2',
-                      '#FDE6E0', '#f5f5f5', '#E3EDCD', '#DCE2F1',
-                      '#EDDEE5'
-                    ],
-                  }
-                ]}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 8, fontWeight: 'bold' }}>字体大小: {settings.fontSize}px</div>
+              <Slider
+                min={12}
+                max={28}
+                value={settings.fontSize}
+                onChange={(value) => saveSettings({ ...settings, fontSize: value })}
               />
             </div>
-          </div>
+            
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 8, fontWeight: 'bold' }}>行高: {settings.lineHeight}</div>
+              <Slider
+                min={1}
+                max={3}
+                step={0.1}
+                value={settings.lineHeight}
+                onChange={(value) => saveSettings({ ...settings, lineHeight: value })}
+              />
+            </div>
+            
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 8, fontWeight: 'bold' }}>字间距: {settings.letterSpacing !== undefined ? settings.letterSpacing : 0}px</div>
+              <Slider
+                min={0}
+                max={2}
+                step={0.1}
+                value={settings.letterSpacing !== undefined ? settings.letterSpacing : 0}
+                onChange={(value) => saveSettings({ ...settings, letterSpacing: value })}
+              />
+            </div>
+            
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 8, fontWeight: 'bold' }}>不透明度: {Math.round(settings.opacity * 100)}%</div>
+              <Slider
+                min={0.5}
+                max={1}
+                step={0.05}
+                value={settings.opacity}
+                onChange={(value) => saveSettings({ ...settings, opacity: value })}
+              />
+            </div>
+            
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ marginBottom: 8, fontWeight: 'bold' }}>字体颜色</div>
+                <ColorPicker
+                  value={settings.fontColor}
+                  onChange={(color, hex) => saveSettings({ ...settings, fontColor: hex as string })}
+                  presets={[
+                    {
+                      label: '推荐',
+                      colors: [
+                        '#000000', '#333333', '#666666', '#999999',
+                        '#594433', '#4C3D2E', '#5C4033', '#3C2F2F'
+                      ],
+                    }
+                  ]}
+                />
+              </div>
+              
+              <div>
+                <div style={{ marginBottom: 8, fontWeight: 'bold' }}>背景颜色</div>
+                <ColorPicker
+                  value={settings.backgroundColor}
+                  onChange={(color, hex) => saveSettings({ ...settings, backgroundColor: hex as string })}
+                  presets={[
+                    {
+                      label: '推荐',
+                      colors: [
+                        '#FFFFFF', '#F5F5DC', '#FAF9DE', '#FFF2E2',
+                        '#FDE6E0', '#f5f5f5', '#E3EDCD', '#DCE2F1',
+                        '#EDDEE5'
+                      ],
+                    }
+                  ]}
+                />
+              </div>
+            </div>
 
-          {/* 添加恢复默认样式的按钮 */}
-          <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center' }}>
-            <Button 
-              type="primary" 
-              onClick={() => saveSettings(DEFAULT_SETTINGS)}
-            >
-              恢复默认样式
-            </Button>
-          </div>
-        </>
-      )}
+            {/* 添加恢复默认样式的按钮 */}
+            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center' }}>
+              <Button 
+                type="primary" 
+                onClick={() => saveSettings(DEFAULT_SETTINGS)}
+              >
+                恢复默认样式
+              </Button>
+            </div>
+          </>
+        )}
+        {settingsTab === 'tts' && (
+          <>
+            {/* 朗读功能开关 */}
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontWeight: 'bold' }}>启用朗读功能</div>
+              <div 
+                style={{ 
+                  width: '44px', 
+                  height: '22px', 
+                  backgroundColor: settings.ttsEnabled ? '#1890ff' : '#ccc',
+                  borderRadius: '11px',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  transition: 'background-color 0.3s'
+                }}
+                onClick={() => saveSettings({ ...settings, ttsEnabled: !settings.ttsEnabled })}
+              >
+                <div 
+                  style={{ 
+                    position: 'absolute',
+                    width: '18px',
+                    height: '18px',
+                    backgroundColor: '#fff',
+                    borderRadius: '9px',
+                    top: '2px',
+                    left: settings.ttsEnabled ? '24px' : '2px',
+                    transition: 'left 0.3s'
+                  }} 
+                />
+              </div>
+            </div>
+
+            <div style={{ 
+              padding: '10px', 
+              backgroundColor: '#fffbe6', 
+              borderRadius: '4px',
+              marginBottom: '16px',
+              fontSize: '12px',
+              color: '#876800',
+              display: 'flex',
+              alignItems: 'flex-start'
+            }}>
+              <div style={{ marginRight: '8px', fontSize: '14px' }}>ⓘ</div>
+              <div>启用朗读功能后，点击朗读按钮开始朗读，可以点击段落跳转到该段落继续朗读</div>
+            </div>
+
+            <div style={{ marginBottom: 16, opacity: settings.ttsEnabled ? 1 : 0.5, pointerEvents: settings.ttsEnabled ? 'auto' : 'none' }}>
+              <div style={{ marginBottom: 8, fontWeight: 'bold' }}>选择声音</div>
+              <Select
+                value={selectedVoice}
+                onChange={(value) => setSelectedVoice(value)}
+                style={{ width: '100%' }}
+                disabled={!settings.ttsEnabled}
+                options={availableVoices.map(voice => ({
+                  value: voice.voiceURI,
+                  label: `${voice.name} (${voice.lang})`
+                }))}
+              />
+            </div>
+            
+            <div style={{ marginBottom: 16, opacity: settings.ttsEnabled ? 1 : 0.5, pointerEvents: settings.ttsEnabled ? 'auto' : 'none' }}>
+              <div style={{ marginBottom: 8, fontWeight: 'bold' }}>语速: {settings.speechRate}</div>
+              <Slider
+                min={0.5}
+                max={2}
+                step={0.1}
+                value={settings.speechRate || 1}
+                onChange={(value) => saveSettings({ ...settings, speechRate: value })}
+                disabled={!settings.ttsEnabled}
+              />
+            </div>
+            
+            <div style={{ marginBottom: 16, opacity: settings.ttsEnabled ? 1 : 0.5, pointerEvents: settings.ttsEnabled ? 'auto' : 'none' }}>
+              <div style={{ marginBottom: 8, fontWeight: 'bold' }}>音调: {settings.speechPitch}</div>
+              <Slider
+                min={0.5}
+                max={2}
+                step={0.1}
+                value={settings.speechPitch || 1}
+                onChange={(value) => saveSettings({ ...settings, speechPitch: value })}
+                disabled={!settings.ttsEnabled}
+              />
+            </div>
+            
+            <div style={{ marginBottom: 16, opacity: settings.ttsEnabled ? 1 : 0.5, pointerEvents: settings.ttsEnabled ? 'auto' : 'none' }}>
+              <div style={{ marginBottom: 8, fontWeight: 'bold' }}>音量: {Math.round((settings.speechVolume || 1) * 100)}%</div>
+              <Slider
+                min={0}
+                max={1}
+                step={0.1}
+                value={settings.speechVolume || 1}
+                onChange={(value) => saveSettings({ ...settings, speechVolume: value })}
+                disabled={!settings.ttsEnabled}
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -2503,6 +2647,275 @@ const renderThemeCreator = () => {
   );
 };
 
+// 初始化语音合成
+useEffect(() => {
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    speechSynthesisRef.current = window.speechSynthesis;
+    
+    // 初始化获取可用的声音
+    const loadVoices = () => {
+      const voices = speechSynthesisRef.current?.getVoices() || [];
+      setAvailableVoices(voices);
+      
+      // 尝试找到中文声音或默认声音
+      const chineseVoice = voices.find(voice => 
+        voice.lang.includes('zh') || voice.lang.includes('cmn')
+      );
+      
+      if (chineseVoice) {
+        setSelectedVoice(chineseVoice.voiceURI);
+      } else if (voices.length > 0) {
+        setSelectedVoice(voices[0].voiceURI);
+      }
+    };
+
+    // Chrome和Safari的声音加载机制不同，需要兼容处理
+    if (speechSynthesisRef.current.onvoiceschanged !== undefined) {
+      speechSynthesisRef.current.onvoiceschanged = loadVoices;
+    }
+    
+    // 立即尝试加载一次
+    loadVoices();
+  }
+
+  return () => {
+    // 组件卸载时停止语音合成
+    if (speechSynthesisRef.current && speechSynthesisRef.current.speaking) {
+      speechSynthesisRef.current.cancel();
+    }
+  };
+}, []);
+
+// 处理章节内容变更时更新段落
+useEffect(() => {
+  if (chapterContent) {
+    const newParagraphs = chapterContent.split('\n').filter(p => p.trim() !== '');
+    setParagraphs(newParagraphs);
+    
+    // 章节内容变更时停止朗读
+    if (speechSynthesisRef.current && speechSynthesisRef.current.speaking) {
+      speechSynthesisRef.current.cancel();
+      setIsSpeaking(false);
+      setCurrentHighlightedIndex(-1);
+    }
+  }
+}, [chapterContent]);
+
+// 从指定段落开始朗读
+const startSpeaking = useCallback((startIndex: number) => {
+  if (!speechSynthesisRef.current || paragraphs.length === 0) {
+    return;
+  }
+
+  // 检查朗读功能是否启用
+  if (!settings.ttsEnabled) {
+    message.warning('请先在设置中启用朗读功能');
+    return;
+  }
+
+  // 先取消之前的朗读
+  speechSynthesisRef.current.cancel();
+
+  // 从指定段落开始
+  const contentToSpeak = paragraphs.slice(startIndex).join("\n");
+  
+  const utterance = new SpeechSynthesisUtterance(contentToSpeak);
+  utteranceRef.current = utterance;
+  
+  // 设置语音参数
+  utterance.rate = settings.speechRate || 1;
+  utterance.pitch = settings.speechPitch || 1;
+  utterance.volume = settings.speechVolume || 1;
+  
+  // 设置选择的声音
+  if (selectedVoice) {
+    const voice = availableVoices.find(v => v.voiceURI === selectedVoice);
+    if (voice) {
+      utterance.voice = voice;
+    }
+  }
+
+  // 当前正在朗读的文本索引
+  let currentIndex = startIndex;
+  setCurrentHighlightedIndex(currentIndex);
+
+  // 监听朗读进度
+  utterance.onboundary = (event) => {
+    // 获取当前朗读的字符位置
+    const charIndex = event.charIndex;
+    let totalChars = 0;
+    let paragraphIndex = startIndex;
+    
+    // 计算当前正在朗读的段落
+    for (let i = startIndex; i < paragraphs.length; i++) {
+      const paragraphLength = paragraphs[i].length + 1; // +1 for the newline
+      if (totalChars + paragraphLength > charIndex) {
+        paragraphIndex = i;
+        break;
+      }
+      totalChars += paragraphLength;
+    }
+    
+    // 更新高亮段落
+    if (paragraphIndex !== currentIndex) {
+      currentIndex = paragraphIndex;
+      setCurrentHighlightedIndex(currentIndex);
+      
+      // 滚动到可视区域
+      const highlightedElement = document.getElementById(`paragraph-${currentIndex}`);
+      if (highlightedElement) {
+        highlightedElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  };
+
+  // 朗读结束处理
+  utterance.onend = () => {
+    setIsSpeaking(false);
+    setCurrentHighlightedIndex(-1);
+  };
+
+  // 开始朗读
+  speechSynthesisRef.current.speak(utterance);
+  setIsSpeaking(true);
+}, [paragraphs, settings.speechRate, settings.speechPitch, settings.speechVolume, settings.ttsEnabled, selectedVoice, availableVoices]);
+
+// 开始/暂停朗读
+const toggleSpeech = useCallback(() => {
+  if (!speechSynthesisRef.current) {
+    message.error('您的浏览器不支持语音合成功能');
+    return;
+  }
+
+  // 检查朗读功能是否启用
+  if (!settings.ttsEnabled) {
+    message.warning('请先在设置中启用朗读功能');
+    return;
+  }
+
+  if (isSpeaking) {
+    // 暂停朗读
+    speechSynthesisRef.current.pause();
+    setIsSpeaking(false);
+  } else {
+    if (speechSynthesisRef.current.paused) {
+      // 继续之前暂停的朗读
+      speechSynthesisRef.current.resume();
+      setIsSpeaking(true);
+    } else {
+      // 从头开始朗读
+      startSpeaking(0);
+    }
+  }
+}, [isSpeaking, startSpeaking, settings.ttsEnabled]);
+
+// 点击段落开始从该位置朗读
+const handleParagraphClick = useCallback((index: number) => {
+  // 只有在启用朗读功能且朗读模式激活时才响应点击
+  if ((settings.ttsEnabled && isSpeaking) || (settings.ttsEnabled && speechSynthesisRef.current?.paused)) {
+    if (speechSynthesisRef.current) {
+      speechSynthesisRef.current.cancel();
+    }
+    startSpeaking(index);
+  }
+  // 在非朗读模式或朗读功能未启用时点击段落不做任何处理
+}, [isSpeaking, startSpeaking, settings.ttsEnabled]);
+
+// 停止朗读
+const stopSpeaking = useCallback(() => {
+  if (speechSynthesisRef.current) {
+    speechSynthesisRef.current.cancel();
+    setIsSpeaking(false);
+    setCurrentHighlightedIndex(-1);
+  }
+}, []);
+
+// 在组件卸载时停止朗读
+useEffect(() => {
+  return () => {
+    if (speechSynthesisRef.current) {
+      speechSynthesisRef.current.cancel();
+    }
+  };
+}, []);
+
+// 强制更新进度时同时停止朗读
+const enhancedForceUpdateReadingProgress = () => {
+  // 原有的进度保存逻辑
+  forceUpdateReadingProgress();
+  
+  // 停止朗读
+  if (speechSynthesisRef.current && speechSynthesisRef.current.speaking) {
+    speechSynthesisRef.current.cancel();
+    setIsSpeaking(false);
+    setCurrentHighlightedIndex(-1);
+  }
+};
+
+
+
+// 修改内容区域渲染，添加段落点击和高亮功能
+// 在renderChapterList函数上方添加
+const renderContent = () => {
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '20px 0' }}>
+        <Spin size="large" tip="加载中..." />
+      </div>
+    );
+  }
+  
+  if (!book) {
+    return (
+      <div style={{ textAlign: 'center', padding: '20px 0' }}>
+        <p>未找到书籍</p>
+        <Button type="primary" onClick={() => window.location.href = '/reader'}>
+          返回书架
+        </Button>
+      </div>
+    );
+  }
+  
+  if (!book.chapters || book.chapters.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '20px 0' }}>
+        <p>章节列表为空，请尝试重新加载</p>
+        <Button type="primary" onClick={handleReload}>
+          重新加载
+        </Button>
+      </div>
+    );
+  }
+  
+  return (
+    <>
+      <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>
+        {book.chapters[chapterIndex]?.title || `第${chapterIndex + 1}章`}
+      </h2>
+      <div>
+        {paragraphs.map((paragraph, index) => (
+          <p
+            key={index}
+            id={`paragraph-${index}`}
+            onClick={() => handleParagraphClick(index)}
+            style={{
+              textIndent: '2em',
+              margin: '0.5em 0',
+              padding: '3px 0',
+              cursor: settings.ttsEnabled && (isSpeaking || speechSynthesisRef.current?.paused) ? 'pointer' : 'text',
+              backgroundColor: currentHighlightedIndex === index ? '#fffbe6' : 'transparent',
+              borderRadius: '3px',
+              transition: 'background-color 0.3s'
+            }}
+          >
+            {paragraph}
+          </p>
+        ))}
+      </div>
+    </>
+  );
+};
+
 // 如果不可见则不渲染
 if (!visible) return null;
 
@@ -2580,6 +2993,19 @@ return createPortal(
               disabled={chapterLoadingState.isLoading}
             />
           </Tooltip>
+
+          {/* 只有在启用朗读功能时才显示朗读按钮 */}
+          {settings.ttsEnabled && (
+            <Tooltip title={isSpeaking ? "暂停朗读" : "开始朗读"}>
+              <Button
+                type={isSpeaking ? "primary" : "text"}
+                size="small"
+                icon={isSpeaking ? <PauseOutlined /> : <SoundOutlined />}
+                onClick={toggleSpeech}
+                disabled={!paragraphs.length}
+              />
+            </Tooltip>
+          )}
 
           <Tooltip title="刷新">
             <Button
@@ -2696,43 +3122,7 @@ return createPortal(
         onScroll={handleScroll}
         onContextMenu={handleContextMenu}
       >
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <Spin size="large" tip="加载中..." />
-          </div>
-        ) : !book ? (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <p>未找到书籍</p>
-            <Button type="primary" onClick={() => window.location.href = '/reader'}>
-              返回书架
-            </Button>
-          </div>
-        ) : !book.chapters || book.chapters.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <p>章节列表为空，请尝试重新加载</p>
-            <Button type="primary" onClick={handleReload}>
-              重新加载
-            </Button>
-          </div>
-        ) : (
-          <>
-            <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>
-              {book.chapters[chapterIndex]?.title || `第${chapterIndex + 1}章`}
-            </h2>
-            <div
-              style={{
-                whiteSpace: 'pre-wrap',
-                textIndent: '2em'
-              }}
-            >
-              {chapterContent.split('\n').map((paragraph, index) => (
-                paragraph.trim() ?
-                  <p key={index}>{paragraph}</p> :
-                  <br key={index} />
-              ))}
-            </div>
-          </>
-        )}
+        {renderContent()}
       </div>
 
       {/* 调整大小的手柄 */}
@@ -2828,6 +3218,7 @@ return createPortal(
   </>,
   document.body
 );
-};
+
+}
 
 export default GlobalReader;
