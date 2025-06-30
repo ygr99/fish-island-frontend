@@ -1567,7 +1567,7 @@ const ChatRoom: React.FC = () => {
             tagEmoji = '💎';
             tagClass = styles.titleTagPlatinum;
             break;
-          case '4': // 黄金摸鱼官
+          case '4': // 梦幻摸鱼官
             tagEmoji = '🌟';
             tagClass = styles.titleTagGold;
             break;
