@@ -1135,13 +1135,14 @@ declare namespace API {
 
   type UndercoverRoomVO = {
     createTime?: string;
+    creatorId?: number;
     duration?: number;
     eliminatedIds?: number[];
+    gameResult?: string;
     maxPlayers?: number;
     participantIds?: number[];
     participants?: UndercoverPlayerDetailVO[];
     remainingTime?: number;
-    role?: string;
     roomId?: string;
     startTime?: string;
     status?: 'WAITING' | 'PLAYING' | 'ENDED';

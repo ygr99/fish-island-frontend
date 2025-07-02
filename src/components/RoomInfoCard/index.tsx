@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Badge, Avatar, Button, Tooltip, Spin, Empty, List, message, Space, Modal, Form, Input, InputNumber } from 'antd';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { Card, Badge, Avatar, Button, Tooltip, Spin, Empty, List, message, Space, Modal, Form, Input, InputNumber, Radio, Popconfirm } from 'antd';
 import { 
   TeamOutlined, 
   ClockCircleOutlined, 
@@ -9,7 +9,14 @@ import {
   PlayCircleOutlined,
   StopOutlined,
   PlusCircleOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  DragOutlined,
+  PushpinOutlined,
+  PushpinFilled,
+  SendOutlined,
+  CommentOutlined,
+  DeleteOutlined,
+  QuestionCircleOutlined
 } from '@ant-design/icons';
 import { 
   getActiveRoomUsingGet, 
@@ -17,10 +24,21 @@ import {
   joinRoomUsingPost, 
   startGameUsingPost,
   endGameUsingPost,
-  createRoomUsingPost
+  createRoomUsingPost,
+  removeActiveRoomUsingPost
 } from '@/services/backend/undercoverGameController';
 import { history, useModel } from '@umijs/max';
 import styles from './index.less';
+import { wsService } from '@/services/websocket';
+
+// 添加聊天消息接口
+interface ChatMessage {
+  content: string;
+  userId: number;
+  userName: string;
+  userAvatar?: string;
+  timestamp: Date;
+}
 
 interface RoomInfoCardProps {
   visible: boolean;
@@ -32,6 +50,7 @@ interface CreateRoomFormValues {
   civilianWord: string;
   undercoverWord: string;
   duration: number;
+  roomType: 'god' | 'random';
 }
 
 const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
@@ -46,18 +65,122 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   const [startingGame, setStartingGame] = useState<boolean>(false);
   const [endingGame, setEndingGame] = useState<boolean>(false);
   const [creatingRoom, setCreatingRoom] = useState<boolean>(false);
+  const [removingRoom, setRemovingRoom] = useState<boolean>(false);
   const [isCreateModalVisible, setIsCreateModalVisible] = useState<boolean>(false);
+  const [isRuleModalVisible, setIsRuleModalVisible] = useState<boolean>(false);
   const [form] = Form.useForm();
+  
+  // 添加拖动相关状态
+  const [position, setPosition] = useState({ x: 10, y: 10 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartPoint, setDragStartPoint] = useState({ mouseX: 0, mouseY: 0, elemX: 0, elemY: 0 });
+  const cardRef = useRef<HTMLDivElement>(null);
+  
+  // 添加置顶状态
+  const [isPinned, setIsPinned] = useState(false);
+  
+  // 添加聊天相关状态
+  const [showChat, setShowChat] = useState<boolean>(true);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [messageInput, setMessageInput] = useState<string>('');
+  const chatMessagesRef = useRef<HTMLDivElement>(null);
+  
+  // 添加静默刷新状态
+  const [silentRefresh, setSilentRefresh] = useState<boolean>(false);
+  
+  // 确保位置初始化在视窗内
+  useEffect(() => {
+    if (visible && cardRef.current) {
+      const maxX = window.innerWidth - cardRef.current.offsetWidth;
+      const maxY = window.innerHeight - 100; // 留出一些底部空间
+      
+      setPosition(prev => ({
+        x: Math.min(prev.x, maxX),
+        y: Math.min(prev.y, maxY)
+      }));
+    }
+  }, [visible]);
 
-  const fetchRoomInfo = async () => {
+  // 当房间ID变化时，清空聊天消息
+  useEffect(() => {
+    if (roomInfo?.roomId) {
+      setChatMessages([]);
+    }
+  }, [roomInfo?.roomId]);
+
+  // 添加WebSocket消息处理
+  useEffect(() => {
+      // 添加undercover消息处理器
+      const handleUndercoverMessage = (data: any) => {
+        // 检查消息格式
+        if (data?.type === 'undercover') {
+          const messageData = data.data.message;
+          const newMessage: ChatMessage = {
+            content: messageData.content,
+            userId: messageData.sender.id,
+            userName: messageData.sender.name,
+            userAvatar: messageData.sender.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+            timestamp: new Date(messageData.timestamp)
+          };
+          
+          setChatMessages(prev => [...prev, newMessage]);
+          
+          // 确保聊天窗口滚动到最新消息
+          setTimeout(() => {
+            if (chatMessagesRef.current) {
+              chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
+            }
+          }, 100);
+        }
+      };
+      
+      // 添加refreshRoom消息处理器
+      const handleRefreshRoomMessage = (data: any) => {
+        // 检查是否是刷新房间的消息
+          fetchRoomInfo(true); // 静默刷新，不显示加载状态
+      };
+
+      // 添加gamestart消息处理器
+      const handleGameStartMessage = (data: any) => {
+        message.success('游戏已开始!');
+        fetchRoomInfo();
+      };
+      
+      wsService.addMessageHandler('undercover', handleUndercoverMessage);
+      wsService.addMessageHandler('refreshRoom', handleRefreshRoomMessage);
+      wsService.addMessageHandler('gameStart', handleGameStartMessage);
+      
+      return () => {
+        wsService.removeMessageHandler('undercover', handleUndercoverMessage);
+        wsService.removeMessageHandler('refreshRoom', handleRefreshRoomMessage);
+        wsService.removeMessageHandler('gameStart', handleGameStartMessage);
+      };
+  }, [visible, roomInfo?.roomId]);
+
+  const fetchRoomInfo = async (silent: boolean = false) => {
     if (!visible) return;
 
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
+      setSilentRefresh(silent);
       setError(null);
       const response = await getActiveRoomUsingGet();
       if (response.code === 0 && response.data) {
+        // 更新房间信息
         setRoomInfo(response.data);
+        
+        // 确保重置投票状态
+        setVotingFor(null);
+        setVotingLoading(false);
+        
+        // 如果房间状态发生变化，重置相关操作状态
+        if (roomInfo?.status !== response.data.status) {
+          setStartingGame(false);
+          setEndingGame(false);
+          setJoiningRoom(false);
+        }
       } else {
         setRoomInfo(null);
         setError('暂无活跃房间');
@@ -67,7 +190,10 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       setError('获取房间信息失败');
       setRoomInfo(null);
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
+      setSilentRefresh(false);
     }
   };
 
@@ -77,7 +203,13 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     }
   }, [visible]);
 
-  const handleJoinRoom = async () => {
+  // 处理加入房间
+  const handleJoinRoom = async (e?: React.MouseEvent) => {
+    // 如果有事件对象，阻止事件冒泡
+    if (e) {
+      e.stopPropagation();
+    }
+    
     if (roomInfo?.roomId) {
       try {
         setJoiningRoom(true);
@@ -87,7 +219,21 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
         
         if (response.code === 0 && response.data) {
           message.success('加入房间成功');
-          fetchRoomInfo(); // 刷新房间信息
+          
+          // 发送刷新房间信息的websocket消息
+          wsService.send({
+            type: 2,
+            userId: currentUser?.id || -1,
+            data: {
+              type: 'refreshRoom',
+              content: {
+                roomId: roomInfo.roomId,
+                action: 'join'
+              },
+            },
+          });
+          
+          fetchRoomInfo(true); // 加入房间后静默刷新房间信息
         } else {
           message.error(response.message || '加入房间失败');
         }
@@ -100,15 +246,158 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     }
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = (e: React.MouseEvent) => {
+    // 阻止事件冒泡，避免触发文档点击事件
+    e.stopPropagation();
     fetchRoomInfo();
   };
+  
+  // 添加拖动相关处理函数
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (cardRef.current) {
+      e.preventDefault(); // 阻止默认行为
+      e.stopPropagation(); // 阻止事件冒泡
+      
+      // 记录鼠标起始位置和元素起始位置
+      setDragStartPoint({
+        mouseX: e.clientX,
+        mouseY: e.clientY,
+        elemX: position.x,
+        elemY: position.y
+      });
+      setIsDragging(true);
+    }
+  };
+  
+  // 添加触摸事件处理
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (cardRef.current && e.touches.length > 0) {
+      e.stopPropagation(); // 阻止事件冒泡
+      
+      const touch = e.touches[0];
+      
+      // 记录触摸起始位置和元素起始位置
+      setDragStartPoint({
+        mouseX: touch.clientX,
+        mouseY: touch.clientY,
+        elemX: position.x,
+        elemY: position.y
+      });
+      setIsDragging(true);
+    }
+  };
+  
+  const handleTouchMove = (e: TouchEvent) => {
+    if (isDragging && e.touches.length > 0) {
+      e.preventDefault(); // 阻止页面滚动
+      const touch = e.touches[0];
+      
+      // 直接使用触摸当前位置减去起始触摸位置的差值，加上元素起始位置
+      const newX = dragStartPoint.elemX + (touch.clientX - dragStartPoint.mouseX);
+      const newY = dragStartPoint.elemY + (touch.clientY - dragStartPoint.mouseY);
+      
+      // 计算边界，允许部分超出屏幕以确保可访问性
+      const minX = -50; // 允许左侧超出50px
+      const minY = -10; // 允许顶部超出10px
+      const maxX = window.innerWidth - (cardRef.current?.offsetWidth || 300) + 100; // 允许右侧超出100px
+      const maxY = window.innerHeight - 50; // 底部保留50px
+      
+      // 应用边界限制
+      setPosition({
+        x: Math.min(Math.max(minX, newX), maxX),
+        y: Math.min(Math.max(minY, newY), maxY)
+      });
+    }
+  };
+  
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (isDragging) {
+      e.preventDefault();
+      
+      // 直接使用鼠标当前位置减去起始鼠标位置的差值，加上元素起始位置
+      const newX = dragStartPoint.elemX + (e.clientX - dragStartPoint.mouseX);
+      const newY = dragStartPoint.elemY + (e.clientY - dragStartPoint.mouseY);
+      
+      // 计算边界，允许部分超出屏幕以确保可访问性
+      const minX = -50; // 允许左侧超出50px
+      const minY = -10; // 允许顶部超出10px
+      const maxX = window.innerWidth - (cardRef.current?.offsetWidth || 300) + 100; // 允许右侧超出100px
+      const maxY = window.innerHeight - 50; // 底部保留50px
+      
+      // 应用边界限制
+      setPosition({
+        x: Math.min(Math.max(minX, newX), maxX),
+        y: Math.min(Math.max(minY, newY), maxY)
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // 添加点击空白处关闭功能
+  const handleDocumentClick = useCallback((e: MouseEvent) => {
+    // 如果卡片已置顶，则不关闭
+    if (isPinned) return;
+    
+    // 如果当前模态框打开，不处理点击事件
+    if (isCreateModalVisible || isRuleModalVisible) return;
+    
+    // 如果点击的是卡片外部，则关闭卡片
+    if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+      onClose();
+    }
+  }, [isPinned, onClose, isCreateModalVisible, isRuleModalVisible]);
+
+  // 添加全局鼠标和触摸事件监听
+  useEffect(() => {
+    if (visible) {
+      // 鼠标事件
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      
+      // 触摸事件
+      window.addEventListener('touchmove', handleTouchMove, { passive: false });
+      window.addEventListener('touchend', handleTouchEnd);
+      
+      // 添加点击空白处关闭的事件监听
+      // 使用setTimeout确保事件在当前点击事件之后绑定，避免立即触发
+      const timer = setTimeout(() => {
+        document.addEventListener('click', handleDocumentClick);
+      }, 0);
+      
+      return () => {
+        // 清理鼠标事件
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+        
+        // 清理触摸事件
+        window.removeEventListener('touchmove', handleTouchMove);
+        window.removeEventListener('touchend', handleTouchEnd);
+        
+        // 清理点击事件
+        document.removeEventListener('click', handleDocumentClick);
+        clearTimeout(timer);
+      };
+    }
+  }, [visible, isDragging, dragStartPoint, position, handleDocumentClick]);
 
   // 处理投票
-  const handleVote = async (targetUserId: number) => {
+  const handleVote = async (targetUserId: number, e?: React.MouseEvent) => {
+    // 如果有事件对象，阻止事件冒泡
+    if (e) {
+      e.stopPropagation();
+    }
+    
     if (!roomInfo?.roomId) return;
 
     try {
+      // 设置正在投票的目标和加载状态
       setVotingFor(targetUserId);
       setVotingLoading(true);
 
@@ -119,7 +408,17 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
 
       if (response.code === 0 && response.data) {
         message.success('投票成功');
-        fetchRoomInfo(); // 刷新房间信息
+        // 在投票成功后先标记已完成投票（前端状态立即更新）
+        const updatedVotes = [...(roomInfo.votes || []), { 
+          voterId: currentUser?.id || 0, 
+          targetId: targetUserId 
+        }];
+        setRoomInfo({
+          ...roomInfo,
+          votes: updatedVotes
+        });
+        // 然后静默刷新房间信息（后端数据同步）
+        fetchRoomInfo(true);
       } else {
         message.error(response.message || '投票失败');
       }
@@ -133,7 +432,12 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   };
 
   // 处理开始游戏
-  const handleStartGame = async () => {
+  const handleStartGame = async (e?: React.MouseEvent) => {
+    // 如果有事件对象，阻止事件冒泡
+    if (e) {
+      e.stopPropagation();
+    }
+    
     if (!roomInfo?.roomId) return;
 
     try {
@@ -144,7 +448,21 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
 
       if (response.code === 0 && response.data) {
         message.success('游戏已开始');
-        fetchRoomInfo(); // 刷新房间信息
+        
+        // 发送刷新房间信息的websocket消息
+        wsService.send({
+            type: 2,
+            userId: currentUser?.id || -1,
+            data: {
+              type: 'refreshRoom',
+              content: {
+                roomId: roomInfo.roomId,
+                action: 'start'
+              },
+            },
+          });
+        
+        fetchRoomInfo(true); // 开始游戏后静默刷新房间信息
       } else {
         message.error(response.message || '开始游戏失败');
       }
@@ -157,7 +475,12 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   };
 
   // 处理结束游戏
-  const handleEndGame = async () => {
+  const handleEndGame = async (e?: React.MouseEvent) => {
+    // 如果有事件对象，阻止事件冒泡
+    if (e) {
+      e.stopPropagation();
+    }
+    
     if (!roomInfo?.roomId) return;
 
     try {
@@ -168,7 +491,21 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
 
       if (response.code === 0 && response.data) {
         message.success('游戏已结束');
-        fetchRoomInfo(); // 刷新房间信息
+        
+        // 发送刷新房间信息的websocket消息
+        wsService.send({
+            type: 2,
+            userId: currentUser?.id || -1,
+            data: {
+              type: 'refreshRoom',
+              content: {
+                roomId: roomInfo.roomId,
+                action: 'end'
+              },
+            },
+          });
+        
+        fetchRoomInfo(true); // 结束游戏后静默刷新房间信息
       } else {
         message.error(response.message || '结束游戏失败');
       }
@@ -181,13 +518,19 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   };
 
   // 显示创建房间模态框
-  const showCreateModal = () => {
+  const showCreateModal = (e?: React.MouseEvent) => {
+    // 如果有事件对象，阻止事件冒泡
+    if (e) {
+      e.stopPropagation();
+    }
+    
     form.resetFields();
     form.setFieldsValue({
       maxPlayers: 8,
       civilianWord: '',
       undercoverWord: '',
-      duration: 600
+      duration: 600,
+      roomType: 'random'
     });
     setIsCreateModalVisible(true);
   };
@@ -196,17 +539,25 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   const handleCreateRoom = async (values: CreateRoomFormValues) => {
     try {
       setCreatingRoom(true);
-      const response = await createRoomUsingPost({
+      
+      // 根据房间类型决定请求参数
+      const requestParams = {
         maxPlayers: values.maxPlayers,
-        civilianWord: values.civilianWord,
-        undercoverWord: values.undercoverWord,
-        duration: values.duration
-      });
+        duration: values.duration,
+        // 如果是上帝模式，提供自定义单词，如果是随机模式，不提供单词
+        ...(values.roomType === 'god' ? {
+          civilianWord: values.civilianWord,
+          undercoverWord: values.undercoverWord
+        } : {})
+      };
+      
+      const response = await createRoomUsingPost(requestParams);
 
       if (response.code === 0 && response.data) {
-        message.success('创建房间成功');
+        message.success('创建房间成功')
+        
         setIsCreateModalVisible(false);
-        fetchRoomInfo(); // 刷新房间信息
+        fetchRoomInfo(true); // 刷新房间信息
       } else {
         message.error(response.message || '创建房间失败');
       }
@@ -235,10 +586,81 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   const statusInfo = getRoomStatusInfo(roomInfo?.status);
 
   // 判断当前用户是否可以投票
-  const canVote = roomInfo?.status === 'PLAYING' && currentUser?.id;
+  const canVote = useCallback(() => {
+    // 必须是游戏进行中、用户已登录且不是投票中状态
+    const basicConditions = roomInfo?.status === 'PLAYING' && currentUser?.id && !votingLoading;
+    
+    // 检查用户是否已被淘汰或已投票
+    if (!basicConditions || !roomInfo?.participants) return false;
+    
+    // 获取当前用户信息
+    const currentUserInGame = roomInfo.participants.find(p => p.userId === currentUser?.id);
+    if (!currentUserInGame) return false; // 如果用户不在游戏中，不能投票
+    
+    // 如果用户已被淘汰，不能投票
+    if (currentUserInGame.isEliminated) return false;
+    
+    // 检查用户是否已经投过票
+    const hasVoted = roomInfo.votes?.some(vote => vote.voterId === currentUser?.id);
+    return !hasVoted;
+  }, [roomInfo, currentUser, votingLoading]);
+
+  // 判断当前用户是否可以加入房间
+  const canJoinRoom = useCallback(() => {
+    if (!roomInfo || !currentUser?.id || roomInfo.status !== 'WAITING') return false;
+    
+    // 检查用户是否已经在房间中
+    if (roomInfo.participants?.some(p => p.userId === currentUser.id)) return false;
+    
+    // 检查房间是否已满
+    return (roomInfo.participants?.length || 0) < (roomInfo.maxPlayers || 8);
+  }, [roomInfo, currentUser]);
 
   // 判断当前用户是否是管理员
   const isAdmin = currentUser?.userRole === 'admin';
+
+  // 处理删除房间
+  const handleRemoveRoom = async (e?: React.MouseEvent) => {
+    // 如果有事件对象，阻止事件冒泡
+    if (e) {
+      e.stopPropagation();
+    }
+    
+    if (!isAdmin) {
+      message.error('只有管理员才能删除房间');
+      return;
+    }
+
+    try {
+      setRemovingRoom(true);
+      const response = await removeActiveRoomUsingPost();
+
+      if (response.code === 0 && response.data) {
+        message.success('房间已删除');
+        
+        // 发送刷新房间信息的websocket消息
+        wsService.send({
+            type: 2,
+            userId: currentUser?.id || -1,
+            data: {
+              type: 'refreshRoom',
+              content: {
+                action: 'remove'
+              },
+            },
+          });
+        
+        fetchRoomInfo(true); // 删除房间后静默刷新房间信息
+      } else {
+        message.error(response.message || '删除房间失败');
+      }
+    } catch (error) {
+      console.error('删除房间失败:', error);
+      message.error('删除房间失败，请重试');
+    } finally {
+      setRemovingRoom(false);
+    }
+  };
 
   // 渲染管理员操作按钮
   const renderAdminButtons = () => {
@@ -250,7 +672,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
         <Button
           type="primary"
           icon={<PlusCircleOutlined />}
-          onClick={showCreateModal}
+          onClick={(e) => showCreateModal(e)}
           loading={creatingRoom}
           disabled={creatingRoom}
           className={styles.adminButton}
@@ -264,15 +686,125 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     switch (roomInfo.status) {
       case 'WAITING':
         return (
+          <>
+            <Button
+              type="primary"
+              icon={<PlayCircleOutlined />}
+              onClick={(e) => handleStartGame(e)}
+              loading={startingGame}
+              disabled={startingGame}
+              className={styles.adminButton}
+            >
+              开始游戏
+            </Button>
+            <Popconfirm
+              title="确定要删除当前房间吗？"
+              onConfirm={(e) => handleRemoveRoom(e)}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button
+                type="primary"
+                danger
+                icon={<DeleteOutlined />}
+                loading={removingRoom}
+                disabled={removingRoom}
+                className={styles.adminButton}
+              >
+                删除房间
+              </Button>
+            </Popconfirm>
+          </>
+        );
+      case 'PLAYING':
+        return (
+          <>
+            <Button
+              type="primary"
+              danger
+              icon={<StopOutlined />}
+              onClick={(e) => handleEndGame(e)}
+              loading={endingGame}
+              disabled={endingGame}
+              className={styles.adminButton}
+            >
+              结束游戏
+            </Button>
+            <Popconfirm
+              title="游戏正在进行中，确定要删除当前房间吗？"
+              onConfirm={(e) => handleRemoveRoom(e)}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button
+                type="primary"
+                danger
+                icon={<DeleteOutlined />}
+                loading={removingRoom}
+                disabled={removingRoom}
+                className={styles.adminButton}
+              >
+                删除房间
+              </Button>
+            </Popconfirm>
+          </>
+        );
+      case 'ENDED':
+        return (
+          <>
+            <Button
+              type="primary"
+              icon={<PlusCircleOutlined />}
+              onClick={(e) => showCreateModal(e)}
+              loading={creatingRoom}
+              disabled={creatingRoom}
+              className={styles.adminButton}
+            >
+              创建新房间
+            </Button>
+            <Popconfirm
+              title="确定要删除当前房间吗？"
+              onConfirm={(e) => handleRemoveRoom(e)}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button
+                type="primary"
+                danger
+                icon={<DeleteOutlined />}
+                loading={removingRoom}
+                disabled={removingRoom}
+                className={styles.adminButton}
+              >
+                删除房间
+              </Button>
+            </Popconfirm>
+          </>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // 优化renderCreatorButtons函数，更好地响应房间状态变化
+  const renderCreatorButtons = () => {
+    // 如果用户不是房间创建者，返回null
+    if (!roomInfo || !currentUser || roomInfo.creatorId !== currentUser.id || isAdmin) return null;
+
+    // 根据房间状态显示不同的操作按钮
+    switch (roomInfo.status) {
+      case 'WAITING':
+        const participantsCount = roomInfo.participants?.length || 0;
+        return (
           <Button
             type="primary"
             icon={<PlayCircleOutlined />}
-            onClick={handleStartGame}
+            onClick={(e) => handleStartGame(e)}
             loading={startingGame}
-            disabled={startingGame}
-            className={styles.adminButton}
+            disabled={startingGame || participantsCount < 3} // 至少需要3名玩家才能开始游戏
+            className={styles.actionButton}
           >
-            开始游戏
+            {participantsCount < 3 ? '至少需要3名玩家' : '开始游戏'}
           </Button>
         );
       case 'PLAYING':
@@ -281,25 +813,12 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             type="primary"
             danger
             icon={<StopOutlined />}
-            onClick={handleEndGame}
+            onClick={(e) => handleEndGame(e)}
             loading={endingGame}
             disabled={endingGame}
-            className={styles.adminButton}
+            className={styles.actionButton}
           >
             结束游戏
-          </Button>
-        );
-      case 'ENDED':
-        return (
-          <Button
-            type="primary"
-            icon={<PlusCircleOutlined />}
-            onClick={showCreateModal}
-            loading={creatingRoom}
-            disabled={creatingRoom}
-            className={styles.adminButton}
-          >
-            创建新房间
           </Button>
         );
       default:
@@ -307,175 +826,419 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     }
   };
 
+  // 添加渲染创建房间按钮的函数
+  const renderCreateRoomButton = () => {
+    // 如果当前没有活跃房间或者房间已结束，显示创建房间按钮
+    if (!roomInfo || roomInfo.status === 'ENDED') {
+      return (
+        <Button
+          type="primary"
+          icon={<PlusCircleOutlined />}
+          onClick={(e) => showCreateModal(e)}
+          loading={creatingRoom}
+          disabled={creatingRoom}
+          className={styles.actionButton}
+        >
+          创建房间
+        </Button>
+      );
+    }
+    return null;
+  };
+
+  // 滚动到最新消息
+  useEffect(() => {
+    if (chatMessagesRef.current) {
+      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
+  // 判断当前用户是否是房间参与者
+  const isRoomParticipant = useCallback(() => {
+    if (!roomInfo?.participants || !currentUser?.id) return false;
+    return roomInfo.participants.some(p => p.userId === currentUser.id);
+  }, [roomInfo?.participants, currentUser?.id]);
+
+  // 处理发送消息
+  const handleSendMessage = () => {
+    if (!messageInput.trim() || !roomInfo?.roomId) {
+      message.error('聊天室暂未开始，请等待');
+      return;
+    }
+    
+    // 检查用户是否是房间参与者
+    if (!isRoomParticipant()) {
+      message.error('只有房间参与者才能发言');
+      return;
+    }
+    
+    // 创建消息对象
+    const newMessage = {
+      id: `${Date.now()}`,
+      content: messageInput,
+      sender: {
+        id: currentUser?.id || 0,
+        name: currentUser?.userName || '游客',
+        avatar: currentUser?.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+        level: currentUser?.level || 1,
+        points: currentUser?.points || 0,
+        isAdmin: currentUser?.userRole === 'admin',
+      },
+      timestamp: new Date(),
+    };
+    
+    // 使用WebSocket发送消息
+    wsService.send({
+      type: 2,
+      userId: currentUser?.id || -1,
+      data: {
+        type: 'undercover', // 使用undercover作为消息类型
+        content: {
+          message: newMessage,
+        },
+      },
+    });
+    
+    // 添加自己的消息到聊天窗口
+    const myChatMessage: ChatMessage = {
+      content: messageInput,
+      userId: currentUser?.id || 0,
+      userName: currentUser?.userName || '游客',
+      userAvatar: currentUser?.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+      timestamp: new Date()
+    };
+    
+    setChatMessages(prev => [...prev, myChatMessage]);
+    
+    // 确保聊天窗口滚动到最新消息
+    setTimeout(() => {
+      if (chatMessagesRef.current) {
+        chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
+      }
+    }, 100);
+    
+    setMessageInput('');
+  };
+
+  // 处理按Enter发送消息
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  // 在玩家列表渲染中优化投票按钮逻辑
+  const renderPlayerItem = (player: API.UndercoverPlayerDetailVO, index: number) => {
+    // 判断当前用户是否可以对该玩家投票
+    const canVoteForPlayer = () => {
+      // 基本投票条件
+      if (!canVote() || player.userId === undefined || currentUser?.id === undefined) return false;
+      
+      // 不能给自己投票
+      if (player.userId === currentUser.id) return false;
+      
+      // 不能给已淘汰的玩家投票
+      return !player.isEliminated;
+    };
+    
+    return (
+      <List.Item className={styles.playerItem}>
+        <div className={styles.playerInfo}>
+          <Badge count={index + 1} style={{ backgroundColor: '#52c41a', marginRight: 8 }} />
+          <Avatar
+            size="small"
+            src={player.userAvatar}
+            icon={<UserOutlined />}
+          />
+          <span className={styles.playerName}>{player.userName}</span>
+        </div>
+        <div className={styles.playerActions}>
+          {player.voteCount !== undefined && (
+            <div className={styles.voteCount}>
+              <Tooltip title="获得的票数">
+                <Badge
+                  count={player.voteCount}
+                  showZero={true}
+                  style={{ backgroundColor: player.isEliminated ? '#ff4d4f' : '#1890ff' }}
+                />
+              </Tooltip>
+            </div>
+          )}
+          {canVoteForPlayer() && (
+            <Button
+              size="small"
+              type="primary"
+              danger
+              onClick={(e) => player.userId !== undefined && handleVote(player.userId, e)}
+              loading={votingLoading && votingFor === player.userId}
+            >
+              投票
+            </Button>
+          )}
+          {player.isEliminated && (
+            <span className={styles.eliminatedTag}>已出局</span>
+          )}
+        </div>
+      </List.Item>
+    );
+  };
+
+  // 显示规则模态框
+  const showRuleModal = (e?: React.MouseEvent) => {
+    // 如果有事件对象，阻止事件冒泡
+    if (e) {
+      e.stopPropagation();
+    }
+    setIsRuleModalVisible(true);
+  };
+
   if (!visible) return null;
 
   return (
-    <div className={styles.roomInfoCardContainer}>
-      <Card
-        title={
-          <div className={styles.cardTitle}>
-            <span>谁是卧底房间</span>
-            <Badge
-              status={roomInfo ? statusInfo.badgeStatus : 'default'}
-              text={roomInfo ? statusInfo.text : '无活跃房间'}
-              className={styles.statusBadge}
-            />
-          </div>
-        }
-        extra={
-          <Button type="text" onClick={onClose} icon={<RightOutlined />} />
-        }
-        className={styles.roomInfoCard}
-      >
-        {loading ? (
-          <div className={styles.loadingContainer}>
-            <Spin tip="加载中..." />
-          </div>
-        ) : error ? (
-          <div>
-            <Empty
-              description={error}
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-            />
-            {/* 在错误状态下，如果是管理员，也显示管理员操作按钮 */}
-            {isAdmin && (
-              <div className={styles.adminActionsCenter}>
-                {renderAdminButtons()}
-              </div>
-            )}
-          </div>
-        ) : roomInfo ? (
-          <div className={styles.roomContent}>
-            <div className={styles.roomHeader}>
-              <h3 className={styles.roomName}>谁是卧底</h3>
+    <div 
+      className={styles.roomInfoCardContainer} 
+      style={{ 
+        transform: `translate(${position.x}px, ${position.y}px)`,
+        cursor: isDragging ? 'grabbing' : 'auto' 
+      }}
+      ref={cardRef}
+    >
+      <div className={styles.cardLayout}>
+        <Card
+          title={
+            <div 
+              className={styles.cardTitle}
+              onMouseDown={handleMouseDown}
+              onTouchStart={handleTouchStart}
+            >
+              <span>谁是卧底房间</span>
+              <Badge
+                status={roomInfo ? statusInfo.badgeStatus : 'default'}
+                text={roomInfo ? statusInfo.text : '无活跃房间'}
+                className={styles.statusBadge}
+              />
+              <DragOutlined className={styles.dragIcon} />
             </div>
-
-            <div className={styles.infoItem}>
-              <TeamOutlined className={styles.infoIcon} />
-              <span>玩家数量: {roomInfo.participants?.length || 0}/{roomInfo.maxPlayers || 0}</span>
+          }
+          extra={
+            <div className={styles.cardActions}>
+              <Button 
+                type="text" 
+                onClick={(e) => showRuleModal(e)} 
+                icon={<QuestionCircleOutlined />} 
+                title="游戏规则"
+              />
+              <Button 
+                type="text" 
+                onClick={(e) => {
+                  const newPinnedState = !isPinned;
+                  setIsPinned(newPinnedState);
+                  message.info(newPinnedState ? '已置顶，点击空白处不会关闭' : '已取消置顶');
+                }} 
+                icon={isPinned ? <PushpinFilled className={styles.pinnedIcon} /> : <PushpinOutlined />} 
+                title={isPinned ? "取消置顶" : "置顶"}
+              />
+              <Button 
+                type="text" 
+                onClick={() => setShowChat(!showChat)}
+                icon={<CommentOutlined className={showChat ? styles.activeIcon : ''} />}
+                title={showChat ? "隐藏聊天" : "显示聊天"}
+              />
+              <Button type="text" onClick={onClose} icon={<RightOutlined />} />
             </div>
-
-            <div className={styles.infoItem}>
-              <ClockCircleOutlined className={styles.infoIcon} />
-              <span style={{ color: statusInfo.color }}>状态: {statusInfo.text}</span>
+          }
+          className={`${styles.roomInfoCard} ${isPinned ? styles.pinned : ''} ${silentRefresh ? styles.silentRefresh : ''}`}
+        >
+          {loading && !silentRefresh ? (
+            <div className={styles.loadingContainer}>
+              <Spin tip="加载中..." />
             </div>
-
-            {/* 显示当前玩家的词语，仅在游戏进行中显示 */}
-            {roomInfo.word && roomInfo.status === 'PLAYING' && (
-              <div className={styles.infoItem}>
-                <TrophyOutlined className={styles.infoIcon} />
-                <span>你的词语: <strong>{roomInfo.word}</strong></span>
-              </div>
-            )}
-
-            {/* 玩家列表 */}
-            {roomInfo.participants && roomInfo.participants.length > 0 && (
-              <div className={styles.playersList}>
-                <h4 className={styles.playersTitle}>参与玩家</h4>
-                <List
-                  size="small"
-                  dataSource={roomInfo.participants}
-                  renderItem={(player) => (
-                    <List.Item className={styles.playerItem}>
-                      <div className={styles.playerInfo}>
-                        <Avatar
-                          size="small"
-                          src={player.userAvatar}
-                          icon={<UserOutlined />}
-                        />
-                        <span className={styles.playerName}>{player.userName}</span>
-                      </div>
-                      <div className={styles.playerActions}>
-                        {player.voteCount !== undefined && (
-                          <div className={styles.voteCount}>
-                            <Tooltip title="获得的票数">
-                              <Badge
-                                count={player.voteCount}
-                                showZero={true}
-                                style={{ backgroundColor: player.isEliminated ? '#ff4d4f' : '#1890ff' }}
-                              />
-                            </Tooltip>
-                          </div>
-                        )}
-                        {canVote &&
-                         player.userId !== undefined &&
-                         currentUser?.id !== undefined &&
-                         player.userId !== currentUser.id &&
-                         !player.isEliminated &&
-                         roomInfo.status === 'PLAYING' && (
-                          <Button
-                            size="small"
-                            type="primary"
-                            danger
-                            onClick={() => player.userId !== undefined && handleVote(player.userId)}
-                            loading={votingLoading && votingFor === player.userId}
-                          >
-                            投票
-                          </Button>
-                        )}
-                        {player.isEliminated && (
-                          <span className={styles.eliminatedTag}>已出局</span>
-                        )}
-                      </div>
-                    </List.Item>
-                  )}
-                />
-              </div>
-            )}
-
-            {/* 底部操作区域，将管理员操作和普通操作分开布局 */}
-            <div className={styles.actionContainer}>
-              {/* 管理员操作区 */}
+          ) : error ? (
+            <div>
+              <Empty
+                description={error}
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+              {/* 在错误状态下，如果是管理员，也显示管理员操作按钮 */}
               {isAdmin && (
-                <div className={styles.adminActionsSection}>
-                  <h4 className={styles.sectionTitle}>管理员操作</h4>
-                  <div className={styles.adminActions}>
-                    {renderAdminButtons()}
-                  </div>
+                <div className={styles.adminActionsCenter}>
+                  {renderAdminButtons()}
                 </div>
               )}
-              
-              {/* 普通操作区 */}
-              <div className={styles.userActionsSection}>
-                <h4 className={styles.sectionTitle}>玩家操作</h4>
-                <div className={styles.userActions}>
-                  {roomInfo.status === 'WAITING' && (
-                    <Button
-                      type="primary"
-                      onClick={handleJoinRoom}
-                      disabled={joiningRoom}
-                      loading={joiningRoom}
+              {/* 在错误状态下，如果不是管理员，显示创建房间按钮 */}
+              {!isAdmin && (
+                <div className={styles.adminActionsCenter}>
+                  {renderCreateRoomButton()}
+                </div>
+              )}
+            </div>
+          ) : roomInfo ? (
+            <div className={styles.roomContent}>
+              <div className={styles.roomHeader}>
+                <h3 className={styles.roomName}>谁是卧底</h3>
+              </div>
+
+              <div className={styles.infoItem}>
+                <TeamOutlined className={styles.infoIcon} />
+                <span>玩家数量: {roomInfo.participants?.length || 0}/{roomInfo.maxPlayers || 0}</span>
+              </div>
+
+              <div className={styles.infoItem}>
+                <ClockCircleOutlined className={styles.infoIcon} />
+                <span style={{ color: statusInfo.color }}>状态: {statusInfo.text}</span>
+              </div>
+
+              {/* 显示当前玩家的词语，仅在游戏进行中显示 */}
+              {roomInfo.word && roomInfo.status === 'PLAYING' && (
+                <div className={styles.infoItem}>
+                  <TrophyOutlined className={styles.infoIcon} />
+                  <span>你的词语: <strong>{roomInfo.word}</strong></span>
+                </div>
+              )}
+
+              {/* 玩家列表 */}
+              {roomInfo.participants && roomInfo.participants.length > 0 && (
+                <div className={styles.playersList}>
+                  <h4 className={styles.playersTitle}>参与玩家</h4>
+                  <List
+                    size="small"
+                    dataSource={roomInfo.participants}
+                    renderItem={(player, index) => renderPlayerItem(player, index)}
+                  />
+                </div>
+              )}
+
+              {/* 底部操作区域，将管理员操作和普通操作分开布局 */}
+              <div className={styles.actionContainer}>
+                {/* 管理员操作区 */}
+                {isAdmin && (
+                  <div className={styles.adminActionsSection}>
+                    <h4 className={styles.sectionTitle}>管理员操作</h4>
+                    <div className={styles.adminActions}>
+                      {renderAdminButtons()}
+                    </div>
+                  </div>
+                )}
+                
+                {/* 房间创建者操作区 */}
+                {!isAdmin && roomInfo && currentUser && roomInfo.creatorId === currentUser.id && (
+                  <div className={styles.creatorActionsSection}>
+                    <h4 className={styles.sectionTitle}>创建者操作</h4>
+                    <div className={styles.creatorActions}>
+                      {renderCreatorButtons()}
+                    </div>
+                  </div>
+                )}
+                
+                {/* 普通操作区 */}
+                <div className={styles.userActionsSection}>
+                  <h4 className={styles.sectionTitle}>玩家操作</h4>
+                  <div className={styles.userActions}>
+                    {canJoinRoom() && (
+                      <Button
+                        type="primary"
+                        onClick={(e) => handleJoinRoom(e)}
+                        disabled={joiningRoom}
+                        loading={joiningRoom}
+                        className={styles.actionButton}
+                      >
+                        {joiningRoom ? '加入中...' : '加入房间'}
+                      </Button>
+                    )}
+                    {/* 添加创建房间按钮 */}
+                    {renderCreateRoomButton()}
+                    <Button 
+                      onClick={(e) => handleRefresh(e)}
+                      icon={<ReloadOutlined />}
                       className={styles.actionButton}
                     >
-                      {joiningRoom ? '加入中...' : '加入房间'}
+                      刷新
                     </Button>
-                  )}
-                  <Button 
-                    onClick={handleRefresh}
-                    icon={<ReloadOutlined />}
-                    className={styles.actionButton}
-                  >
-                    刷新
-                  </Button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <div>
-            <Empty
-              description="暂无活跃房间"
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-            />
-            {/* 在无房间状态下，如果是管理员，显示管理员操作按钮 */}
-            {isAdmin && (
-              <div className={styles.adminActionsCenter}>
-                {renderAdminButtons()}
-              </div>
-            )}
+          ) : (
+            <div>
+              <Empty
+                description="暂无活跃房间"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+              {/* 在无房间状态下，如果是管理员，显示管理员操作按钮 */}
+              {isAdmin && (
+                <div className={styles.adminActionsCenter}>
+                  {renderAdminButtons()}
+                </div>
+              )}
+              {/* 在无房间状态下，如果不是管理员，显示创建房间按钮 */}
+              {!isAdmin && (
+                <div className={styles.adminActionsCenter}>
+                  {renderCreateRoomButton()}
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+
+        {/* 聊天窗口 */}
+        {showChat && (
+          <div className={styles.chatContainer}>
+            <div className={styles.chatHeader}>
+              <span>房间聊天</span>
+              <Button 
+                type="text" 
+                size="small" 
+                icon={<RightOutlined />} 
+                onClick={() => setShowChat(false)} 
+              />
+            </div>
+            <div className={styles.chatMessages} ref={chatMessagesRef}>
+              {chatMessages.length > 0 ? (
+                chatMessages.map((msg, index) => (
+                  <div 
+                    key={index} 
+                    className={`${styles.chatMessage} ${msg.userId === currentUser?.id ? styles.myMessage : ''}`}
+                  >
+                    <div className={styles.messageHeader}>
+                      <Avatar size="small" src={msg.userAvatar} icon={<UserOutlined />} />
+                      <span className={styles.messageSender}>{msg.userName}</span>
+                      {msg.timestamp && (
+                        <span className={styles.messageTime}>
+                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      )}
+                    </div>
+                    <div className={styles.messageContent}>
+                      {msg.content}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className={styles.emptyChatMessage}>
+                  <Empty description="暂无消息" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                </div>
+              )}
+            </div>
+            <div className={styles.chatInputContainer}>
+              <Input 
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={isRoomParticipant() ? "输入消息..." : "加入房间后才能发言"}
+                className={styles.chatInput}
+                disabled={!isRoomParticipant()}
+              />
+              <Button 
+                type="primary" 
+                icon={<SendOutlined />} 
+                onClick={handleSendMessage}
+                disabled={!messageInput.trim() || !isRoomParticipant()}
+              />
+            </div>
           </div>
         )}
-      </Card>
+      </div>
 
       {/* 创建房间模态框 */}
       <Modal
@@ -495,9 +1258,22 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             maxPlayers: 8,
             civilianWord: '',
             undercoverWord: '',
-            duration: 600
+            duration: 600,
+            roomType: 'random'
           }}
         >
+          <Form.Item
+            name="roomType"
+            label="房间类型"
+            rules={[{ required: true, message: '请选择房间类型' }]}
+            className={styles.roomTypeSelector}
+          >
+            <Radio.Group>
+              <Radio value="god">上帝模式（自定义词语）</Radio>
+              <Radio value="random">随机模式（系统随机词语）</Radio>
+            </Radio.Group>
+          </Form.Item>
+          
           <Form.Item
             name="maxPlayers"
             label="最大玩家数"
@@ -511,19 +1287,30 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
           </Form.Item>
 
           <Form.Item
-            name="civilianWord"
-            label="平民词"
-            rules={[{ required: true, message: '请输入平民词' }]}
+            noStyle
+            shouldUpdate={(prevValues, currentValues) => prevValues.roomType !== currentValues.roomType}
           >
-            <Input placeholder="例如：苹果" />
-          </Form.Item>
+            {({ getFieldValue }) => 
+              getFieldValue('roomType') === 'god' ? (
+                <>
+                  <Form.Item
+                    name="civilianWord"
+                    label="平民词"
+                    rules={[{ required: true, message: '请输入平民词' }]}
+                  >
+                    <Input placeholder="例如：苹果" />
+                  </Form.Item>
 
-          <Form.Item
-            name="undercoverWord"
-            label="卧底词"
-            rules={[{ required: true, message: '请输入卧底词' }]}
-          >
-            <Input placeholder="例如：梨" />
+                  <Form.Item
+                    name="undercoverWord"
+                    label="卧底词"
+                    rules={[{ required: true, message: '请输入卧底词' }]}
+                  >
+                    <Input placeholder="例如：梨" />
+                  </Form.Item>
+                </>
+              ) : null
+            }
           </Form.Item>
 
           <Form.Item
@@ -537,6 +1324,52 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             <InputNumber min={60} style={{ width: '100%' }} />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 游戏规则模态框 */}
+      <Modal
+        title="谁是卧底游戏规则"
+        open={isRuleModalVisible}
+        onOk={() => setIsRuleModalVisible(false)}
+        onCancel={() => setIsRuleModalVisible(false)}
+        maskClosable={false}
+        footer={[
+          <Button key="close" type="primary" onClick={(e) => {
+            e.stopPropagation(); // 阻止事件冒泡
+            setIsRuleModalVisible(false);
+          }}>
+            我知道了
+          </Button>
+        ]}
+      >
+        <div className={styles.ruleContent} onClick={(e) => e.stopPropagation()}>
+          <h3>游戏规则说明</h3>
+          <p><strong>游戏目标：</strong>平民找出卧底，卧底隐藏自己融入平民。</p>
+          
+          <h4>基本规则：</h4>
+          <ol>
+            <li>游戏开始后，每位玩家会收到一个词语。大多数人收到的是平民词，少数人收到的是卧底词。</li>
+            <li>玩家轮流描述自己拿到的词语，但不能直接说出这个词。</li>
+            <li>每轮描述后，所有玩家投票选出一名怀疑是卧底的玩家。</li>
+            <li>得票最多的玩家出局，并公布其身份。</li>
+            <li>如果所有卧底被找出，平民获胜；如果卧底存活到只剩两名玩家，卧底获胜。</li>
+          </ol>
+          
+          <h4>描述技巧：</h4>
+          <ul>
+            <li><strong>平民：</strong>描述要准确但不要太明显，既能让其他平民理解，又不会让卧底轻易识别。</li>
+            <li><strong>卧底：</strong>要仔细听平民的描述，尽量模仿平民的描述方式，避免被识破。</li>
+          </ul>
+          
+          <h4>投票策略：</h4>
+          <ul>
+            <li>注意观察其他玩家的描述是否与大多数人一致。</li>
+            <li>留意玩家的反应和表情，有时卧底会因紧张而露出破绽。</li>
+            <li>不要轻易暴露自己的判断，以免被卧底利用。</li>
+          </ul>
+          
+          <p><strong>祝您游戏愉快！</strong></p>
+        </div>
       </Modal>
     </div>
   );

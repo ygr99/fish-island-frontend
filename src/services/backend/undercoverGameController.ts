@@ -148,6 +148,14 @@ export async function getRoomPlayersDetailUsingGet(
   );
 }
 
+/** 移除当前活跃房间（仅管理员） POST /api/undercover/room/remove */
+export async function removeActiveRoomUsingPost(options?: { [key: string]: any }) {
+  return request<API.BaseResponseBoolean_>('/api/undercover/room/remove', {
+    method: 'POST',
+    ...(options || {}),
+  });
+}
+
 /** 开始游戏（仅管理员） POST /api/undercover/room/start */
 export async function startGameUsingPost(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
