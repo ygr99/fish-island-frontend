@@ -88,6 +88,10 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   // 添加静默刷新状态
   const [silentRefresh, setSilentRefresh] = useState<boolean>(false);
   
+  // 添加用户消息查看状态
+  const [viewingUserId, setViewingUserId] = useState<number | null>(null);
+  const [isUserMessagesVisible, setIsUserMessagesVisible] = useState<boolean>(false);
+  
   // 确保位置初始化在视窗内
   useEffect(() => {
     if (visible && cardRef.current) {
@@ -346,13 +350,13 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     if (isPinned) return;
     
     // 如果当前模态框打开，不处理点击事件
-    if (isCreateModalVisible || isRuleModalVisible) return;
+    if (isCreateModalVisible || isRuleModalVisible || isUserMessagesVisible) return;
     
     // 如果点击的是卡片外部，则关闭卡片
     if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
       onClose();
     }
-  }, [isPinned, onClose, isCreateModalVisible, isRuleModalVisible]);
+  }, [isPinned, onClose, isCreateModalVisible, isRuleModalVisible, isUserMessagesVisible]);
 
   // 添加全局鼠标和触摸事件监听
   useEffect(() => {
@@ -944,14 +948,21 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     
     return (
       <List.Item className={styles.playerItem}>
-        <div className={styles.playerInfo}>
+        <div 
+          className={styles.playerInfo} 
+          onClick={(e) => player.userId !== undefined && handleAvatarClick(player.userId, player.userName || '未知玩家', e)}
+        >
           <Badge count={index + 1} style={{ backgroundColor: '#52c41a', marginRight: 8 }} />
           <Avatar
             size="small"
             src={player.userAvatar}
             icon={<UserOutlined />}
+            className={styles.clickableAvatar}
           />
           <span className={styles.playerName}>{player.userName}</span>
+          <Tooltip title="点击查看消息记录">
+            <CommentOutlined className={styles.viewMessagesIcon} />
+          </Tooltip>
         </div>
         <div className={styles.playerActions}>
           {player.voteCount !== undefined && (
@@ -991,6 +1002,45 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       e.stopPropagation();
     }
     setIsRuleModalVisible(true);
+  };
+
+  // 处理点击用户头像或玩家列表项
+  const handleAvatarClick = (userId: number, userName: string, e?: React.MouseEvent) => {
+    // 如果有事件对象，阻止事件冒泡
+    if (e) {
+      e.stopPropagation();
+    }
+    setViewingUserId(userId);
+    setIsUserMessagesVisible(true);
+  };
+
+  // 获取特定用户的所有消息
+  const getUserMessages = (userId: number) => {
+    return chatMessages.filter(msg => msg.userId === userId);
+  };
+
+  // 获取用户名称
+  const getUserName = (userId: number) => {
+    // 先从聊天消息中查找
+    const userMessage = chatMessages.find(msg => msg.userId === userId);
+    if (userMessage?.userName) {
+      return userMessage.userName;
+    }
+    
+    // 如果聊天消息中没有，从房间参与者中查找
+    if (roomInfo?.participants) {
+      const participant = roomInfo.participants.find(p => p.userId === userId);
+      if (participant?.userName) {
+        return participant.userName;
+      }
+    }
+    
+    return '未知用户';
+  };
+
+  // 判断用户是否有聊天记录
+  const hasUserMessages = (userId: number) => {
+    return chatMessages.some(msg => msg.userId === userId);
   };
 
   if (!visible) return null;
@@ -1099,13 +1149,15 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
 
               {/* 玩家列表 */}
               {roomInfo.participants && roomInfo.participants.length > 0 && (
-                <div className={styles.playersList}>
+                <div className={styles.playersListContainer}>
                   <h4 className={styles.playersTitle}>参与玩家</h4>
-                  <List
-                    size="small"
-                    dataSource={roomInfo.participants}
-                    renderItem={(player, index) => renderPlayerItem(player, index)}
-                  />
+                  <div className={styles.playersList}>
+                    <List
+                      size="small"
+                      dataSource={roomInfo.participants}
+                      renderItem={(player, index) => renderPlayerItem(player, index)}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -1201,7 +1253,13 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
                     className={`${styles.chatMessage} ${msg.userId === currentUser?.id ? styles.myMessage : ''}`}
                   >
                     <div className={styles.messageHeader}>
-                      <Avatar size="small" src={msg.userAvatar} icon={<UserOutlined />} />
+                      <Avatar 
+                        size="small" 
+                        src={msg.userAvatar} 
+                        icon={<UserOutlined />} 
+                        onClick={(e) => handleAvatarClick(msg.userId, msg.userName, e)}
+                        className={styles.clickableAvatar}
+                      />
                       <span className={styles.messageSender}>{msg.userName}</span>
                       {msg.timestamp && (
                         <span className={styles.messageTime}>
@@ -1369,6 +1427,75 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
           </ul>
           
           <p><strong>祝您游戏愉快！</strong></p>
+        </div>
+      </Modal>
+
+      {/* 用户消息模态框 */}
+      <Modal
+        title={`${viewingUserId ? getUserName(viewingUserId) : '用户'}的消息记录`}
+        open={isUserMessagesVisible}
+        onCancel={(e) => {
+          // 阻止事件冒泡
+          e?.stopPropagation();
+          setIsUserMessagesVisible(false);
+        }}
+        maskClosable={false}
+        wrapClassName={styles.userMessagesModal}
+        footer={[
+          <Button 
+            key="close" 
+            type="primary" 
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsUserMessagesVisible(false);
+            }}
+          >
+            关闭
+          </Button>
+        ]}
+      >
+        <div 
+          className={styles.userMessagesContent} 
+          onClick={(e) => {
+            e.stopPropagation();
+            e.nativeEvent.stopImmediatePropagation();
+          }}
+        >
+          {viewingUserId && (
+            hasUserMessages(viewingUserId) ? (
+              <List
+                dataSource={getUserMessages(viewingUserId)}
+                renderItem={(msg, index) => (
+                  <List.Item 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.nativeEvent.stopImmediatePropagation();
+                    }}
+                  >
+                    <div 
+                      className={styles.userMessageItem} 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.nativeEvent.stopImmediatePropagation();
+                      }}
+                    >
+                      <div className={styles.userMessageTime}>
+                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </div>
+                      <div className={styles.userMessageContent}>
+                        {msg.content}
+                      </div>
+                    </div>
+                  </List.Item>
+                )}
+              />
+            ) : (
+              <Empty 
+                description="该用户暂无消息记录" 
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+            )
+          )}
         </div>
       </Modal>
     </div>
