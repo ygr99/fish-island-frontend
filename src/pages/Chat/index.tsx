@@ -58,6 +58,7 @@ import { FixedSizeList as List } from 'react-window';
 import styles from './index.less';
 import { UNDERCOVER_NOTIFICATION, UNDERCOVER_ROOM_STATUS } from '@/constants';
 import { getActiveRoomUsingGet } from '@/services/backend/undercoverGameController';
+import eventBus from '@/utils/eventBus';
 
 interface Message {
   id: string;
@@ -2587,8 +2588,21 @@ const ChatRoom: React.FC = () => {
   const handleRoomInfoClick = () => {
     // 点击后清除通知状态
     setUndercoverNotification(UNDERCOVER_NOTIFICATION.NONE);
-    setIsRoomInfoVisible(!isRoomInfoVisible);
+    setIsRoomInfoVisible(true);
   };
+
+  // 添加处理来自eventBus的显示谁是卧底房间事件
+  useEffect(() => {
+    const handleShowUndercoverRoom = () => {
+      setIsRoomInfoVisible(true);
+    };
+    
+    eventBus.on('show_undercover_room', handleShowUndercoverRoom);
+    
+    return () => {
+      eventBus.off('show_undercover_room', handleShowUndercoverRoom);
+    };
+  }, []);
 
   // 添加WebSocket消息处理器来监听房间创建事件
   useEffect(() => {

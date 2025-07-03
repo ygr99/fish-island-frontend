@@ -372,20 +372,23 @@
 /* 添加房间类型选择样式 */
 .roomTypeSelector {
   margin-bottom: 16px;
+  
+  :global(.ant-radio-group) {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
 }
 
-:global(.ant-radio-group) {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-:global(.ant-form-item-label) {
-  font-weight: 500;
-}
-
-:global(.ant-radio-wrapper) {
-  margin-bottom: 8px;
+/* 局部化表单样式 */
+.formContainer {
+  :global(.ant-form-item-label) {
+    font-weight: 500;
+  }
+  
+  :global(.ant-radio-wrapper) {
+    margin-bottom: 8px;
+  }
 }
 
 .playerItem {
@@ -529,4 +532,32 @@
   padding: 10px;
   max-height: 400px;
   overflow-y: auto;
+}
+
+/* 添加邀请按钮样式 */
+.inviteButton {
+  margin-right: 8px;
+}
+
+/* 添加邀请消息样式 */
+.inviteMessage {
+  background-color: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 8px 0;
+  text-align: center;
+}
+
+.inviteAction {
+  margin-top: 8px;
+  display: flex;
+  justify-content: center;
+}
+
+/* 冷却时间提示样式 */
+.cooldownTip {
+  font-size: 12px;
+  color: #ff4d4f;
+  margin-left: 8px;
 } 

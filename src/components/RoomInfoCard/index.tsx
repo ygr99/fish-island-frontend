@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Card, Badge, Avatar, Button, Tooltip, Spin, Empty, List, message, Space, Modal, Form, Input, InputNumber, Radio, Popconfirm } from 'antd';
-import { 
-  TeamOutlined, 
-  ClockCircleOutlined, 
-  TrophyOutlined, 
-  RightOutlined, 
-  UserOutlined, 
+import {
+  TeamOutlined,
+  ClockCircleOutlined,
+  TrophyOutlined,
+  RightOutlined,
+  UserOutlined,
   PlayCircleOutlined,
   StopOutlined,
   PlusCircleOutlined,
@@ -18,12 +18,13 @@ import {
   DeleteOutlined,
   QuestionCircleOutlined,
   LogoutOutlined,
-  BulbOutlined
+  BulbOutlined,
+  ShareAltOutlined
 } from '@ant-design/icons';
-import { 
-  getActiveRoomUsingGet, 
-  voteUsingPost, 
-  joinRoomUsingPost, 
+import {
+  getActiveRoomUsingGet,
+  voteUsingPost,
+  joinRoomUsingPost,
   startGameUsingPost,
   endGameUsingPost,
   createRoomUsingPost,
@@ -34,6 +35,7 @@ import {
 import { history, useModel } from '@umijs/max';
 import styles from './index.less';
 import { wsService } from '@/services/websocket';
+import eventBus from '@/utils/eventBus';
 
 // 添加聊天消息接口
 interface ChatMessage {
@@ -42,6 +44,14 @@ interface ChatMessage {
   userName: string;
   userAvatar?: string;
   timestamp: Date;
+  id?: string; // 添加可选的id字段
+  sender?: {
+    id: string;
+    name: string;
+    avatar: string;
+    level: number;
+    isAdmin: boolean;
+  }; // 添加可选的sender字段
 }
 
 interface RoomInfoCardProps {
@@ -78,35 +88,39 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   const [guessing, setGuessing] = useState<boolean>(false);
   const [form] = Form.useForm();
   const [guessForm] = Form.useForm();
-  
+
   // 添加拖动相关状态
   const [position, setPosition] = useState({ x: 10, y: 10 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartPoint, setDragStartPoint] = useState({ mouseX: 0, mouseY: 0, elemX: 0, elemY: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
-  
+
   // 添加置顶状态
   const [isPinned, setIsPinned] = useState(false);
-  
+
   // 添加聊天相关状态
   const [showChat, setShowChat] = useState<boolean>(true);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [messageInput, setMessageInput] = useState<string>('');
   const chatMessagesRef = useRef<HTMLDivElement>(null);
-  
+
   // 添加静默刷新状态
   const [silentRefresh, setSilentRefresh] = useState<boolean>(false);
-  
+
   // 添加用户消息查看状态
   const [viewingUserId, setViewingUserId] = useState<number | null>(null);
   const [isUserMessagesVisible, setIsUserMessagesVisible] = useState<boolean>(false);
-  
+
+  // 添加邀请冷却状态
+  const [inviteCooldown, setInviteCooldown] = useState<number>(0);
+  const inviteCooldownRef = useRef<NodeJS.Timeout | null>(null);
+
   // 确保位置初始化在视窗内
   useEffect(() => {
     if (visible && cardRef.current) {
       const maxX = window.innerWidth - cardRef.current.offsetWidth;
       const maxY = window.innerHeight - 100; // 留出一些底部空间
-      
+
       setPosition(prev => ({
         x: Math.min(prev.x, maxX),
         y: Math.min(prev.y, maxY)
@@ -135,9 +149,9 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             userAvatar: messageData.sender.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
             timestamp: new Date(messageData.timestamp)
           };
-          
+
           setChatMessages(prev => [...prev, newMessage]);
-          
+
           // 确保聊天窗口滚动到最新消息
           setTimeout(() => {
             if (chatMessagesRef.current) {
@@ -146,7 +160,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
           }, 100);
         }
       };
-      
+
       // 添加refreshRoom消息处理器
       const handleRefreshRoomMessage = (data: any) => {
         // 检查是否是刷新房间的消息
@@ -158,16 +172,54 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
         message.success('游戏已开始!');
         fetchRoomInfo();
       };
-      
+
       wsService.addMessageHandler('undercover', handleUndercoverMessage);
       wsService.addMessageHandler('refreshRoom', handleRefreshRoomMessage);
       wsService.addMessageHandler('gameStart', handleGameStartMessage);
-      
+
       return () => {
         wsService.removeMessageHandler('undercover', handleUndercoverMessage);
         wsService.removeMessageHandler('refreshRoom', handleRefreshRoomMessage);
         wsService.removeMessageHandler('gameStart', handleGameStartMessage);
       };
+  }, [visible, roomInfo?.roomId]);
+
+  // 添加监听eventBus的事件，处理从聊天室点击加入游戏的事件
+  useEffect(() => {
+    // 监听加入谁是卧底房间事件
+    const handleJoinUndercoverRoom = (roomIdStr: string) => {
+      console.log('收到加入房间事件，房间ID:', roomIdStr);
+
+      if (!visible) {
+        // 如果卡片当前不可见，则显示卡片
+        // 使用chat页面的事件来显示谁是卧底弹窗
+        eventBus.emit('show_undercover_room');
+        
+        // 使用setTimeout延迟执行加入房间操作，确保弹窗已显示
+        setTimeout(() => {
+          try {
+            handleJoinRoom();
+            fetchRoomInfo(true);
+          } catch (error) {
+            message.error("加入失败，请手动加入");
+          }
+        }, 500); // 延迟500毫秒执行
+      } else {
+        // 如果弹窗已经显示，直接执行加入操作
+        try {
+          handleJoinRoom();
+          fetchRoomInfo(true);
+        } catch (error) {
+          message.error("加入失败，请手动加入");
+        }
+      }
+    };
+
+    eventBus.on('join_undercover_room', handleJoinUndercoverRoom);
+
+    return () => {
+      eventBus.off('join_undercover_room', handleJoinUndercoverRoom);
+    };
   }, [visible, roomInfo?.roomId]);
 
   const fetchRoomInfo = async (silent: boolean = false) => {
@@ -183,11 +235,11 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       if (response.code === 0 && response.data) {
         // 更新房间信息
         setRoomInfo(response.data);
-        
+
         // 确保重置投票状态
         setVotingFor(null);
         setVotingLoading(false);
-        
+
         // 如果房间状态发生变化，重置相关操作状态
         if (roomInfo?.status !== response.data.status) {
           setStartingGame(false);
@@ -222,17 +274,17 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     if (e) {
       e.stopPropagation();
     }
-    
+
     if (roomInfo?.roomId) {
       try {
         setJoiningRoom(true);
         const response = await joinRoomUsingPost({
           roomId: roomInfo.roomId
         });
-        
+
         if (response.code === 0 && response.data) {
           message.success('加入房间成功');
-          
+
           // 发送刷新房间信息的websocket消息
           wsService.send({
             type: 2,
@@ -245,7 +297,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
               },
             },
           });
-          
+
           fetchRoomInfo(true); // 加入房间后静默刷新房间信息
         } else {
           message.error(response.message || '加入房间失败');
@@ -264,13 +316,13 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     e.stopPropagation();
     fetchRoomInfo();
   };
-  
+
   // 添加拖动相关处理函数
   const handleMouseDown = (e: React.MouseEvent) => {
     if (cardRef.current) {
       e.preventDefault(); // 阻止默认行为
       e.stopPropagation(); // 阻止事件冒泡
-      
+
       // 记录鼠标起始位置和元素起始位置
       setDragStartPoint({
         mouseX: e.clientX,
@@ -281,14 +333,14 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       setIsDragging(true);
     }
   };
-  
+
   // 添加触摸事件处理
   const handleTouchStart = (e: React.TouchEvent) => {
     if (cardRef.current && e.touches.length > 0) {
       e.stopPropagation(); // 阻止事件冒泡
-      
+
       const touch = e.touches[0];
-      
+
       // 记录触摸起始位置和元素起始位置
       setDragStartPoint({
         mouseX: touch.clientX,
@@ -299,22 +351,22 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       setIsDragging(true);
     }
   };
-  
+
   const handleTouchMove = (e: TouchEvent) => {
     if (isDragging && e.touches.length > 0) {
       e.preventDefault(); // 阻止页面滚动
       const touch = e.touches[0];
-      
+
       // 直接使用触摸当前位置减去起始触摸位置的差值，加上元素起始位置
       const newX = dragStartPoint.elemX + (touch.clientX - dragStartPoint.mouseX);
       const newY = dragStartPoint.elemY + (touch.clientY - dragStartPoint.mouseY);
-      
+
       // 计算边界，允许部分超出屏幕以确保可访问性
       const minX = -50; // 允许左侧超出50px
       const minY = -10; // 允许顶部超出10px
       const maxX = window.innerWidth - (cardRef.current?.offsetWidth || 300) + 100; // 允许右侧超出100px
       const maxY = window.innerHeight - 50; // 底部保留50px
-      
+
       // 应用边界限制
       setPosition({
         x: Math.min(Math.max(minX, newX), maxX),
@@ -322,7 +374,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       });
     }
   };
-  
+
   const handleTouchEnd = () => {
     setIsDragging(false);
   };
@@ -330,17 +382,17 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   const handleMouseMove = (e: MouseEvent) => {
     if (isDragging) {
       e.preventDefault();
-      
+
       // 直接使用鼠标当前位置减去起始鼠标位置的差值，加上元素起始位置
       const newX = dragStartPoint.elemX + (e.clientX - dragStartPoint.mouseX);
       const newY = dragStartPoint.elemY + (e.clientY - dragStartPoint.mouseY);
-      
+
       // 计算边界，允许部分超出屏幕以确保可访问性
       const minX = -50; // 允许左侧超出50px
       const minY = -10; // 允许顶部超出10px
       const maxX = window.innerWidth - (cardRef.current?.offsetWidth || 300) + 100; // 允许右侧超出100px
       const maxY = window.innerHeight - 50; // 底部保留50px
-      
+
       // 应用边界限制
       setPosition({
         x: Math.min(Math.max(minX, newX), maxX),
@@ -357,10 +409,10 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   const handleDocumentClick = useCallback((e: MouseEvent) => {
     // 如果卡片已置顶，则不关闭
     if (isPinned) return;
-    
+
     // 如果当前模态框打开，不处理点击事件
     if (isCreateModalVisible || isRuleModalVisible || isUserMessagesVisible) return;
-    
+
     // 如果点击的是卡片外部，则关闭卡片
     if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
       onClose();
@@ -373,26 +425,26 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       // 鼠标事件
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
-      
+
       // 触摸事件
       window.addEventListener('touchmove', handleTouchMove, { passive: false });
       window.addEventListener('touchend', handleTouchEnd);
-      
+
       // 添加点击空白处关闭的事件监听
       // 使用setTimeout确保事件在当前点击事件之后绑定，避免立即触发
       const timer = setTimeout(() => {
         document.addEventListener('click', handleDocumentClick);
       }, 0);
-      
+
       return () => {
         // 清理鼠标事件
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
-        
+
         // 清理触摸事件
         window.removeEventListener('touchmove', handleTouchMove);
         window.removeEventListener('touchend', handleTouchEnd);
-        
+
         // 清理点击事件
         document.removeEventListener('click', handleDocumentClick);
         clearTimeout(timer);
@@ -406,7 +458,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     if (e) {
       e.stopPropagation();
     }
-    
+
     if (!roomInfo?.roomId) return;
 
     try {
@@ -422,9 +474,9 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       if (response.code === 0 && response.data) {
         message.success('投票成功');
         // 在投票成功后先标记已完成投票（前端状态立即更新）
-        const updatedVotes = [...(roomInfo.votes || []), { 
-          voterId: currentUser?.id || 0, 
-          targetId: targetUserId 
+        const updatedVotes = [...(roomInfo.votes || []), {
+          voterId: currentUser?.id || 0,
+          targetId: targetUserId
         }];
         setRoomInfo({
           ...roomInfo,
@@ -450,7 +502,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     if (e) {
       e.stopPropagation();
     }
-    
+
     if (!roomInfo?.roomId) return;
 
     try {
@@ -461,7 +513,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
 
       if (response.code === 0 && response.data) {
         message.success('游戏已开始');
-        
+
         // 发送刷新房间信息的websocket消息
         wsService.send({
             type: 2,
@@ -474,7 +526,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
               },
             },
           });
-        
+
         fetchRoomInfo(true); // 开始游戏后静默刷新房间信息
       } else {
         message.error(response.message || '开始游戏失败');
@@ -493,7 +545,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     if (e) {
       e.stopPropagation();
     }
-    
+
     if (!roomInfo?.roomId) return;
 
     try {
@@ -504,7 +556,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
 
       if (response.code === 0 && response.data) {
         message.success('游戏已结束');
-        
+
         // 发送刷新房间信息的websocket消息
         wsService.send({
             type: 2,
@@ -517,7 +569,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
               },
             },
           });
-        
+
         fetchRoomInfo(true); // 结束游戏后静默刷新房间信息
       } else {
         message.error(response.message || '结束游戏失败');
@@ -536,7 +588,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     if (e) {
       e.stopPropagation();
     }
-    
+
     form.resetFields();
     form.setFieldsValue({
       maxPlayers: 8,
@@ -552,7 +604,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   const handleCreateRoom = async (values: CreateRoomFormValues) => {
     try {
       setCreatingRoom(true);
-      
+
       // 根据房间类型决定请求参数
       const requestParams = {
         maxPlayers: values.maxPlayers,
@@ -563,12 +615,12 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
           undercoverWord: values.undercoverWord
         } : {})
       };
-      
+
       const response = await createRoomUsingPost(requestParams);
 
       if (response.code === 0 && response.data) {
         message.success('创建房间成功')
-        
+
         // 发送刷新房间信息的websocket消息，通知有新房间创建
         wsService.send({
           type: 2,
@@ -581,7 +633,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             },
           },
         });
-        
+
         setIsCreateModalVisible(false);
         fetchRoomInfo(true); // 刷新房间信息
       } else {
@@ -615,17 +667,17 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   const canVote = useCallback(() => {
     // 必须是游戏进行中、用户已登录且不是投票中状态
     const basicConditions = roomInfo?.status === 'PLAYING' && currentUser?.id && !votingLoading;
-    
+
     // 检查用户是否已被淘汰或已投票
     if (!basicConditions || !roomInfo?.participants) return false;
-    
+
     // 获取当前用户信息
     const currentUserInGame = roomInfo.participants.find(p => p.userId === currentUser?.id);
     if (!currentUserInGame) return false; // 如果用户不在游戏中，不能投票
-    
+
     // 如果用户已被淘汰，不能投票
     if (currentUserInGame.isEliminated) return false;
-    
+
     // 检查用户是否已经投过票
     const hasVoted = roomInfo.votes?.some(vote => vote.voterId === currentUser?.id);
     return !hasVoted;
@@ -634,10 +686,10 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   // 判断当前用户是否可以加入房间
   const canJoinRoom = useCallback(() => {
     if (!roomInfo || !currentUser?.id || roomInfo.status !== 'WAITING') return false;
-    
+
     // 检查用户是否已经在房间中
     if (roomInfo.participants?.some(p => p.userId === currentUser.id)) return false;
-    
+
     // 检查房间是否已满
     return (roomInfo.participants?.length || 0) < (roomInfo.maxPlayers || 8);
   }, [roomInfo, currentUser]);
@@ -651,7 +703,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     if (e) {
       e.stopPropagation();
     }
-    
+
     if (!isAdmin) {
       message.error('只有管理员才能删除房间');
       return;
@@ -663,7 +715,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
 
       if (response.code === 0 && response.data) {
         message.success('房间已删除');
-        
+
         // 发送刷新房间信息的websocket消息
         wsService.send({
             type: 2,
@@ -675,7 +727,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
               },
             },
           });
-        
+
         fetchRoomInfo(true); // 删除房间后静默刷新房间信息
       } else {
         message.error(response.message || '删除房间失败');
@@ -694,7 +746,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     if (e) {
       e.stopPropagation();
     }
-    
+
     if (!roomInfo?.roomId) return;
 
     try {
@@ -705,7 +757,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
 
       if (response.code === 0 && response.data) {
         message.success('已退出房间');
-        
+
         // 发送刷新房间信息的websocket消息
         wsService.send({
             type: 2,
@@ -718,7 +770,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
               },
             },
           });
-        
+
         fetchRoomInfo(true); // 退出房间后静默刷新房间信息
       } else {
         message.error(response.message || '退出房间失败');
@@ -934,13 +986,13 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       message.error('聊天室暂未开始，请等待');
       return;
     }
-    
+
     // 检查用户是否是房间参与者
     if (!isRoomParticipant()) {
       message.error('只有房间参与者才能发言');
       return;
     }
-    
+
     // 创建消息对象
     const newMessage = {
       id: `${Date.now()}`,
@@ -955,7 +1007,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       },
       timestamp: new Date(),
     };
-    
+
     // 使用WebSocket发送消息
     wsService.send({
       type: 2,
@@ -967,7 +1019,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
         },
       },
     });
-    
+
     // 添加自己的消息到聊天窗口
     const myChatMessage: ChatMessage = {
       content: messageInput,
@@ -976,16 +1028,16 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       userAvatar: currentUser?.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
       timestamp: new Date()
     };
-    
+
     setChatMessages(prev => [...prev, myChatMessage]);
-    
+
     // 确保聊天窗口滚动到最新消息
     setTimeout(() => {
       if (chatMessagesRef.current) {
         chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
       }
     }, 100);
-    
+
     setMessageInput('');
   };
 
@@ -1003,18 +1055,18 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     const canVoteForPlayer = () => {
       // 基本投票条件
       if (!canVote() || player.userId === undefined || currentUser?.id === undefined) return false;
-      
+
       // 不能给自己投票
       if (player.userId === currentUser.id) return false;
-      
+
       // 不能给已淘汰的玩家投票
       return !player.isEliminated;
     };
-    
+
     return (
       <List.Item className={styles.playerItem}>
-        <div 
-          className={styles.playerInfo} 
+        <div
+          className={styles.playerInfo}
           onClick={(e) => player.userId !== undefined && handleAvatarClick(player.userId, player.userName || '未知玩家', e)}
         >
           <Badge count={index + 1} style={{ backgroundColor: '#52c41a', marginRight: 8 }} />
@@ -1091,7 +1143,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     if (userMessage?.userName) {
       return userMessage.userName;
     }
-    
+
     // 如果聊天消息中没有，从房间参与者中查找
     if (roomInfo?.participants) {
       const participant = roomInfo.participants.find(p => p.userId === userId);
@@ -1099,7 +1151,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
         return participant.userName;
       }
     }
-    
+
     return '未知用户';
   };
 
@@ -1112,17 +1164,17 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   const isUndercover = useCallback(() => {
     // 确保房间信息和用户信息存在
     if (!roomInfo || !currentUser?.id) return false;
-    
+
     // 游戏必须处于进行中状态
     if (roomInfo.status !== 'PLAYING') return false;
-    
+
     // 获取当前用户的角色信息
     const currentPlayerInfo = roomInfo.participants?.find(p => p.userId === currentUser.id);
     if (!currentPlayerInfo) return false;
-    
+
     // 如果用户已被淘汰，不能猜词
     if (currentPlayerInfo.isEliminated) return false;
-    
+
     // 直接使用role字段判断是否是卧底
     return roomInfo.role === 'undercover';
   }, [roomInfo, currentUser]);
@@ -1133,7 +1185,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     if (e) {
       e.stopPropagation();
     }
-    
+
     guessForm.resetFields();
     setIsGuessModalVisible(true);
   };
@@ -1141,18 +1193,18 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   // 处理卧底猜词
   const handleGuessWord = async (values: { guessWord: string }) => {
     if (!roomInfo?.roomId) return;
-    
+
     try {
       setGuessing(true);
       const response = await guessWordUsingPost({
         roomId: roomInfo.roomId,
         guessWord: values.guessWord
       });
-      
+
       if (response.code === 0) {
         if (response.data) {
           message.success('恭喜你猜对了！游戏结束');
-          
+
           // 发送刷新房间信息的websocket消息
           wsService.send({
             type: 2,
@@ -1165,7 +1217,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
               },
             },
           });
-          
+
           fetchRoomInfo(true); // 猜词成功后静默刷新房间信息
         } else {
           message.error('很遗憾，猜错了');
@@ -1182,7 +1234,162 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     }
   };
 
-  // 渲染用户操作区域中，添加退出房间按钮和卧底猜词按钮
+  // 处理发送邀请
+  const handleSendInvite = (e?: React.MouseEvent) => {
+    // 如果有事件对象，阻止事件冒泡
+    if (e) {
+      e.stopPropagation();
+    }
+
+    // 检查冷却时间
+    if (inviteCooldown > 0) {
+      message.warning(`请等待 ${inviteCooldown} 秒后再发送邀请`);
+      return;
+    }
+
+    if (!roomInfo?.roomId) {
+      message.error('房间不存在，无法发送邀请');
+      return;
+    }
+
+    // 创建邀请消息，将房间ID放在消息末尾，在UI中会被隐藏
+    const inviteMessage = `<undercover>我邀请你加入谁是卧底游戏！房间ID: ${roomInfo.roomId}</undercover>`;
+
+    // @ts-ignore
+    const newMessage: ChatMessage = {
+      id: `${Date.now()}`,
+      content: inviteMessage,
+      sender: {
+        id: String(currentUser?.id),
+        name: currentUser?.userName || '游客',
+        avatar: currentUser?.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+        level: currentUser?.level || 1,
+        isAdmin: currentUser?.userRole === 'admin',
+      },
+      timestamp: new Date(),
+    };
+
+    // 使用全局 WebSocket 服务发送消息
+    wsService.send({
+      type: 2,
+      userId: -1,
+      data: {
+        type: 'chat',
+        content: {
+          message: newMessage,
+        },
+      },
+    });
+
+    // 设置冷却时间（60秒）
+    setInviteCooldown(60);
+
+    // 启动倒计时
+    if (inviteCooldownRef.current) {
+      clearInterval(inviteCooldownRef.current);
+    }
+
+    inviteCooldownRef.current = setInterval(() => {
+      setInviteCooldown(prev => {
+        if (prev <= 1) {
+          if (inviteCooldownRef.current) {
+            clearInterval(inviteCooldownRef.current);
+            inviteCooldownRef.current = null;
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    message.success('邀请已发送到聊天室');
+  };
+
+  // 清理冷却计时器
+  useEffect(() => {
+    return () => {
+      if (inviteCooldownRef.current) {
+        clearInterval(inviteCooldownRef.current);
+      }
+    };
+  }, []);
+
+  // 渲染聊天消息，添加对邀请消息的特殊处理
+  const renderChatMessage = (msg: ChatMessage, index: number) => {
+    // 检查是否是邀请消息
+    const isInviteMessage = msg.content.includes('<undercover>') && msg.content.includes('</undercover>');
+
+    if (isInviteMessage) {
+      // 提取邀请内容
+      const inviteContent = msg.content.match(/<undercover>(.*?)<\/undercover>/)?.[1] || '邀请加入谁是卧底游戏';
+
+      return (
+        <div
+          key={index}
+          className={`${styles.chatMessage} ${msg.userId === currentUser?.id ? styles.myMessage : ''}`}
+        >
+          <div className={styles.messageHeader}>
+            <Avatar
+              size="small"
+              src={msg.userAvatar}
+              icon={<UserOutlined />}
+              onClick={(e) => handleAvatarClick(msg.userId, msg.userName, e)}
+              className={styles.clickableAvatar}
+            />
+            <span className={styles.messageSender}>{msg.userName}</span>
+            {msg.timestamp && (
+              <span className={styles.messageTime}>
+                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </div>
+          <div className={styles.inviteMessage}>
+            {inviteContent}
+            {msg.userId !== currentUser?.id && canJoinRoom() && (
+              <div className={styles.inviteAction}>
+                <Button
+                  type="primary"
+                  size="small"
+                  onClick={(e) => handleJoinRoom(e)}
+                >
+                  加入游戏
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // 普通消息的渲染
+    return (
+      <div
+        key={index}
+        className={`${styles.chatMessage} ${msg.userId === currentUser?.id ? styles.myMessage : ''}`}
+      >
+        <div className={styles.messageHeader}>
+          <Avatar
+            size="small"
+            src={msg.userAvatar}
+            icon={<UserOutlined />}
+            onClick={(e) => handleAvatarClick(msg.userId, msg.userName, e)}
+            className={styles.clickableAvatar}
+          />
+          <span className={styles.messageSender}>{msg.userName}</span>
+          {msg.timestamp && (
+            <span className={styles.messageTime}>
+              {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+        </div>
+        <div className={styles.messageContent}>
+          {msg.content}
+        </div>
+      </div>
+    );
+  };
+
+  // 修改renderUserActions函数，添加发送邀请按钮
   const renderUserActions = () => {
     return (
       <div className={styles.userActions}>
@@ -1195,6 +1402,21 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             className={styles.actionButton}
           >
             {joiningRoom ? '加入中...' : '加入房间'}
+          </Button>
+        )}
+        {/* 添加发送邀请按钮 - 不再限制只有房间参与者才能发送邀请 */}
+        {roomInfo?.status !== 'ENDED' && (
+          <Button
+            type="primary"
+            icon={<ShareAltOutlined />}
+            onClick={(e) => handleSendInvite(e)}
+            disabled={inviteCooldown > 0}
+            className={styles.actionButton}
+          >
+            邀请好友
+            {inviteCooldown > 0 && (
+              <span className={styles.cooldownTip}>({inviteCooldown}s)</span>
+            )}
           </Button>
         )}
         {isRoomParticipant() && roomInfo?.status !== 'ENDED' && (
@@ -1229,7 +1451,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
         )}
         {/* 添加创建房间按钮 */}
         {renderCreateRoomButton()}
-        <Button 
+        <Button
           onClick={(e) => handleRefresh(e)}
           icon={<ReloadOutlined />}
           className={styles.actionButton}
@@ -1243,18 +1465,18 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   if (!visible) return null;
 
   return (
-    <div 
-      className={styles.roomInfoCardContainer} 
-      style={{ 
+    <div
+      className={styles.roomInfoCardContainer}
+      style={{
         transform: `translate(${position.x}px, ${position.y}px)`,
-        cursor: isDragging ? 'grabbing' : 'auto' 
+        cursor: isDragging ? 'grabbing' : 'auto'
       }}
       ref={cardRef}
     >
       <div className={styles.cardLayout}>
         <Card
           title={
-            <div 
+            <div
               className={styles.cardTitle}
               onMouseDown={handleMouseDown}
               onTouchStart={handleTouchStart}
@@ -1270,24 +1492,24 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
           }
           extra={
             <div className={styles.cardActions}>
-              <Button 
-                type="text" 
-                onClick={(e) => showRuleModal(e)} 
-                icon={<QuestionCircleOutlined />} 
+              <Button
+                type="text"
+                onClick={(e) => showRuleModal(e)}
+                icon={<QuestionCircleOutlined />}
                 title="游戏规则"
               />
-              <Button 
-                type="text" 
+              <Button
+                type="text"
                 onClick={(e) => {
                   const newPinnedState = !isPinned;
                   setIsPinned(newPinnedState);
                   message.info(newPinnedState ? '已置顶，点击空白处不会关闭' : '已取消置顶');
-                }} 
-                icon={isPinned ? <PushpinFilled className={styles.pinnedIcon} /> : <PushpinOutlined />} 
+                }}
+                icon={isPinned ? <PushpinFilled className={styles.pinnedIcon} /> : <PushpinOutlined />}
                 title={isPinned ? "取消置顶" : "置顶"}
               />
-              <Button 
-                type="text" 
+              <Button
+                type="text"
                 onClick={() => setShowChat(!showChat)}
                 icon={<CommentOutlined className={showChat ? styles.activeIcon : ''} />}
                 title={showChat ? "隐藏聊天" : "显示聊天"}
@@ -1379,7 +1601,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
                     </div>
                   </div>
                 )}
-                
+
                 {/* 房间创建者操作区 */}
                 {!isAdmin && roomInfo && currentUser && roomInfo.creatorId === currentUser.id && (
                   <div className={styles.creatorActionsSection}>
@@ -1389,7 +1611,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
                     </div>
                   </div>
                 )}
-                
+
                 {/* 普通操作区 */}
                 <div className={styles.userActionsSection}>
                   <h4 className={styles.sectionTitle}>玩家操作</h4>
@@ -1424,40 +1646,16 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
           <div className={styles.chatContainer}>
             <div className={styles.chatHeader}>
               <span>房间聊天</span>
-              <Button 
-                type="text" 
-                size="small" 
-                icon={<RightOutlined />} 
-                onClick={() => setShowChat(false)} 
+              <Button
+                type="text"
+                size="small"
+                icon={<RightOutlined />}
+                onClick={() => setShowChat(false)}
               />
             </div>
             <div className={styles.chatMessages} ref={chatMessagesRef}>
               {chatMessages.length > 0 ? (
-                chatMessages.map((msg, index) => (
-                  <div 
-                    key={index} 
-                    className={`${styles.chatMessage} ${msg.userId === currentUser?.id ? styles.myMessage : ''}`}
-                  >
-                    <div className={styles.messageHeader}>
-                      <Avatar 
-                        size="small" 
-                        src={msg.userAvatar} 
-                        icon={<UserOutlined />} 
-                        onClick={(e) => handleAvatarClick(msg.userId, msg.userName, e)}
-                        className={styles.clickableAvatar}
-                      />
-                      <span className={styles.messageSender}>{msg.userName}</span>
-                      {msg.timestamp && (
-                        <span className={styles.messageTime}>
-                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      )}
-                    </div>
-                    <div className={styles.messageContent}>
-                      {msg.content}
-                    </div>
-                  </div>
-                ))
+                chatMessages.map((msg, index) => renderChatMessage(msg, index))
               ) : (
                 <div className={styles.emptyChatMessage}>
                   <Empty description="暂无消息" image={Empty.PRESENTED_IMAGE_SIMPLE} />
@@ -1465,7 +1663,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
               )}
             </div>
             <div className={styles.chatInputContainer}>
-              <Input 
+              <Input
                 value={messageInput}
                 onChange={(e) => setMessageInput(e.target.value)}
                 onKeyPress={handleKeyPress}
@@ -1473,9 +1671,9 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
                 className={styles.chatInput}
                 disabled={!isRoomParticipant()}
               />
-              <Button 
-                type="primary" 
-                icon={<SendOutlined />} 
+              <Button
+                type="primary"
+                icon={<SendOutlined />}
                 onClick={handleSendMessage}
                 disabled={!messageInput.trim() || !isRoomParticipant()}
               />
@@ -1517,7 +1715,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
               <Radio value="random">随机模式（系统随机词语）</Radio>
             </Radio.Group>
           </Form.Item>
-          
+
           <Form.Item
             name="maxPlayers"
             label="最大玩家数"
@@ -1534,7 +1732,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             noStyle
             shouldUpdate={(prevValues, currentValues) => prevValues.roomType !== currentValues.roomType}
           >
-            {({ getFieldValue }) => 
+            {({ getFieldValue }) =>
               getFieldValue('roomType') === 'god' ? (
                 <>
                   <Form.Item
@@ -1589,7 +1787,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
         <div className={styles.ruleContent} onClick={(e) => e.stopPropagation()}>
           <h3>游戏规则说明</h3>
           <p><strong>游戏目标：</strong>平民找出卧底，卧底隐藏自己融入平民。</p>
-          
+
           <h4>基本规则：</h4>
           <ol>
             <li>游戏开始后，每位玩家会收到一个词语。大多数人收到的是平民词，少数人收到的是卧底词。</li>
@@ -1598,20 +1796,20 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             <li>得票最多的玩家出局，并公布其身份。</li>
             <li>如果所有卧底被找出，平民获胜；如果卧底存活到只剩两名玩家，卧底获胜。</li>
           </ol>
-          
+
           <h4>描述技巧：</h4>
           <ul>
             <li><strong>平民：</strong>描述要准确但不要太明显，既能让其他平民理解，又不会让卧底轻易识别。</li>
             <li><strong>卧底：</strong>要仔细听平民的描述，尽量模仿平民的描述方式，避免被识破。</li>
           </ul>
-          
+
           <h4>投票策略：</h4>
           <ul>
             <li>注意观察其他玩家的描述是否与大多数人一致。</li>
             <li>留意玩家的反应和表情，有时卧底会因紧张而露出破绽。</li>
             <li>不要轻易暴露自己的判断，以免被卧底利用。</li>
           </ul>
-          
+
           <p><strong>祝您游戏愉快！</strong></p>
         </div>
       </Modal>
@@ -1628,9 +1826,9 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
         maskClosable={false}
         wrapClassName={styles.userMessagesModal}
         footer={[
-          <Button 
-            key="close" 
-            type="primary" 
+          <Button
+            key="close"
+            type="primary"
             onClick={(e) => {
               e.stopPropagation();
               setIsUserMessagesVisible(false);
@@ -1640,8 +1838,8 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
           </Button>
         ]}
       >
-        <div 
-          className={styles.userMessagesContent} 
+        <div
+          className={styles.userMessagesContent}
           onClick={(e) => {
             e.stopPropagation();
             e.nativeEvent.stopImmediatePropagation();
@@ -1652,14 +1850,14 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
               <List
                 dataSource={getUserMessages(viewingUserId)}
                 renderItem={(msg, index) => (
-                  <List.Item 
+                  <List.Item
                     onClick={(e) => {
                       e.stopPropagation();
                       e.nativeEvent.stopImmediatePropagation();
                     }}
                   >
-                    <div 
-                      className={styles.userMessageItem} 
+                    <div
+                      className={styles.userMessageItem}
                       onClick={(e) => {
                         e.stopPropagation();
                         e.nativeEvent.stopImmediatePropagation();
@@ -1676,8 +1874,8 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
                 )}
               />
             ) : (
-              <Empty 
-                description="该用户暂无消息记录" 
+              <Empty
+                description="该用户暂无消息记录"
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
               />
             )
@@ -1723,8 +1921,8 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
               name="guessWord"
               rules={[{ required: true, message: '请输入你猜测的平民词' }]}
             >
-              <Input 
-                placeholder="输入平民词" 
+              <Input
+                placeholder="输入平民词"
                 value={guessWord}
                 onChange={(e) => {
                   e.stopPropagation();
