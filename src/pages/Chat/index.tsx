@@ -2550,6 +2550,11 @@ const ChatRoom: React.FC = () => {
       case 'calendar':
         fetchMoyuCalendar();
         break;
+      case 'undercover':
+        // 点击后清除通知状态
+        setUndercoverNotification(UNDERCOVER_NOTIFICATION.NONE);
+        setIsRoomInfoVisible(true);
+        break;
       default:
         break;
     }
@@ -2924,7 +2929,7 @@ const ChatRoom: React.FC = () => {
             <Badge dot={undercoverNotification === UNDERCOVER_NOTIFICATION.NEW_ROOM} className={styles.roomInfoBadge}>
               <Button
                 icon={<TeamOutlined />}
-                className={styles.roomInfoButton}
+                className={`${styles.roomInfoButton} ${styles.pcOnlyButton}`}
                 onClick={handleRoomInfoClick}
               />
             </Badge>
@@ -2956,7 +2961,7 @@ const ChatRoom: React.FC = () => {
             placement="top"
             overlayClassName={styles.moreOptionsPopover}
           >
-            <Button icon={<EllipsisOutlined />} className={styles.moreOptionsButton} />
+            <Button icon={<EllipsisOutlined />} className={`${styles.moreOptionsButton} ${styles.pcOnlyButton}`} />
           </Popover>
           <Input.TextArea
             ref={inputRef}
@@ -3054,19 +3059,26 @@ const ChatRoom: React.FC = () => {
                 <div className={styles.mobileToolText}>摸鱼日历</div>
               </div>
             </div>
-            {(currentUser?.userRole === 'admin' || (currentUser?.level && currentUser.level >= 6)) && (
-              <div className={styles.mobileToolRow}>
+            <div className={styles.mobileToolRow}>
+              {(currentUser?.userRole === 'admin' || (currentUser?.level && currentUser.level >= 6)) && (
                 <div className={styles.mobileTool} onClick={() => handleMobileToolClick('redPacket')}>
                   <div className={styles.mobileToolIcon}>
                     <GiftOutlined />
                   </div>
                   <div className={styles.mobileToolText}>红包</div>
                 </div>
-                <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
-                <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
-                <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
+              )}
+              <div className={styles.mobileTool} onClick={() => handleMobileToolClick('undercover')}>
+                <div className={styles.mobileToolIcon}>
+                  <Badge dot={undercoverNotification === UNDERCOVER_NOTIFICATION.NEW_ROOM}>
+                    <TeamOutlined />
+                  </Badge>
+                </div>
+                <div className={styles.mobileToolText}>谁是卧底</div>
               </div>
-            )}
+              <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
+              <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
+            </div>
           </div>
         )}
       </div>

@@ -65,6 +65,7 @@ interface CreateRoomFormValues {
   undercoverWord: string;
   duration: number;
   roomType: 'god' | 'random';
+  gameMode: number; // 修改为数字类型，1-常规模式，2-卧底猜词模式
 }
 
 const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
@@ -595,7 +596,8 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       civilianWord: '',
       undercoverWord: '',
       duration: 600,
-      roomType: 'random'
+      roomType: 'random',
+      gameMode: 1 // 默认为常规模式(1)
     });
     setIsCreateModalVisible(true);
   };
@@ -609,6 +611,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       const requestParams = {
         maxPlayers: values.maxPlayers,
         duration: values.duration,
+        gameMode: values.gameMode, // 已经是数字类型
         // 如果是上帝模式，提供自定义单词，如果是随机模式，不提供单词
         ...(values.roomType === 'god' ? {
           civilianWord: values.civilianWord,
@@ -1175,8 +1178,8 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     // 如果用户已被淘汰，不能猜词
     if (currentPlayerInfo.isEliminated) return false;
 
-    // 直接使用role字段判断是否是卧底
-    return roomInfo.role === 'undercover';
+    // 必须是猜词模式(2)，且角色是卧底
+    return roomInfo.gameMode === 2 && roomInfo.role === 'undercover';
   }, [roomInfo, currentUser]);
 
   // 显示猜词模态框
@@ -1462,6 +1465,48 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     );
   };
 
+  // 添加一个函数来渲染游戏信息，避免在JSX中使用过于复杂的条件表达式
+  const renderGameInfo = () => {
+    if (!roomInfo) return null;
+
+    // 猜词模式(2)
+    if (roomInfo.gameMode === 2) {
+      // 卧底
+      if (roomInfo.role === 'undercover') {
+        return (
+          <>
+            <div className={styles.infoItem}>
+              <UserOutlined className={styles.infoIcon} />
+              <span>你的身份: <strong style={{ color: '#ff4d4f' }}>卧底</strong></span>
+            </div>
+            <div className={styles.infoItem}>
+              <TrophyOutlined className={styles.infoIcon} />
+              <span>你需要猜出平民的词语才能获胜</span>
+            </div>
+          </>
+        );
+      } 
+      // 平民
+      else {
+        return (
+          <div className={styles.infoItem}>
+            <TrophyOutlined className={styles.infoIcon} />
+            <span>你的词语: <strong>{roomInfo.word}</strong></span>
+          </div>
+        );
+      }
+    } 
+    // 常规模式(1)
+    else {
+      return (
+        <div className={styles.infoItem}>
+          <TrophyOutlined className={styles.infoIcon} />
+          <span>你的词语: <strong>{roomInfo.word}</strong></span>
+        </div>
+      );
+    }
+  };
+
   if (!visible) return null;
 
   return (
@@ -1559,21 +1604,16 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
                   <span style={{ color: statusInfo.color }}>状态: {statusInfo.text}</span>
                 </div>
 
-                {/* 显示当前玩家的词语和身份，仅在游戏进行中显示 */}
-                {roomInfo.word && roomInfo.status === 'PLAYING' && (
-                  <>
-                    <div className={styles.infoItem}>
-                      <TrophyOutlined className={styles.infoIcon} />
-                      <span>你的词语: <strong>{roomInfo.word}</strong></span>
-                    </div>
-                    <div className={styles.infoItem}>
-                      <UserOutlined className={styles.infoIcon} />
-                      <span>你的身份: <strong style={{ color: roomInfo.role === 'undercover' ? '#ff4d4f' : '#52c41a' }}>
-                        {roomInfo.role === 'undercover' ? '卧底' : '平民'}
-                      </strong></span>
-                    </div>
-                  </>
+                {/* 显示游戏模式 */}
+                {roomInfo.gameMode !== undefined && (
+                  <div className={styles.infoItem}>
+                    <BulbOutlined className={styles.infoIcon} />
+                    <span>游戏模式: {roomInfo.gameMode === 1 ? '常规模式' : '猜词模式'}</span>
+                  </div>
                 )}
+
+                {/* 显示当前玩家的词语和身份，根据游戏模式显示不同内容 */}
+                {roomInfo.status === 'PLAYING' && renderGameInfo()}
               </div>
 
               {/* 玩家列表 */}
@@ -1701,7 +1741,8 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             civilianWord: '',
             undercoverWord: '',
             duration: 600,
-            roomType: 'random'
+            roomType: 'random',
+            gameMode: 1 // 默认为常规模式(1)
           }}
         >
           <Form.Item
@@ -1713,6 +1754,18 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             <Radio.Group>
               <Radio value="god">上帝模式（自定义词语）</Radio>
               <Radio value="random">随机模式（系统随机词语）</Radio>
+            </Radio.Group>
+          </Form.Item>
+          
+          <Form.Item
+            name="gameMode"
+            label="游戏模式"
+            rules={[{ required: true, message: '请选择游戏模式' }]}
+            className={styles.gameModeSelector}
+          >
+            <Radio.Group>
+              <Radio value={1}>常规模式（所有人都有词语，不知道身份）</Radio>
+              <Radio value={2}>猜词模式（卧底知道身份但没有词语）</Radio>
             </Radio.Group>
           </Form.Item>
 
@@ -1788,6 +1841,12 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
           <h3>游戏规则说明</h3>
           <p><strong>游戏目标：</strong>平民找出卧底，卧底隐藏自己融入平民。</p>
 
+          <h4>游戏模式：</h4>
+          <ul>
+            <li><strong>常规模式：</strong>所有玩家都有词语，但不知道自己的身份。通过描述和推理，平民需要找出卧底，卧底需要隐藏自己。</li>
+            <li><strong>猜词模式：</strong>卧底知道自己的身份但不知道词语，平民知道词语但不知道自己的身份。卧底需要通过其他玩家的描述猜出平民词语。</li>
+          </ul>
+
           <h4>基本规则：</h4>
           <ol>
             <li>游戏开始后，每位玩家会收到一个词语。大多数人收到的是平民词，少数人收到的是卧底词。</li>
@@ -1795,6 +1854,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             <li>每轮描述后，所有玩家投票选出一名怀疑是卧底的玩家。</li>
             <li>得票最多的玩家出局，并公布其身份。</li>
             <li>如果所有卧底被找出，平民获胜；如果卧底存活到只剩两名玩家，卧底获胜。</li>
+            <li>在猜词模式下，卧底还可以通过猜出平民词语直接获胜。</li>
           </ol>
 
           <h4>描述技巧：</h4>

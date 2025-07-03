@@ -1106,7 +1106,9 @@ declare namespace API {
   };
 
   type UndercoverPlayerDetailVO = {
+    guessCount?: number;
     isEliminated?: boolean;
+    remainingGuessCount?: number;
     userAvatar?: string;
     userId?: number;
     userName?: string;
@@ -1114,7 +1116,9 @@ declare namespace API {
   };
 
   type UndercoverPlayerVO = {
+    guessCount?: number;
     isEliminated?: boolean;
+    remainingGuessCount?: number;
     role?: string;
     userId?: number;
     word?: string;
@@ -1125,6 +1129,8 @@ declare namespace API {
     civilianWord?: string;
     /** 持续时间秒 */
     duration?: number;
+    /** 游戏模式：1-常规模式(默认)，2-卧底猜词模式 */
+    gameMode?: number;
     /** 房间最大人数 */
     maxPlayers?: number;
     /** 卧底词 */
@@ -1144,8 +1150,10 @@ declare namespace API {
     creatorId?: number;
     duration?: number;
     eliminatedIds?: number[];
+    gameMode?: number;
     gameResult?: string;
     maxPlayers?: number;
+    orderedParticipantIds?: number[];
     participantIds?: number[];
     participants?: UndercoverPlayerDetailVO[];
     remainingTime?: number;
