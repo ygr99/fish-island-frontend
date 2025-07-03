@@ -16,7 +16,9 @@ import {
   SendOutlined,
   CommentOutlined,
   DeleteOutlined,
-  QuestionCircleOutlined
+  QuestionCircleOutlined,
+  LogoutOutlined,
+  BulbOutlined
 } from '@ant-design/icons';
 import { 
   getActiveRoomUsingGet, 
@@ -25,7 +27,9 @@ import {
   startGameUsingPost,
   endGameUsingPost,
   createRoomUsingPost,
-  removeActiveRoomUsingPost
+  removeActiveRoomUsingPost,
+  quitRoomUsingPost,
+  guessWordUsingPost
 } from '@/services/backend/undercoverGameController';
 import { history, useModel } from '@umijs/max';
 import styles from './index.less';
@@ -66,9 +70,14 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   const [endingGame, setEndingGame] = useState<boolean>(false);
   const [creatingRoom, setCreatingRoom] = useState<boolean>(false);
   const [removingRoom, setRemovingRoom] = useState<boolean>(false);
+  const [quittingRoom, setQuittingRoom] = useState<boolean>(false);
   const [isCreateModalVisible, setIsCreateModalVisible] = useState<boolean>(false);
   const [isRuleModalVisible, setIsRuleModalVisible] = useState<boolean>(false);
+  const [isGuessModalVisible, setIsGuessModalVisible] = useState<boolean>(false);
+  const [guessWord, setGuessWord] = useState<string>('');
+  const [guessing, setGuessing] = useState<boolean>(false);
   const [form] = Form.useForm();
+  const [guessForm] = Form.useForm();
   
   // 添加拖动相关状态
   const [position, setPosition] = useState({ x: 10, y: 10 });
@@ -560,6 +569,19 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       if (response.code === 0 && response.data) {
         message.success('创建房间成功')
         
+        // 发送刷新房间信息的websocket消息，通知有新房间创建
+        wsService.send({
+          type: 2,
+          userId: currentUser?.id || -1,
+          data: {
+            type: 'refreshRoom',
+            content: {
+              roomId: response.data,
+              action: 'create'
+            },
+          },
+        });
+        
         setIsCreateModalVisible(false);
         fetchRoomInfo(true); // 刷新房间信息
       } else {
@@ -663,6 +685,49 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       message.error('删除房间失败，请重试');
     } finally {
       setRemovingRoom(false);
+    }
+  };
+
+  // 处理退出房间
+  const handleQuitRoom = async (e?: React.MouseEvent) => {
+    // 如果有事件对象，阻止事件冒泡
+    if (e) {
+      e.stopPropagation();
+    }
+    
+    if (!roomInfo?.roomId) return;
+
+    try {
+      setQuittingRoom(true);
+      const response = await quitRoomUsingPost({
+        roomId: roomInfo.roomId
+      });
+
+      if (response.code === 0 && response.data) {
+        message.success('已退出房间');
+        
+        // 发送刷新房间信息的websocket消息
+        wsService.send({
+            type: 2,
+            userId: currentUser?.id || -1,
+            data: {
+              type: 'refreshRoom',
+              content: {
+                roomId: roomInfo.roomId,
+                action: 'quit'
+              },
+            },
+          });
+        
+        fetchRoomInfo(true); // 退出房间后静默刷新房间信息
+      } else {
+        message.error(response.message || '退出房间失败');
+      }
+    } catch (error) {
+      console.error('退出房间失败:', error);
+      message.error('退出房间失败，请重试');
+    } finally {
+      setQuittingRoom(false);
     }
   };
 
@@ -1043,6 +1108,138 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     return chatMessages.some(msg => msg.userId === userId);
   };
 
+  // 判断当前用户是否是卧底
+  const isUndercover = useCallback(() => {
+    // 确保房间信息和用户信息存在
+    if (!roomInfo || !currentUser?.id) return false;
+    
+    // 游戏必须处于进行中状态
+    if (roomInfo.status !== 'PLAYING') return false;
+    
+    // 获取当前用户的角色信息
+    const currentPlayerInfo = roomInfo.participants?.find(p => p.userId === currentUser.id);
+    if (!currentPlayerInfo) return false;
+    
+    // 如果用户已被淘汰，不能猜词
+    if (currentPlayerInfo.isEliminated) return false;
+    
+    // 直接使用role字段判断是否是卧底
+    return roomInfo.role === 'undercover';
+  }, [roomInfo, currentUser]);
+
+  // 显示猜词模态框
+  const showGuessModal = (e?: React.MouseEvent) => {
+    // 如果有事件对象，阻止事件冒泡
+    if (e) {
+      e.stopPropagation();
+    }
+    
+    guessForm.resetFields();
+    setIsGuessModalVisible(true);
+  };
+
+  // 处理卧底猜词
+  const handleGuessWord = async (values: { guessWord: string }) => {
+    if (!roomInfo?.roomId) return;
+    
+    try {
+      setGuessing(true);
+      const response = await guessWordUsingPost({
+        roomId: roomInfo.roomId,
+        guessWord: values.guessWord
+      });
+      
+      if (response.code === 0) {
+        if (response.data) {
+          message.success('恭喜你猜对了！游戏结束');
+          
+          // 发送刷新房间信息的websocket消息
+          wsService.send({
+            type: 2,
+            userId: currentUser?.id || -1,
+            data: {
+              type: 'refreshRoom',
+              content: {
+                roomId: roomInfo.roomId,
+                action: 'guess_success'
+              },
+            },
+          });
+          
+          fetchRoomInfo(true); // 猜词成功后静默刷新房间信息
+        } else {
+          message.error('很遗憾，猜错了');
+        }
+        setIsGuessModalVisible(false);
+      } else {
+        message.error(response.message || '猜词失败');
+      }
+    } catch (error) {
+      console.error('猜词失败:', error);
+      message.error('猜词失败，请重试');
+    } finally {
+      setGuessing(false);
+    }
+  };
+
+  // 渲染用户操作区域中，添加退出房间按钮和卧底猜词按钮
+  const renderUserActions = () => {
+    return (
+      <div className={styles.userActions}>
+        {canJoinRoom() && (
+          <Button
+            type="primary"
+            onClick={(e) => handleJoinRoom(e)}
+            disabled={joiningRoom}
+            loading={joiningRoom}
+            className={styles.actionButton}
+          >
+            {joiningRoom ? '加入中...' : '加入房间'}
+          </Button>
+        )}
+        {isRoomParticipant() && roomInfo?.status !== 'ENDED' && (
+          <Popconfirm
+            title={roomInfo?.status === 'PLAYING' ? "游戏正在进行中，确定要退出吗？" : "确定要退出房间吗？"}
+            onConfirm={(e) => handleQuitRoom(e)}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Button
+              type="primary"
+              danger
+              icon={<LogoutOutlined />}
+              disabled={quittingRoom}
+              loading={quittingRoom}
+              className={styles.actionButton}
+            >
+              退出房间
+            </Button>
+          </Popconfirm>
+        )}
+        {/* 添加卧底猜词按钮 */}
+        {isRoomParticipant() && roomInfo?.status === 'PLAYING' && isUndercover() && (
+          <Button
+            type="primary"
+            icon={<BulbOutlined />}
+            onClick={(e) => showGuessModal(e)}
+            className={styles.actionButton}
+          >
+            猜平民词
+          </Button>
+        )}
+        {/* 添加创建房间按钮 */}
+        {renderCreateRoomButton()}
+        <Button 
+          onClick={(e) => handleRefresh(e)}
+          icon={<ReloadOutlined />}
+          className={styles.actionButton}
+        >
+          刷新
+        </Button>
+      </div>
+    );
+  };
+
   if (!visible) return null;
 
   return (
@@ -1129,23 +1326,33 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
                 <h3 className={styles.roomName}>谁是卧底</h3>
               </div>
 
-              <div className={styles.infoItem}>
-                <TeamOutlined className={styles.infoIcon} />
-                <span>玩家数量: {roomInfo.participants?.length || 0}/{roomInfo.maxPlayers || 0}</span>
-              </div>
-
-              <div className={styles.infoItem}>
-                <ClockCircleOutlined className={styles.infoIcon} />
-                <span style={{ color: statusInfo.color }}>状态: {statusInfo.text}</span>
-              </div>
-
-              {/* 显示当前玩家的词语，仅在游戏进行中显示 */}
-              {roomInfo.word && roomInfo.status === 'PLAYING' && (
+              <div className={styles.infoSection}>
                 <div className={styles.infoItem}>
-                  <TrophyOutlined className={styles.infoIcon} />
-                  <span>你的词语: <strong>{roomInfo.word}</strong></span>
+                  <TeamOutlined className={styles.infoIcon} />
+                  <span>玩家数量: {roomInfo.participants?.length || 0}/{roomInfo.maxPlayers || 0}</span>
                 </div>
-              )}
+
+                <div className={styles.infoItem}>
+                  <ClockCircleOutlined className={styles.infoIcon} />
+                  <span style={{ color: statusInfo.color }}>状态: {statusInfo.text}</span>
+                </div>
+
+                {/* 显示当前玩家的词语和身份，仅在游戏进行中显示 */}
+                {roomInfo.word && roomInfo.status === 'PLAYING' && (
+                  <>
+                    <div className={styles.infoItem}>
+                      <TrophyOutlined className={styles.infoIcon} />
+                      <span>你的词语: <strong>{roomInfo.word}</strong></span>
+                    </div>
+                    <div className={styles.infoItem}>
+                      <UserOutlined className={styles.infoIcon} />
+                      <span>你的身份: <strong style={{ color: roomInfo.role === 'undercover' ? '#ff4d4f' : '#52c41a' }}>
+                        {roomInfo.role === 'undercover' ? '卧底' : '平民'}
+                      </strong></span>
+                    </div>
+                  </>
+                )}
+              </div>
 
               {/* 玩家列表 */}
               {roomInfo.participants && roomInfo.participants.length > 0 && (
@@ -1186,28 +1393,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
                 {/* 普通操作区 */}
                 <div className={styles.userActionsSection}>
                   <h4 className={styles.sectionTitle}>玩家操作</h4>
-                  <div className={styles.userActions}>
-                    {canJoinRoom() && (
-                      <Button
-                        type="primary"
-                        onClick={(e) => handleJoinRoom(e)}
-                        disabled={joiningRoom}
-                        loading={joiningRoom}
-                        className={styles.actionButton}
-                      >
-                        {joiningRoom ? '加入中...' : '加入房间'}
-                      </Button>
-                    )}
-                    {/* 添加创建房间按钮 */}
-                    {renderCreateRoomButton()}
-                    <Button 
-                      onClick={(e) => handleRefresh(e)}
-                      icon={<ReloadOutlined />}
-                      className={styles.actionButton}
-                    >
-                      刷新
-                    </Button>
-                  </div>
+                  {renderUserActions()}
                 </div>
               </div>
             </div>
@@ -1496,6 +1682,59 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
               />
             )
           )}
+        </div>
+      </Modal>
+
+      {/* 猜词模态框 */}
+      <Modal
+        title="卧底猜词"
+        open={isGuessModalVisible}
+        onOk={(e) => {
+          e?.stopPropagation();
+          guessForm.submit();
+        }}
+        onCancel={(e) => {
+          e?.stopPropagation();
+          setIsGuessModalVisible(false);
+        }}
+        confirmLoading={guessing}
+        maskClosable={false}
+        okText="提交"
+        cancelText="取消"
+        wrapClassName={styles.guessModalWrapper}
+        modalRender={(modal) => (
+          <div onClick={(e) => e.stopPropagation()}>
+            {modal}
+          </div>
+        )}
+      >
+        <div className={styles.guessModalContent} onClick={(e) => e.stopPropagation()}>
+          <p>你是卧底！如果你猜出平民的词语，卧底将获胜。请输入你猜测的平民词：</p>
+          <Form
+            form={guessForm}
+            onFinish={(values) => {
+              handleGuessWord(values);
+              return false;
+            }}
+            layout="vertical"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Form.Item
+              name="guessWord"
+              rules={[{ required: true, message: '请输入你猜测的平民词' }]}
+            >
+              <Input 
+                placeholder="输入平民词" 
+                value={guessWord}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setGuessWord(e.target.value);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              />
+            </Form.Item>
+          </Form>
         </div>
       </Modal>
     </div>

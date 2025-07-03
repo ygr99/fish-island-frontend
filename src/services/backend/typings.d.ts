@@ -321,11 +321,6 @@ declare namespace API {
     source: string;
   };
 
-  type checkGameOverUsingGETParams = {
-    /** roomId */
-    roomId: string;
-  };
-
   type CosCredentialVo = {
     /** 桶名称 */
     bucket?: string;
@@ -470,6 +465,8 @@ declare namespace API {
   type getPlayerDetailInfoUsingGETParams = {
     /** roomId */
     roomId: string;
+    /** userId */
+    userId: number;
   };
 
   type getPlayerInfoUsingGETParams = {
@@ -1103,6 +1100,11 @@ declare namespace API {
     source: string;
   };
 
+  type UndercoverGuessRequest = {
+    guessWord?: string;
+    roomId?: string;
+  };
+
   type UndercoverPlayerDetailVO = {
     isEliminated?: boolean;
     userAvatar?: string;
@@ -1133,6 +1135,10 @@ declare namespace API {
     roomId?: string;
   };
 
+  type UndercoverRoomQuitRequest = {
+    roomId?: string;
+  };
+
   type UndercoverRoomVO = {
     createTime?: string;
     creatorId?: number;
@@ -1143,6 +1149,7 @@ declare namespace API {
     participantIds?: number[];
     participants?: UndercoverPlayerDetailVO[];
     remainingTime?: number;
+    role?: string;
     roomId?: string;
     startTime?: string;
     status?: 'WAITING' | 'PLAYING' | 'ENDED';

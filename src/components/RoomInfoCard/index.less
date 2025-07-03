@@ -13,36 +13,86 @@
 /* 添加卡片布局容器 */
 .cardLayout {
   display: flex;
-  gap: 8px;
+  gap: 12px; /* 增加间隔 */
 }
 
 .roomInfoCard {
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  width: 300px; /* 设置固定宽度 */
+  width: 360px; /* 增加卡片宽度 */
   
   :global(.ant-card-head) {
     padding: 0 16px;
   }
   
   :global(.ant-card-body) {
-    max-height: 500px; /* 设置卡片内容最大高度 */
+    max-height: 550px; /* 增加卡片内容最大高度 */
     overflow-y: auto; /* 添加垂直滚动条 */
+    padding: 16px; /* 确保内边距合适 */
+    
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: #f5f5f5;
+      border-radius: 4px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: #d9d9d9;
+      border-radius: 4px;
+    }
+    
+    &::-webkit-scrollbar-thumb:hover {
+      background: #bfbfbf;
+    }
   }
 }
 
 .roomContent {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  height: 100%;
+  gap: 16px; /* 增加元素间距 */
+}
+
+.roomHeader {
+  margin-bottom: 4px;
+}
+
+.roomName {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+/* 信息区域 */
+.infoSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+
+.infoItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.infoIcon {
+  color: #1890ff;
 }
 
 /* 玩家列表容器 */
 .playersListContainer {
   display: flex;
   flex-direction: column;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .playersTitle {
@@ -55,33 +105,34 @@
 }
 
 .playersList {
-  max-height: 200px; /* 设置玩家列表最大高度 */
+  max-height: 240px; /* 增加玩家列表最大高度 */
   overflow-y: auto; /* 添加垂直滚动条 */
   padding-right: 4px; /* 为滚动条预留空间 */
+  margin-bottom: 4px;
   
   /* 自定义滚动条样式 */
   &::-webkit-scrollbar {
-    width: 4px;
+    width: 6px;
   }
   
   &::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: #f5f5f5;
     border-radius: 4px;
   }
   
   &::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
+    background: #d9d9d9;
     border-radius: 4px;
   }
   
   &::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
+    background: #bfbfbf;
   }
 }
 
 /* 聊天窗口样式 */
 .chatContainer {
-  width: 250px;
+  width: 320px; /* 增加聊天窗口宽度 */
   border-radius: 8px;
   background-color: #fff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -89,7 +140,7 @@
   flex-direction: column;
   overflow: hidden;
   height: fit-content; /* 使高度适应内容 */
-  max-height: 500px; /* 限制最大高度 */
+  max-height: 550px; /* 增加最大高度 */
 }
 
 .chatHeader {
@@ -264,31 +315,10 @@
   padding: 30px 0;
 }
 
-.roomHeader {
-  margin-bottom: 8px;
-}
-
-.roomName {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 500;
-}
-
 .roomId {
   font-size: 12px;
   color: #888;
   margin-top: 4px;
-}
-
-.infoItem {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-}
-
-.infoIcon {
-  color: #1890ff;
 }
 
 .creatorAvatar {

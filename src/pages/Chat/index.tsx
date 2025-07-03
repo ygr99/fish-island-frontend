@@ -51,10 +51,13 @@ import {
   Radio,
   Spin,
   Tabs,
+  Badge,
 } from 'antd';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import styles from './index.less';
+import { UNDERCOVER_NOTIFICATION, UNDERCOVER_ROOM_STATUS } from '@/constants';
+import { getActiveRoomUsingGet } from '@/services/backend/undercoverGameController';
 
 interface Message {
   id: string;
@@ -198,6 +201,7 @@ const ChatRoom: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const [isRoomInfoVisible, setIsRoomInfoVisible] = useState<boolean>(false);
+  const [undercoverNotification, setUndercoverNotification] = useState<string>(UNDERCOVER_NOTIFICATION.NONE);
 
   // 添加搜索音乐的函数
   const handleMusicSearch = async () => {
@@ -2559,6 +2563,49 @@ const ChatRoom: React.FC = () => {
     }
   };
 
+  // 添加检查谁是卧底房间状态的函数
+  const checkUndercoverRoomStatus = async () => {
+    try {
+      const response = await getActiveRoomUsingGet();
+      if (response.code === 0 && response.data) {
+        // 如果有等待中的房间，显示小红点通知
+        if (response.data.status === UNDERCOVER_ROOM_STATUS.WAITING) {
+          setUndercoverNotification(UNDERCOVER_NOTIFICATION.NEW_ROOM);
+        }
+      }
+    } catch (error) {
+      console.error('获取谁是卧底房间状态失败:', error);
+    }
+  };
+
+  // 在组件加载时检查房间状态
+  useEffect(() => {
+    checkUndercoverRoomStatus();
+  }, []);
+
+  // 处理谁是卧底按钮点击
+  const handleRoomInfoClick = () => {
+    // 点击后清除通知状态
+    setUndercoverNotification(UNDERCOVER_NOTIFICATION.NONE);
+    setIsRoomInfoVisible(!isRoomInfoVisible);
+  };
+
+  // 添加WebSocket消息处理器来监听房间创建事件
+  useEffect(() => {
+    const handleRefreshRoomMessage = (data: any) => {
+      if (data?.data?.content?.action === 'create') {
+        // 新房间创建，显示小红点通知
+        setUndercoverNotification(UNDERCOVER_NOTIFICATION.NEW_ROOM);
+      }
+    };
+    
+    wsService.addMessageHandler('refreshRoom', handleRefreshRoomMessage);
+    
+    return () => {
+      wsService.removeMessageHandler('refreshRoom', handleRefreshRoomMessage);
+    };
+  }, []);
+
   return (
     <div className={styles.chatRoom}>
       {/* 房间信息卡片 */}
@@ -2860,11 +2907,13 @@ const ChatRoom: React.FC = () => {
           </Popover>
           {/* 谁是卧底按钮 */}
           <Popover content="谁是卧底" placement="top">
-            <Button
-              icon={<TeamOutlined />}
-              className={styles.roomInfoButton}
-              onClick={() => setIsRoomInfoVisible(!isRoomInfoVisible)}
-            />
+            <Badge dot={undercoverNotification === UNDERCOVER_NOTIFICATION.NEW_ROOM} className={styles.roomInfoBadge}>
+              <Button
+                icon={<TeamOutlined />}
+                className={styles.roomInfoButton}
+                onClick={handleRoomInfoClick}
+              />
+            </Badge>
           </Popover>
           <Popover
             content={
