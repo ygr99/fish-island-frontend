@@ -57,13 +57,34 @@
 }
 
 .roomHeader {
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
 
 .roomName {
   margin: 0;
   font-size: 18px;
   font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.creatorInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.creatorName {
+  font-size: 14px;
+  color: #333;
+}
+
+.creatorLabel {
+  font-size: 12px;
+  color: #fff;
+  background-color: #1890ff;
+  padding: 2px 6px;
+  border-radius: 10px;
 }
 
 /* 信息区域 */
@@ -162,6 +183,28 @@
   flex-direction: column;
   gap: 8px;
   background-color: #f9f9f9;
+  position: relative;
+}
+
+.emptyChatMessage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+}
+
+.notJoinedOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: rgba(0, 0, 0, 0.03);
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-top: 1px solid #e8e8e8;
 }
 
 .chatMessage {
@@ -247,6 +290,27 @@
   border-top: 1px solid #e8e8e8;
   background-color: #fff;
   gap: 8px;
+  flex-direction: column;
+}
+
+.chatInputRow {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.chatInput {
+  flex: 1;
+}
+
+.notJoinedTip {
+  color: #ff4d4f;
+  font-size: 12px;
+  text-align: center;
+  padding: 4px 0;
+  background-color: #fff2f0;
+  border-radius: 4px;
+  margin-bottom: 4px;
 }
 
 .chatInput {
@@ -560,4 +624,225 @@
   font-size: 12px;
   color: #ff4d4f;
   margin-left: 8px;
+}
+
+/* 房间列表样式 */
+.roomTabs {
+  width: 100%;
+  
+  :global(.ant-tabs-nav) {
+    margin-bottom: 12px;
+  }
+}
+
+.roomListContainer {
+  height: 450px;
+  overflow-y: auto;
+  
+  /* 自定义滚动条样式 */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f5f5f5;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #d9d9d9;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: #bfbfbf;
+  }
+}
+
+.roomList {
+  background-color: #fff;
+  border-radius: 8px;
+  
+  :global(.ant-list-item) {
+    padding: 12px;
+    transition: background-color 0.3s;
+    
+    &:hover {
+      background-color: #f5f5f5;
+    }
+  }
+}
+
+.roomListItem {
+  width: 100%;
+}
+
+/* 新增房间列表项内容容器样式 */
+.roomListItemContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+/* 第一行：头像和名称 */
+.roomListItemHeader {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.roomListItemTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  
+  span {
+    font-weight: 500;
+  }
+
+  .roomId {
+    font-weight: normal;
+    color: #999;
+    font-size: 12px;
+  }
+}
+
+/* 房间状态 - 现在在第一行 */
+.roomListItemStatus {
+  margin-left: auto;
+}
+
+/* 第二行：房间模式和人数 */
+.roomListItemInfo {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #666;
+  margin: 8px 0;
+}
+
+.roomListItemMode, .roomListItemPlayers {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 第四行：操作按钮 */
+.roomListItemActions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  
+  button {
+    min-width: 80px;
+  }
+}
+
+.roomListItemDesc {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #666;
+  
+  div {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+.roomListFooter {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  margin-top: 8px;
+}
+
+/* 静默刷新动画 */
+.silentRefresh {
+  animation: silentPulse 0.5s ease-in-out;
+}
+
+@keyframes silentPulse {
+  0% {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(24, 144, 255, 0.4);
+  }
+  100% {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+// 添加倒计时相关样式
+.countdownContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: rgba(24, 144, 255, 0.1);
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-left: 3px solid #1890ff;
+}
+
+.countdownTitle {
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+  color: #1890ff;
+  
+  .countdownIcon {
+    margin-right: 6px;
+  }
+}
+
+.countdownValue {
+  font-size: 16px;
+  font-weight: bold;
+  color: #ff4d4f;
+}
+
+.headerCountdown {
+  margin-left: 8px;
+  font-size: 14px;
+  background-color: #ff4d4f;
+  color: white;
+  padding: 0 8px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  
+  :global(.anticon) {
+    margin-right: 4px;
+  }
+}
+
+// 添加聊天栏倒计时样式
+.chatCountdown {
+  background-color: #ff4d4f;
+  color: white;
+  padding: 8px 12px;
+  text-align: center;
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  :global(.anticon) {
+    margin-right: 6px;
+  }
+}
+
+.chatCountdownValue {
+  font-size: 16px;
+  font-weight: bold;
+  margin: 0 4px;
 } 

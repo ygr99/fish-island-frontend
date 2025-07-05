@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Card, Badge, Avatar, Button, Tooltip, Spin, Empty, List, message, Space, Modal, Form, Input, InputNumber, Radio, Popconfirm } from 'antd';
+import { Card, Badge, Avatar, Button, Tooltip, Spin, Empty, List, message, Space, Modal, Form, Input, InputNumber, Radio, Popconfirm, Tabs } from 'antd';
 import {
   TeamOutlined,
   ClockCircleOutlined,
@@ -19,10 +19,11 @@ import {
   QuestionCircleOutlined,
   LogoutOutlined,
   BulbOutlined,
-  ShareAltOutlined
+  ShareAltOutlined,
+  UnorderedListOutlined
 } from '@ant-design/icons';
 import {
-  getActiveRoomUsingGet,
+  getRoomByIdUsingGet,
   voteUsingPost,
   joinRoomUsingPost,
   startGameUsingPost,
@@ -30,7 +31,8 @@ import {
   createRoomUsingPost,
   removeActiveRoomUsingPost,
   quitRoomUsingPost,
-  guessWordUsingPost
+  guessWordUsingPost,
+  getAllRoomsUsingGet
 } from '@/services/backend/undercoverGameController';
 import { history, useModel } from '@umijs/max';
 import styles from './index.less';
@@ -45,6 +47,7 @@ interface ChatMessage {
   userAvatar?: string;
   timestamp: Date;
   id?: string; // 添加可选的id字段
+  roomId?: string; // 添加房间ID字段
   sender?: {
     id: string;
     name: string;
@@ -68,7 +71,18 @@ interface CreateRoomFormValues {
   gameMode: number; // 修改为数字类型，1-常规模式，2-卧底猜词模式
 }
 
-const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
+// 辅助函数：安全调用ref.current函数
+const safelyCallRef = <T extends unknown[], R>(
+  ref: React.MutableRefObject<((...args: T) => R) | undefined>,
+  ...args: T
+): R | undefined => {
+  if (ref.current) {
+    return ref.current(...args);
+  }
+  return undefined;
+};
+
+const RoomInfoCard = ({ visible, onClose }: RoomInfoCardProps): React.ReactNode => {
   const { initialState } = useModel('@@initialState');
   const currentUser = initialState?.currentUser;
   const [roomInfo, setRoomInfo] = useState<API.UndercoverRoomVO | null>(null);
@@ -89,6 +103,20 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   const [guessing, setGuessing] = useState<boolean>(false);
   const [form] = Form.useForm();
   const [guessForm] = Form.useForm();
+
+  // 添加房间列表相关状态
+  const [activeTab, setActiveTab] = useState<string>('current');
+  const [roomList, setRoomList] = useState<API.UndercoverRoomVO[]>([]);
+  const [roomListLoading, setRoomListLoading] = useState<boolean>(false);
+  const [joiningRoomId, setJoiningRoomId] = useState<string | null>(null);
+
+  // 添加当前活跃房间ID状态
+  const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
+
+  // 使用ref存储函数，避免循环依赖
+  const fetchRoomInfoRef = useRef<(silent?: boolean) => Promise<void>>();
+  const fetchRoomListRef = useRef<() => Promise<void>>();
+  const handleJoinSpecificRoomRef = useRef<(roomId: string) => Promise<void>>();
 
   // 添加拖动相关状态
   const [position, setPosition] = useState({ x: 10, y: 10 });
@@ -116,6 +144,10 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   const [inviteCooldown, setInviteCooldown] = useState<number>(0);
   const inviteCooldownRef = useRef<NodeJS.Timeout | null>(null);
 
+  // 添加倒计时相关状态
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // 确保位置初始化在视窗内
   useEffect(() => {
     if (visible && cardRef.current) {
@@ -132,7 +164,9 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   // 当房间ID变化时，清空聊天消息
   useEffect(() => {
     if (roomInfo?.roomId) {
+      // 清空聊天消息，以便加载新房间的消息
       setChatMessages([]);
+      console.log('房间ID变化，已清空聊天消息，新房间ID:', roomInfo.roomId);
     }
   }, [roomInfo?.roomId]);
 
@@ -143,12 +177,19 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
         // 检查消息格式
         if (data?.type === 'undercover') {
           const messageData = data.data.message;
+          
+          // 检查消息是否属于当前房间
+          if (messageData.roomId && roomInfo?.roomId && messageData.roomId !== roomInfo.roomId) {
+            return; // 如果消息不属于当前房间，则不处理
+          }
+          
           const newMessage: ChatMessage = {
             content: messageData.content,
             userId: messageData.sender.id,
             userName: messageData.sender.name,
             userAvatar: messageData.sender.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-            timestamp: new Date(messageData.timestamp)
+            timestamp: new Date(messageData.timestamp),
+            roomId: messageData.roomId // 保存消息的房间ID
           };
 
           setChatMessages(prev => [...prev, newMessage]);
@@ -165,25 +206,96 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       // 添加refreshRoom消息处理器
       const handleRefreshRoomMessage = (data: any) => {
         // 检查是否是刷新房间的消息
-          fetchRoomInfo(true); // 静默刷新，不显示加载状态
+        if (data?.data?.content?.roomId) {
+          // 如果消息包含房间ID，且与当前活跃房间ID匹配，则刷新房间信息
+          if (activeRoomId === data.data.content.roomId) {
+            safelyCallRef(fetchRoomInfoRef, true); // 静默刷新，不显示加载状态
+          } else if (data.data.content.action === 'create') {
+            // 如果是创建房间的消息，刷新房间列表
+            safelyCallRef(fetchRoomListRef);
+          }
+        } else {
+          // 如果消息不包含房间ID，刷新当前房间信息（兼容旧消息格式）
+          safelyCallRef(fetchRoomInfoRef, true);
+          
+          // 同时也刷新房间列表
+          if (activeTab === 'list') {
+            safelyCallRef(fetchRoomListRef);
+          }
+        }
       };
 
       // 添加gamestart消息处理器
       const handleGameStartMessage = (data: any) => {
-        message.success('游戏已开始!');
-        fetchRoomInfo();
+        // 检查消息是否与当前活跃房间相关
+        if (data?.data?.content?.roomId && activeRoomId === data.data.content.roomId) {
+          message.success('游戏已开始!');
+          safelyCallRef(fetchRoomInfoRef);
+        } else if (!data?.data?.content?.roomId) {
+          // 兼容旧消息格式
+          message.success('游戏已开始!');
+          safelyCallRef(fetchRoomInfoRef);
+        }
+      };
+
+      // 添加倒计时消息处理器
+      const handleCountdownMessage = (data: any) => {
+        // 检查消息是否为倒计时类型，且与当前活跃房间相关
+        data = data.data;
+        if (data?.roomId && activeRoomId === data.roomId) {
+          // 清除之前的倒计时定时器
+          if (countdownTimerRef.current) {
+            clearInterval(countdownTimerRef.current);
+          }
+          
+          // 设置初始倒计时值
+          setCountdown(data.time);
+          
+          // 启动倒计时
+          countdownTimerRef.current = setInterval(() => {
+            setCountdown(prev => {
+              if (prev === null || prev <= 1) {
+                // 倒计时结束，清除定时器
+                if (countdownTimerRef.current) {
+                  clearInterval(countdownTimerRef.current);
+                  countdownTimerRef.current = null;
+                }
+                return null;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+        }
       };
 
       wsService.addMessageHandler('undercover', handleUndercoverMessage);
       wsService.addMessageHandler('refreshRoom', handleRefreshRoomMessage);
       wsService.addMessageHandler('gameStart', handleGameStartMessage);
+      wsService.addMessageHandler('countdown', handleCountdownMessage);
 
       return () => {
         wsService.removeMessageHandler('undercover', handleUndercoverMessage);
         wsService.removeMessageHandler('refreshRoom', handleRefreshRoomMessage);
         wsService.removeMessageHandler('gameStart', handleGameStartMessage);
+        wsService.removeMessageHandler('countdown', handleCountdownMessage);
+        
+        // 清除倒计时定时器
+        if (countdownTimerRef.current) {
+          clearInterval(countdownTimerRef.current);
+          countdownTimerRef.current = null;
+        }
       };
-  }, [visible, roomInfo?.roomId]);
+  }, [visible, roomInfo?.roomId, activeRoomId, activeTab]);
+
+  // 清理倒计时定时器
+  useEffect(() => {
+    return () => {
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // 添加监听eventBus的事件，处理从聊天室点击加入游戏的事件
   useEffect(() => {
@@ -195,22 +307,40 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
         // 如果卡片当前不可见，则显示卡片
         // 使用chat页面的事件来显示谁是卧底弹窗
         eventBus.emit('show_undercover_room');
-        
+
         // 使用setTimeout延迟执行加入房间操作，确保弹窗已显示
         setTimeout(() => {
           try {
-            handleJoinRoom();
-            fetchRoomInfo(true);
+            // 清空聊天消息，以便加载新房间的消息
+            setChatMessages([]);
+            
+            // 设置当前活跃房间ID并加入房间
+            if (roomIdStr && roomIdStr.trim() !== '') {
+              setActiveRoomId(roomIdStr);
+              safelyCallRef(handleJoinSpecificRoomRef, roomIdStr);
+            } else {
+              message.error("无效的房间ID");
+            }
           } catch (error) {
+            console.error('加入房间失败:', error);
             message.error("加入失败，请手动加入");
           }
         }, 500); // 延迟500毫秒执行
       } else {
         // 如果弹窗已经显示，直接执行加入操作
         try {
-          handleJoinRoom();
-          fetchRoomInfo(true);
+          // 清空聊天消息，以便加载新房间的消息
+          setChatMessages([]);
+          
+          // 设置当前活跃房间ID并加入房间
+          if (roomIdStr && roomIdStr.trim() !== '') {
+            setActiveRoomId(roomIdStr);
+            safelyCallRef(handleJoinSpecificRoomRef, roomIdStr);
+          } else {
+            message.error("无效的房间ID");
+          }
         } catch (error) {
+          console.error('加入房间失败:', error);
           message.error("加入失败，请手动加入");
         }
       }
@@ -221,9 +351,10 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     return () => {
       eventBus.off('join_undercover_room', handleJoinUndercoverRoom);
     };
-  }, [visible, roomInfo?.roomId]);
+  }, [visible]);
 
-  const fetchRoomInfo = async (silent: boolean = false) => {
+  // 定义fetchRoomInfo函数
+  fetchRoomInfoRef.current = async (silent: boolean = false) => {
     if (!visible) return;
 
     try {
@@ -232,24 +363,78 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       }
       setSilentRefresh(silent);
       setError(null);
-      const response = await getActiveRoomUsingGet();
-      if (response.code === 0 && response.data) {
-        // 更新房间信息
-        setRoomInfo(response.data);
 
-        // 确保重置投票状态
-        setVotingFor(null);
-        setVotingLoading(false);
+      // 如果没有活跃房间ID，先从房间列表获取一个
+      if (!activeRoomId) {
+        try {
+          const roomListResponse = await getAllRoomsUsingGet();
+          if (roomListResponse.code === 0 && roomListResponse.data && roomListResponse.data.length > 0) {
+            // 找到一个当前用户参与的房间或者第一个等待中的房间
+            const userRoom = roomListResponse.data.find(room =>
+              room.participantIds?.includes(currentUser?.id || 0)
+            );
+            const waitingRoom = roomListResponse.data.find(room =>
+              room.status === 'WAITING'
+            );
 
-        // 如果房间状态发生变化，重置相关操作状态
-        if (roomInfo?.status !== response.data.status) {
-          setStartingGame(false);
-          setEndingGame(false);
-          setJoiningRoom(false);
+            // 优先使用用户参与的房间，其次是等待中的房间，最后是第一个房间
+            const targetRoom = userRoom || waitingRoom || roomListResponse.data[0];
+            setActiveRoomId(targetRoom.roomId || null);
+
+            if (targetRoom.roomId) {
+              const response = await getRoomByIdUsingGet({
+                roomId: targetRoom.roomId
+              });
+
+              if (response.code === 0 && response.data) {
+                setRoomInfo(response.data);
+                setVotingFor(null);
+                setVotingLoading(false);
+              } else {
+                setRoomInfo(null);
+                setError('获取房间信息失败');
+              }
+            } else {
+              setRoomInfo(null);
+              setError('暂无活跃房间');
+            }
+          } else {
+            setRoomInfo(null);
+            setError('暂无活跃房间');
+          }
+        } catch (error) {
+          console.error('获取房间列表失败:', error);
+          setRoomInfo(null);
+          setError('获取房间信息失败');
+        } finally {
+          setLoading(false);
         }
       } else {
-        setRoomInfo(null);
-        setError('暂无活跃房间');
+        // 如果有活跃房间ID，直接获取该房间信息
+        const response = await getRoomByIdUsingGet({
+          roomId: activeRoomId
+        });
+
+        if (response.code === 0 && response.data) {
+          // 更新房间信息
+          setRoomInfo(response.data);
+
+          // 确保重置投票状态
+          setVotingFor(null);
+          setVotingLoading(false);
+
+          // 如果房间状态发生变化，重置相关操作状态
+          if (roomInfo?.status !== response.data.status) {
+            setStartingGame(false);
+            setEndingGame(false);
+            setJoiningRoom(false);
+          }
+        } else {
+          setRoomInfo(null);
+          setError('获取房间信息失败');
+          // 如果房间不存在，重置活跃房间ID
+          setActiveRoomId(null);
+        }
       }
     } catch (error) {
       console.error('获取房间信息失败:', error);
@@ -263,11 +448,152 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     }
   };
 
+  // 添加获取房间列表的方法
+  fetchRoomListRef.current = async () => {
+    try {
+      setRoomListLoading(true);
+      const response = await getAllRoomsUsingGet();
+      if (response.code === 0 && response.data) {
+        setRoomList(response.data);
+      } else {
+        message.error(response.message || '获取房间列表失败');
+      }
+    } catch (error) {
+      console.error('获取房间列表失败:', error);
+      message.error('获取房间列表失败');
+    } finally {
+      setRoomListLoading(false);
+    }
+  };
+
+  // 处理加入特定房间
+  handleJoinSpecificRoomRef.current = async (roomId: string) => {
+    if (!roomId) return;
+
+    try {
+      setJoiningRoomId(roomId);
+      setJoiningRoom(true);
+      
+      // 先设置当前活跃房间ID，确保后续操作使用正确的roomId
+      setActiveRoomId(roomId);
+      
+      const response = await joinRoomUsingPost({
+        roomId: roomId
+      });
+
+      if (response.code === 0 && response.data) {
+        message.success('加入房间成功');
+
+        // 发送刷新房间信息的websocket消息
+        wsService.send({
+          type: 2,
+          userId: currentUser?.id || -1,
+          data: {
+            type: 'refreshRoom',
+            content: {
+              roomId: roomId,
+              action: 'join'
+            },
+          },
+        });
+
+        // 切换到当前房间标签
+        setActiveTab('current');
+        
+        // 清空聊天消息，以便加载新房间的消息
+        setChatMessages([]);
+        
+        // 直接获取房间信息，而不是使用fetchRoomInfoRef
+        try {
+          const roomResponse = await getRoomByIdUsingGet({
+            roomId: roomId
+          });
+          
+          if (roomResponse.code === 0 && roomResponse.data) {
+            setRoomInfo(roomResponse.data);
+            setVotingFor(null);
+            setVotingLoading(false);
+          } else {
+            setRoomInfo(null);
+            setError('获取房间信息失败');
+          }
+        } catch (error) {
+          console.error('获取房间信息失败:', error);
+          message.error('获取房间信息失败');
+        }
+      } else {
+        message.error(response.message || '加入房间失败');
+        // 如果加入失败，恢复之前的房间ID
+        if (activeRoomId && activeRoomId !== roomId) {
+          setActiveRoomId(activeRoomId);
+        }
+      }
+    } catch (error) {
+      console.error('加入房间失败:', error);
+      message.error('加入房间失败，请重试');
+      // 如果出错，恢复之前的房间ID
+      if (activeRoomId && activeRoomId !== roomId) {
+        setActiveRoomId(activeRoomId);
+      }
+    } finally {
+      setJoiningRoom(false);
+      setJoiningRoomId(null);
+    }
+  };
+
+  // 创建稳定的函数引用
+  const fetchRoomInfo = useCallback((silent?: boolean) => {
+    if (fetchRoomInfoRef.current) {
+      return fetchRoomInfoRef.current(silent);
+    }
+    return Promise.resolve();
+  }, []);
+
+  const fetchRoomList = useCallback(() => {
+    if (fetchRoomListRef.current) {
+      return fetchRoomListRef.current();
+    }
+    return Promise.resolve();
+  }, []);
+
+  const handleJoinSpecificRoom = useCallback((roomId: string) => {
+    if (handleJoinSpecificRoomRef.current) {
+      return handleJoinSpecificRoomRef.current(roomId);
+    }
+    return Promise.resolve();
+  }, []);
+
+  // 当切换到房间列表标签时获取房间列表
+  useEffect(() => {
+    if (visible && activeTab === 'list') {
+      fetchRoomList();
+    }
+  }, [visible, activeTab, fetchRoomList]);
+
+  // 当组件可见时获取房间信息
   useEffect(() => {
     if (visible) {
       fetchRoomInfo();
     }
-  }, [visible]);
+  }, [visible, fetchRoomInfo]);
+
+  // 添加WebSocket消息处理器，当收到房间更新消息时刷新列表
+  useEffect(() => {
+    if (visible) {
+      const handleRefreshRoomListMessage = () => {
+        // 如果当前正在查看房间列表，则刷新列表
+        if (activeTab === 'list') {
+          fetchRoomList();
+        }
+      };
+
+      wsService.addMessageHandler('refreshRoom', handleRefreshRoomListMessage);
+
+      return () => {
+        wsService.removeMessageHandler('refreshRoom', handleRefreshRoomListMessage);
+      };
+    }
+  }, [visible, activeTab, fetchRoomList]);
 
   // 处理加入房间
   const handleJoinRoom = async (e?: React.MouseEvent) => {
@@ -279,12 +605,19 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     if (roomInfo?.roomId) {
       try {
         setJoiningRoom(true);
+        
+        // 保存当前房间ID
+        const currentRoomId = roomInfo.roomId;
+        
         const response = await joinRoomUsingPost({
-          roomId: roomInfo.roomId
+          roomId: currentRoomId
         });
 
         if (response.code === 0 && response.data) {
           message.success('加入房间成功');
+
+          // 设置当前活跃房间ID
+          setActiveRoomId(currentRoomId);
 
           // 发送刷新房间信息的websocket消息
           wsService.send({
@@ -293,13 +626,29 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             data: {
               type: 'refreshRoom',
               content: {
-                roomId: roomInfo.roomId,
+                roomId: currentRoomId,
                 action: 'join'
               },
             },
           });
 
-          fetchRoomInfo(true); // 加入房间后静默刷新房间信息
+          // 直接获取房间信息，而不是使用fetchRoomInfo
+          try {
+            const roomResponse = await getRoomByIdUsingGet({
+              roomId: currentRoomId
+            });
+            
+            if (roomResponse.code === 0 && roomResponse.data) {
+              setRoomInfo(roomResponse.data);
+              setVotingFor(null);
+              setVotingLoading(false);
+            } else {
+              message.error('获取房间信息失败');
+            }
+          } catch (error) {
+            console.error('获取房间信息失败:', error);
+            message.error('获取房间信息失败');
+          }
         } else {
           message.error(response.message || '加入房间失败');
         }
@@ -315,7 +664,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
   const handleRefresh = (e: React.MouseEvent) => {
     // 阻止事件冒泡，避免触发文档点击事件
     e.stopPropagation();
-    fetchRoomInfo();
+    fetchRoomInfo(false); // 使用非静默模式刷新
   };
 
   // 添加拖动相关处理函数
@@ -484,7 +833,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
           votes: updatedVotes
         });
         // 然后静默刷新房间信息（后端数据同步）
-        fetchRoomInfo(true);
+        safelyCallRef(fetchRoomInfoRef, true);
       } else {
         message.error(response.message || '投票失败');
       }
@@ -528,7 +877,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             },
           });
 
-        fetchRoomInfo(true); // 开始游戏后静默刷新房间信息
+        safelyCallRef(fetchRoomInfoRef, true); // 开始游戏后静默刷新房间信息
       } else {
         message.error(response.message || '开始游戏失败');
       }
@@ -571,7 +920,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             },
           });
 
-        fetchRoomInfo(true); // 结束游戏后静默刷新房间信息
+        safelyCallRef(fetchRoomInfoRef, true); // 结束游戏后静默刷新房间信息
       } else {
         message.error(response.message || '结束游戏失败');
       }
@@ -622,7 +971,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       const response = await createRoomUsingPost(requestParams);
 
       if (response.code === 0 && response.data) {
-        message.success('创建房间成功')
+        message.success('创建房间成功');
 
         // 发送刷新房间信息的websocket消息，通知有新房间创建
         wsService.send({
@@ -638,7 +987,11 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
         });
 
         setIsCreateModalVisible(false);
-        fetchRoomInfo(true); // 刷新房间信息
+        
+        // 不再设置当前活跃房间ID和切换到房间标签
+        // 而是刷新房间列表并切换到列表标签
+        setActiveTab('list');
+        safelyCallRef(fetchRoomListRef); // 刷新房间列表
       } else {
         message.error(response.message || '创建房间失败');
       }
@@ -712,12 +1065,25 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       return;
     }
 
+    if (!roomInfo?.roomId) {
+      message.error('房间ID不存在，无法删除');
+      return;
+    }
+
     try {
       setRemovingRoom(true);
-      const response = await removeActiveRoomUsingPost();
+      const response = await removeActiveRoomUsingPost(
+        {
+          roomId: roomInfo.roomId
+        },
+        {}
+      );
 
       if (response.code === 0 && response.data) {
         message.success('房间已删除');
+
+        // 清除当前活跃房间ID
+        setActiveRoomId(null);
 
         // 发送刷新房间信息的websocket消息
         wsService.send({
@@ -726,12 +1092,13 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             data: {
               type: 'refreshRoom',
               content: {
+                roomId: roomInfo.roomId, // 添加房间ID
                 action: 'remove'
               },
             },
           });
 
-        fetchRoomInfo(true); // 删除房间后静默刷新房间信息
+        safelyCallRef(fetchRoomInfoRef, true); // 删除房间后静默刷新房间信息
       } else {
         message.error(response.message || '删除房间失败');
       }
@@ -761,6 +1128,9 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       if (response.code === 0 && response.data) {
         message.success('已退出房间');
 
+        // 清除当前活跃房间ID
+        setActiveRoomId(null);
+
         // 发送刷新房间信息的websocket消息
         wsService.send({
             type: 2,
@@ -774,7 +1144,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             },
           });
 
-        fetchRoomInfo(true); // 退出房间后静默刷新房间信息
+        safelyCallRef(fetchRoomInfoRef, true); // 退出房间后静默刷新房间信息
       } else {
         message.error(response.message || '退出房间失败');
       }
@@ -796,7 +1166,12 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
         <Button
           type="primary"
           icon={<PlusCircleOutlined />}
-          onClick={(e) => showCreateModal(e)}
+          onClick={(e) => {
+            e.stopPropagation();
+            showCreateModal(e);
+            // 切换到房间列表标签，这样创建完成后就会显示房间列表
+            setActiveTab('list');
+          }}
           loading={creatingRoom}
           disabled={creatingRoom}
           className={styles.adminButton}
@@ -879,7 +1254,12 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             <Button
               type="primary"
               icon={<PlusCircleOutlined />}
-              onClick={(e) => showCreateModal(e)}
+              onClick={(e) => {
+                e.stopPropagation();
+                showCreateModal(e);
+                // 切换到房间列表标签，这样创建完成后就会显示房间列表
+                setActiveTab('list');
+              }}
               loading={creatingRoom}
               disabled={creatingRoom}
               className={styles.adminButton}
@@ -958,7 +1338,12 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
         <Button
           type="primary"
           icon={<PlusCircleOutlined />}
-          onClick={(e) => showCreateModal(e)}
+          onClick={(e) => {
+            e.stopPropagation();
+            showCreateModal(e);
+            // 切换到房间列表标签，这样创建完成后就会显示房间列表
+            setActiveTab('list');
+          }}
           loading={creatingRoom}
           disabled={creatingRoom}
           className={styles.actionButton}
@@ -992,7 +1377,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
 
     // 检查用户是否是房间参与者
     if (!isRoomParticipant()) {
-      message.error('只有房间参与者才能发言');
+      message.info('请先加入房间才能发言');
       return;
     }
 
@@ -1000,6 +1385,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     const newMessage = {
       id: `${Date.now()}`,
       content: messageInput,
+      roomId: roomInfo?.roomId || '', // 添加房间号
       sender: {
         id: currentUser?.id || 0,
         name: currentUser?.userName || '游客',
@@ -1029,7 +1415,8 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
       userId: currentUser?.id || 0,
       userName: currentUser?.userName || '游客',
       userAvatar: currentUser?.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-      timestamp: new Date()
+      timestamp: new Date(),
+      roomId: roomInfo?.roomId || '' // 添加房间ID
     };
 
     setChatMessages(prev => [...prev, myChatMessage]);
@@ -1134,9 +1521,12 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     setIsUserMessagesVisible(true);
   };
 
-  // 获取特定用户的所有消息
+  // 获取特定用户的所有消息（当前房间）
   const getUserMessages = (userId: number) => {
-    return chatMessages.filter(msg => msg.userId === userId);
+    return chatMessages.filter(msg => 
+      msg.userId === userId && 
+      (!roomInfo?.roomId || !msg.roomId || msg.roomId === roomInfo.roomId)
+    );
   };
 
   // 获取用户名称
@@ -1158,9 +1548,12 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     return '未知用户';
   };
 
-  // 判断用户是否有聊天记录
+  // 判断用户是否有聊天记录（当前房间）
   const hasUserMessages = (userId: number) => {
-    return chatMessages.some(msg => msg.userId === userId);
+    return chatMessages.some(msg => 
+      msg.userId === userId && 
+      (!roomInfo?.roomId || !msg.roomId || msg.roomId === roomInfo.roomId)
+    );
   };
 
   // 判断当前用户是否是卧底
@@ -1221,7 +1614,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
             },
           });
 
-          fetchRoomInfo(true); // 猜词成功后静默刷新房间信息
+          safelyCallRef(fetchRoomInfoRef, true); // 猜词成功后静默刷新房间信息
         } else {
           message.error('很遗憾，猜错了');
         }
@@ -1262,6 +1655,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     const newMessage: ChatMessage = {
       id: `${Date.now()}`,
       content: inviteMessage,
+      roomId: roomInfo.roomId, // 添加房间ID
       sender: {
         id: String(currentUser?.id),
         name: currentUser?.userName || '游客',
@@ -1465,46 +1859,174 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
     );
   };
 
-  // 添加一个函数来渲染游戏信息，避免在JSX中使用过于复杂的条件表达式
+  // 修改renderGameInfo函数，添加倒计时显示
   const renderGameInfo = () => {
     if (!roomInfo) return null;
 
-    // 猜词模式(2)
-    if (roomInfo.gameMode === 2) {
-      // 卧底
-      if (roomInfo.role === 'undercover') {
-        return (
-          <>
-            <div className={styles.infoItem}>
-              <UserOutlined className={styles.infoIcon} />
-              <span>你的身份: <strong style={{ color: '#ff4d4f' }}>卧底</strong></span>
+    return (
+      <>
+        {/* 显示倒计时 */}
+        {countdown !== null && (
+          <div className={styles.countdownContainer}>
+            <div className={styles.countdownTitle}>
+              <ClockCircleOutlined className={styles.countdownIcon} /> 倒计时:
             </div>
+            <div className={styles.countdownValue}>
+              {countdown} 秒
+            </div>
+          </div>
+        )}
+        
+        {/* 原有的游戏信息 */}
+        {roomInfo.gameMode === 2 ? (
+          roomInfo.role === 'undercover' ? (
+            <>
+              <div className={styles.infoItem}>
+                <UserOutlined className={styles.infoIcon} />
+                <span>你的身份: <strong style={{ color: '#ff4d4f' }}>卧底</strong></span>
+              </div>
+              <div className={styles.infoItem}>
+                <TrophyOutlined className={styles.infoIcon} />
+                <span>你需要猜出平民的词语才能获胜</span>
+              </div>
+            </>
+          ) : (
             <div className={styles.infoItem}>
               <TrophyOutlined className={styles.infoIcon} />
-              <span>你需要猜出平民的词语才能获胜</span>
+              <span>你的词语: <strong>{roomInfo.word}</strong></span>
             </div>
-          </>
-        );
-      } 
-      // 平民
-      else {
-        return (
+          )
+        ) : (
           <div className={styles.infoItem}>
             <TrophyOutlined className={styles.infoIcon} />
             <span>你的词语: <strong>{roomInfo.word}</strong></span>
           </div>
-        );
-      }
-    } 
-    // 常规模式(1)
-    else {
-      return (
-        <div className={styles.infoItem}>
-          <TrophyOutlined className={styles.infoIcon} />
-          <span>你的词语: <strong>{roomInfo.word}</strong></span>
+        )}
+      </>
+    );
+  };
+
+  // 渲染房间列表项
+  const renderRoomListItem = (room: API.UndercoverRoomVO) => {
+    const statusInfo = getRoomStatusInfo(room.status);
+    const isCurrentUserInRoom = room.participantIds?.includes(currentUser?.id || 0);
+    const isRoomFull = (room.participants?.length || 0) >= (room.maxPlayers || 8);
+    const canJoin = !isCurrentUserInRoom && !isRoomFull && room.status === 'WAITING';
+
+    return (
+      <List.Item
+        key={room.roomId}
+        className={styles.roomListItem}
+      >
+        <div className={styles.roomListItemContent}>
+          {/* 第一行：头像、名称和状态 */}
+          <div className={styles.roomListItemHeader}>
+            <Avatar
+              src={room.creatorAvatar}
+              icon={!room.creatorAvatar && <UserOutlined />}
+              alt={`${room.creatorName || '未知用户'}的头像`}
+            />
+            <div className={styles.roomListItemTitle}>
+              <span>{room.creatorName || '未知用户'}</span>
+              <span className={styles.roomId}>#{room.roomId?.slice(-6)}</span>
+            </div>
+            <div className={styles.roomListItemStatus}>
+              <Badge status={statusInfo.badgeStatus} text={statusInfo.text} />
+            </div>
+          </div>
+          
+          {/* 第二行：房间模式和人数 */}
+          <div className={styles.roomListItemInfo}>
+            <div className={styles.roomListItemMode}>
+              <ClockCircleOutlined /> {room.gameMode === 1 ? '常规模式' : '猜词模式'}
+            </div>
+            <div className={styles.roomListItemPlayers}>
+              <TeamOutlined /> {room.participants?.length || 0}/{room.maxPlayers || 8} 玩家
+            </div>
+          </div>
+          
+          {/* 第三行：操作按钮 */}
+          <div className={styles.roomListItemActions}>
+            <Button
+              type="default"
+              size="small"
+              onClick={async () => {
+                if (!room.roomId || room.roomId.trim() === '') {
+                  message.error("无效的房间ID");
+                  return;
+                }
+                
+                // 先清空聊天消息，以便加载新房间的消息
+                setChatMessages([]);
+                
+                // 保存当前房间ID
+                const targetRoomId = room.roomId;
+                
+                // 设置当前活跃房间ID
+                setActiveRoomId(targetRoomId);
+                
+                // 切换到当前房间标签
+                setActiveTab('current');
+                
+                // 直接获取房间信息
+                try {
+                  setLoading(true);
+                  const response = await getRoomByIdUsingGet({
+                    roomId: targetRoomId
+                  });
+                  
+                  if (response.code === 0 && response.data) {
+                    setRoomInfo(response.data);
+                    setVotingFor(null);
+                    setVotingLoading(false);
+                  } else {
+                    setRoomInfo(null);
+                    setError('获取房间信息失败');
+                  }
+                } catch (error) {
+                  console.error('获取房间信息失败:', error);
+                  setError('获取房间信息失败');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              查看详情
+            </Button>
+            {canJoin ? (
+              <Button
+                type="primary"
+                size="small"
+                loading={joiningRoom && joiningRoomId === room.roomId}
+                onClick={(e) => {
+                  e.stopPropagation(); // 阻止事件冒泡
+                  if (room.roomId && room.roomId.trim() !== '') {
+                    // 清空聊天消息，以便加载新房间的消息
+                    setChatMessages([]);
+                    handleJoinSpecificRoom(room.roomId);
+                  } else {
+                    message.error("无效的房间ID");
+                  }
+                }}
+                disabled={joiningRoom}
+              >
+                加入房间
+              </Button>
+            ) : (
+              !isCurrentUserInRoom && (
+                <Button
+                  type="default"
+                  size="small"
+                  disabled={true}
+                >
+                  {isRoomFull ? '房间已满' : '不可加入'}
+                </Button>
+              )
+            )}
+          </div>
         </div>
-      );
-    }
+      </List.Item>
+    );
   };
 
   if (!visible) return null;
@@ -1532,6 +2054,11 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
                 text={roomInfo ? statusInfo.text : '无活跃房间'}
                 className={styles.statusBadge}
               />
+              {countdown !== null && (
+                <span className={styles.headerCountdown}>
+                  <ClockCircleOutlined /> {countdown}s
+                </span>
+              )}
               <DragOutlined className={styles.dragIcon} />
             </div>
           }
@@ -1564,121 +2091,226 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
           }
           className={`${styles.roomInfoCard} ${isPinned ? styles.pinned : ''} ${silentRefresh ? styles.silentRefresh : ''}`}
         >
-          {loading && !silentRefresh ? (
-            <div className={styles.loadingContainer}>
-              <Spin tip="加载中..." />
-            </div>
-          ) : error ? (
-            <div>
-              <Empty
-                description={error}
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-              />
-              {/* 在错误状态下，如果是管理员，也显示管理员操作按钮 */}
-              {isAdmin && (
-                <div className={styles.adminActionsCenter}>
-                  {renderAdminButtons()}
-                </div>
-              )}
-              {/* 在错误状态下，如果不是管理员，显示创建房间按钮 */}
-              {!isAdmin && (
-                <div className={styles.adminActionsCenter}>
-                  {renderCreateRoomButton()}
-                </div>
-              )}
-            </div>
-          ) : roomInfo ? (
-            <div className={styles.roomContent}>
-              <div className={styles.roomHeader}>
-                <h3 className={styles.roomName}>谁是卧底</h3>
-              </div>
-
-              <div className={styles.infoSection}>
-                <div className={styles.infoItem}>
-                  <TeamOutlined className={styles.infoIcon} />
-                  <span>玩家数量: {roomInfo.participants?.length || 0}/{roomInfo.maxPlayers || 0}</span>
-                </div>
-
-                <div className={styles.infoItem}>
-                  <ClockCircleOutlined className={styles.infoIcon} />
-                  <span style={{ color: statusInfo.color }}>状态: {statusInfo.text}</span>
-                </div>
-
-                {/* 显示游戏模式 */}
-                {roomInfo.gameMode !== undefined && (
-                  <div className={styles.infoItem}>
-                    <BulbOutlined className={styles.infoIcon} />
-                    <span>游戏模式: {roomInfo.gameMode === 1 ? '常规模式' : '猜词模式'}</span>
-                  </div>
-                )}
-
-                {/* 显示当前玩家的词语和身份，根据游戏模式显示不同内容 */}
-                {roomInfo.status === 'PLAYING' && renderGameInfo()}
-              </div>
-
-              {/* 玩家列表 */}
-              {roomInfo.participants && roomInfo.participants.length > 0 && (
-                <div className={styles.playersListContainer}>
-                  <h4 className={styles.playersTitle}>参与玩家</h4>
-                  <div className={styles.playersList}>
-                    <List
-                      size="small"
-                      dataSource={roomInfo.participants}
-                      renderItem={(player, index) => renderPlayerItem(player, index)}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* 底部操作区域，将管理员操作和普通操作分开布局 */}
-              <div className={styles.actionContainer}>
-                {/* 管理员操作区 */}
-                {isAdmin && (
-                  <div className={styles.adminActionsSection}>
-                    <h4 className={styles.sectionTitle}>管理员操作</h4>
-                    <div className={styles.adminActions}>
-                      {renderAdminButtons()}
+          <Tabs
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            className={styles.roomTabs}
+            items={[
+              {
+                key: 'current',
+                label: (
+                  <span>
+                    <TeamOutlined /> 当前房间
+                  </span>
+                ),
+                children: (
+                  loading && !silentRefresh ? (
+                    <div className={styles.loadingContainer}>
+                      <Spin tip="加载中..." />
                     </div>
-                  </div>
-                )}
-
-                {/* 房间创建者操作区 */}
-                {!isAdmin && roomInfo && currentUser && roomInfo.creatorId === currentUser.id && (
-                  <div className={styles.creatorActionsSection}>
-                    <h4 className={styles.sectionTitle}>创建者操作</h4>
-                    <div className={styles.creatorActions}>
-                      {renderCreatorButtons()}
+                  ) : error ? (
+                    <div>
+                      <Empty
+                        description={error}
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                      />
+                      {/* 在错误状态下，如果是管理员，也显示管理员操作按钮 */}
+                      {isAdmin && (
+                        <div className={styles.adminActionsCenter}>
+                          {renderAdminButtons()}
+                        </div>
+                      )}
+                      {/* 在错误状态下，如果不是管理员，显示创建房间按钮 */}
+                      {!isAdmin && (
+                        <div className={styles.adminActionsCenter}>
+                          {renderCreateRoomButton()}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  ) : roomInfo ? (
+                    <div className={styles.roomContent}>
+                      <div className={styles.roomHeader}>
+                        <h3 className={styles.roomName}>谁是卧底</h3>
+                        {roomInfo.creatorId && (
+                          <div className={styles.creatorInfo}>
+                            <Avatar 
+                              size="small" 
+                              src={roomInfo.creatorAvatar} 
+                              icon={!roomInfo.creatorAvatar && <UserOutlined />}
+                            />
+                            <span className={styles.creatorName}>{roomInfo.creatorName || '未知用户'}</span>
+                            <span className={styles.creatorLabel}>房主</span>
+                          </div>
+                        )}
+                      </div>
 
-                {/* 普通操作区 */}
-                <div className={styles.userActionsSection}>
-                  <h4 className={styles.sectionTitle}>玩家操作</h4>
-                  {renderUserActions()}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <Empty
-                description="暂无活跃房间"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-              />
-              {/* 在无房间状态下，如果是管理员，显示管理员操作按钮 */}
-              {isAdmin && (
-                <div className={styles.adminActionsCenter}>
-                  {renderAdminButtons()}
-                </div>
-              )}
-              {/* 在无房间状态下，如果不是管理员，显示创建房间按钮 */}
-              {!isAdmin && (
-                <div className={styles.adminActionsCenter}>
-                  {renderCreateRoomButton()}
-                </div>
-              )}
-            </div>
-          )}
+                      <div className={styles.infoSection}>
+                        <div className={styles.infoItem}>
+                          <TeamOutlined className={styles.infoIcon} />
+                          <span>玩家数量: {roomInfo.participants?.length || 0}/{roomInfo.maxPlayers || 0}</span>
+                        </div>
+
+                        <div className={styles.infoItem}>
+                          <ClockCircleOutlined className={styles.infoIcon} />
+                          <span style={{ color: statusInfo.color }}>状态: {statusInfo.text}</span>
+                        </div>
+
+                        {/* 显示游戏模式 */}
+                        {roomInfo.gameMode !== undefined && (
+                          <div className={styles.infoItem}>
+                            <BulbOutlined className={styles.infoIcon} />
+                            <span>游戏模式: {roomInfo.gameMode === 1 ? '常规模式' : '猜词模式'}</span>
+                          </div>
+                        )}
+
+                        {/* 显示当前玩家的词语和身份，根据游戏模式显示不同内容 */}
+                        {roomInfo.status === 'PLAYING' && renderGameInfo()}
+                      </div>
+
+                      {/* 玩家列表 */}
+                      {roomInfo.participants && roomInfo.participants.length > 0 && (
+                        <div className={styles.playersListContainer}>
+                          <h4 className={styles.playersTitle}>参与玩家</h4>
+                          <div className={styles.playersList}>
+                            <List
+                              size="small"
+                              dataSource={roomInfo.participants}
+                              renderItem={(player, index) => renderPlayerItem(player, index)}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 底部操作区域，将管理员操作和普通操作分开布局 */}
+                      <div className={styles.actionContainer}>
+                        {/* 管理员操作区 */}
+                        {isAdmin && (
+                          <div className={styles.adminActionsSection}>
+                            <h4 className={styles.sectionTitle}>管理员操作</h4>
+                            <div className={styles.adminActions}>
+                              {renderAdminButtons()}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 房间创建者操作区 */}
+                        {!isAdmin && roomInfo && currentUser && roomInfo.creatorId === currentUser.id && (
+                          <div className={styles.creatorActionsSection}>
+                            <h4 className={styles.sectionTitle}>创建者操作</h4>
+                            <div className={styles.creatorActions}>
+                              {renderCreatorButtons()}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 普通操作区 */}
+                        <div className={styles.userActionsSection}>
+                          <h4 className={styles.sectionTitle}>玩家操作</h4>
+                          {renderUserActions()}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <Empty
+                        description="暂无活跃房间"
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                      />
+                      {/* 在无房间状态下，如果是管理员，显示管理员操作按钮 */}
+                      {isAdmin && (
+                        <div className={styles.adminActionsCenter}>
+                          {renderAdminButtons()}
+                        </div>
+                      )}
+                      {/* 在无房间状态下，如果不是管理员，显示创建房间按钮 */}
+                      {!isAdmin && (
+                        <div className={styles.adminActionsCenter}>
+                          {renderCreateRoomButton()}
+                        </div>
+                      )}
+                    </div>
+                  )
+                )
+              },
+              {
+                key: 'list',
+                label: (
+                  <span>
+                    <UnorderedListOutlined /> 房间列表
+                  </span>
+                ),
+                children: (
+                  <div className={styles.roomListContainer}>
+                    {roomListLoading ? (
+                      <div className={styles.loadingContainer}>
+                        <Spin tip="加载中..." />
+                      </div>
+                    ) : roomList.length > 0 ? (
+                      <List
+                        className={styles.roomList}
+                        itemLayout="horizontal"
+                        dataSource={roomList}
+                        renderItem={renderRoomListItem}
+                        pagination={{
+                          onChange: page => {
+                            if (cardRef.current) {
+                              cardRef.current.scrollTop = 0;
+                            }
+                          },
+                          pageSize: 5,
+                          size: 'small',
+                          simple: true,
+                        }}
+                        footer={
+                          <div className={styles.roomListFooter}>
+                            <Button
+                              icon={<ReloadOutlined />}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                safelyCallRef(fetchRoomListRef);
+                              }}
+                            >
+                              刷新列表
+                            </Button>
+                            <Button
+                              type="primary"
+                              icon={<PlusCircleOutlined />}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                showCreateModal();
+                                // 确保保持在房间列表标签
+                                setActiveTab('list');
+                              }}
+                            >
+                              创建房间
+                            </Button>
+                          </div>
+                        }
+                      />
+                    ) : (
+                      <Empty
+                        description="暂无可用房间"
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                      >
+                        <Button
+                          type="primary"
+                          icon={<PlusCircleOutlined />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            showCreateModal();
+                            // 确保保持在房间列表标签
+                            setActiveTab('list');
+                          }}
+                        >
+                          创建房间
+                        </Button>
+                      </Empty>
+                    )}
+                  </div>
+                )
+              }
+            ]}
+          />
         </Card>
 
         {/* 聊天窗口 */}
@@ -1693,9 +2325,21 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
                 onClick={() => setShowChat(false)}
               />
             </div>
+            {/* 在聊天消息区域上方添加倒计时显示 */}
+            {countdown !== null && (
+              <div className={styles.chatCountdown}>
+                <ClockCircleOutlined /> 倒计时: <span className={styles.chatCountdownValue}>{countdown}</span> 秒
+              </div>
+            )}
             <div className={styles.chatMessages} ref={chatMessagesRef}>
-              {chatMessages.length > 0 ? (
-                chatMessages.map((msg, index) => renderChatMessage(msg, index))
+              {!roomInfo ? (
+                <div className={styles.emptyChatMessage}>
+                  <Empty description="请先选择房间" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                </div>
+              ) : chatMessages.filter(msg => !msg.roomId || msg.roomId === roomInfo?.roomId).length > 0 ? (
+                chatMessages
+                  .filter(msg => !msg.roomId || msg.roomId === roomInfo?.roomId)
+                  .map((msg, index) => renderChatMessage(msg, index))
               ) : (
                 <div className={styles.emptyChatMessage}>
                   <Empty description="暂无消息" image={Empty.PRESENTED_IMAGE_SIMPLE} />
@@ -1703,20 +2347,27 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
               )}
             </div>
             <div className={styles.chatInputContainer}>
-              <Input
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={isRoomParticipant() ? "输入消息..." : "加入房间后才能发言"}
-                className={styles.chatInput}
-                disabled={!isRoomParticipant()}
-              />
-              <Button
-                type="primary"
-                icon={<SendOutlined />}
-                onClick={handleSendMessage}
-                disabled={!messageInput.trim() || !isRoomParticipant()}
-              />
+              {!isRoomParticipant() && roomInfo && (
+                <div className={styles.notJoinedTip}>
+                  您尚未加入该房间，加入后才能参与聊天
+                </div>
+              )}
+              <div className={styles.chatInputRow}>
+                <Input
+                  value={messageInput}
+                  onChange={(e) => setMessageInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder={isRoomParticipant() ? "输入消息..." : "加入房间后才能发言"}
+                  className={styles.chatInput}
+                  disabled={!isRoomParticipant()}
+                />
+                <Button
+                  type="primary"
+                  icon={<SendOutlined />}
+                  onClick={handleSendMessage}
+                  disabled={!messageInput.trim() || !isRoomParticipant()}
+                />
+              </div>
             </div>
           </div>
         )}
@@ -1756,7 +2407,7 @@ const RoomInfoCard: React.FC<RoomInfoCardProps> = ({ visible, onClose }) => {
               <Radio value="random">随机模式（系统随机词语）</Radio>
             </Radio.Group>
           </Form.Item>
-          
+
           <Form.Item
             name="gameMode"
             label="游戏模式"

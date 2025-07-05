@@ -57,7 +57,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import styles from './index.less';
 import { UNDERCOVER_NOTIFICATION, UNDERCOVER_ROOM_STATUS } from '@/constants';
-import { getActiveRoomUsingGet } from '@/services/backend/undercoverGameController';
 import eventBus from '@/utils/eventBus';
 
 interface Message {
@@ -1235,7 +1234,7 @@ const ChatRoom: React.FC = () => {
     setPendingImageUrl(null);
     setPendingFileUrl(null);
     setQuotedMessage(null);
-    
+
     // 重置发送按钮状态为加号按钮
     setShouldShowSendButton(false);
 
@@ -2518,12 +2517,12 @@ const ChatRoom: React.FC = () => {
   const toggleMobileToolbar = () => {
     setIsMobileToolbarVisible(!isMobileToolbarVisible);
   };
-  
+
   // 检查是否应该显示发送按钮
   const shouldShowSendButtonCheck = () => {
     return inputValue.trim().length > 0 || pendingImageUrl !== null || pendingFileUrl !== null;
   };
-  
+
   // 确保在组件状态更新时检查发送按钮状态
   useEffect(() => {
     setShouldShowSendButton(shouldShowSendButtonCheck());
@@ -2550,11 +2549,6 @@ const ChatRoom: React.FC = () => {
       case 'calendar':
         fetchMoyuCalendar();
         break;
-      case 'undercover':
-        // 点击后清除通知状态
-        setUndercoverNotification(UNDERCOVER_NOTIFICATION.NONE);
-        setIsRoomInfoVisible(true);
-        break;
       default:
         break;
     }
@@ -2569,26 +2563,6 @@ const ChatRoom: React.FC = () => {
     }
   };
 
-  // 添加检查谁是卧底房间状态的函数
-  const checkUndercoverRoomStatus = async () => {
-    try {
-      const response = await getActiveRoomUsingGet();
-      if (response.code === 0 && response.data) {
-        // 如果有等待中的房间，显示小红点通知
-        if (response.data.status === UNDERCOVER_ROOM_STATUS.WAITING) {
-          setUndercoverNotification(UNDERCOVER_NOTIFICATION.NEW_ROOM);
-        }
-      }
-    } catch (error) {
-      console.error('获取谁是卧底房间状态失败:', error);
-    }
-  };
-
-  // 在组件加载时检查房间状态
-  useEffect(() => {
-    checkUndercoverRoomStatus();
-  }, []);
-
   // 处理谁是卧底按钮点击
   const handleRoomInfoClick = () => {
     // 点击后清除通知状态
@@ -2601,9 +2575,9 @@ const ChatRoom: React.FC = () => {
     const handleShowUndercoverRoom = () => {
       setIsRoomInfoVisible(true);
     };
-    
+
     eventBus.on('show_undercover_room', handleShowUndercoverRoom);
-    
+
     return () => {
       eventBus.off('show_undercover_room', handleShowUndercoverRoom);
     };
@@ -2617,9 +2591,9 @@ const ChatRoom: React.FC = () => {
         setUndercoverNotification(UNDERCOVER_NOTIFICATION.NEW_ROOM);
       }
     };
-    
+
     wsService.addMessageHandler('refreshRoom', handleRefreshRoomMessage);
-    
+
     return () => {
       wsService.removeMessageHandler('refreshRoom', handleRefreshRoomMessage);
     };
@@ -2628,11 +2602,11 @@ const ChatRoom: React.FC = () => {
   return (
     <div className={styles.chatRoom}>
       {/* 房间信息卡片 */}
-      <RoomInfoCard 
-        visible={isRoomInfoVisible} 
-        onClose={() => setIsRoomInfoVisible(false)} 
+      <RoomInfoCard
+        visible={isRoomInfoVisible}
+        onClose={() => setIsRoomInfoVisible(false)}
       />
-      
+
       {currentMusic && (
         <div className={styles.musicFloatingPlayer}>
           <img src={currentMusic.cover} alt="cover" className={styles.musicCover} />
@@ -2929,7 +2903,7 @@ const ChatRoom: React.FC = () => {
             <Badge dot={undercoverNotification === UNDERCOVER_NOTIFICATION.NEW_ROOM} className={styles.roomInfoBadge}>
               <Button
                 icon={<TeamOutlined />}
-                className={`${styles.roomInfoButton} ${styles.pcOnlyButton}`}
+                className={styles.roomInfoButton}
                 onClick={handleRoomInfoClick}
               />
             </Badge>
@@ -2961,7 +2935,7 @@ const ChatRoom: React.FC = () => {
             placement="top"
             overlayClassName={styles.moreOptionsPopover}
           >
-            <Button icon={<EllipsisOutlined />} className={`${styles.moreOptionsButton} ${styles.pcOnlyButton}`} />
+            <Button icon={<EllipsisOutlined />} className={styles.moreOptionsButton} />
           </Popover>
           <Input.TextArea
             ref={inputRef}
@@ -3059,26 +3033,19 @@ const ChatRoom: React.FC = () => {
                 <div className={styles.mobileToolText}>摸鱼日历</div>
               </div>
             </div>
-            <div className={styles.mobileToolRow}>
-              {(currentUser?.userRole === 'admin' || (currentUser?.level && currentUser.level >= 6)) && (
+            {(currentUser?.userRole === 'admin' || (currentUser?.level && currentUser.level >= 6)) && (
+              <div className={styles.mobileToolRow}>
                 <div className={styles.mobileTool} onClick={() => handleMobileToolClick('redPacket')}>
                   <div className={styles.mobileToolIcon}>
                     <GiftOutlined />
                   </div>
                   <div className={styles.mobileToolText}>红包</div>
                 </div>
-              )}
-              <div className={styles.mobileTool} onClick={() => handleMobileToolClick('undercover')}>
-                <div className={styles.mobileToolIcon}>
-                  <Badge dot={undercoverNotification === UNDERCOVER_NOTIFICATION.NEW_ROOM}>
-                    <TeamOutlined />
-                  </Badge>
-                </div>
-                <div className={styles.mobileToolText}>谁是卧底</div>
+                <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
+                <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
+                <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
               </div>
-              <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
-              <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
-            </div>
+            )}
           </div>
         )}
       </div>

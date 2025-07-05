@@ -9,7 +9,7 @@ export default [
   {path: '/home', layout: false, icon: 'smile', component: './Home', name: '浏览器页面', requireAuth: false},
   {path: '/todo', icon: 'CalendarOutlined', component: './TODO', name: '每日待办', requireAuth: true},
   {path: '/chat', icon: 'MessageOutlined', component: './Chat', name: '摸鱼室', requireAuth: true},
-  // {path: '/post', icon: 'EditOutlined', component: './Post', name: '摸鱼论坛', requireAuth: true},
+  {path: '/post', icon: 'EditOutlined', component: './Post', name: '摸鱼论坛', requireAuth: true},
   {path: '/reader', icon: 'BookOutlined', component: './Reader', name: '摸鱼阅读', requireAuth: true},
   // { path: '/draw', icon: 'MessageOutlined', component: './Draw', name: '你画我猜', requireAuth: true },
   {

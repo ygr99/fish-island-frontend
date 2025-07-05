@@ -219,7 +219,7 @@ const PostPage: React.FC = () => {
                       </div>
                     }
                   />
-                  <div className="post-content">{item.content}</div>
+                  <div className="post-content hot-comment">最热的一条评论</div>
                 </List.Item>
               )}
             />

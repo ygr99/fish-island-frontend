@@ -62,10 +62,17 @@ export async function getPlayerInfoUsingGet(
   });
 }
 
-/** 获取当前活跃房间 GET /api/undercover/room/active */
-export async function getActiveRoomUsingGet(options?: { [key: string]: any }) {
-  return request<API.BaseResponseUndercoverRoomVO_>('/api/undercover/room/active', {
+/** 根据房间ID获取房间信息 GET /api/undercover/room/byId */
+export async function getRoomByIdUsingGet(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getRoomByIdUsingGETParams,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseUndercoverRoomVO_>('/api/undercover/room/byId', {
     method: 'GET',
+    params: {
+      ...params,
+    },
     ...(options || {}),
   });
 }
@@ -130,6 +137,14 @@ export async function joinRoomUsingPost(
   });
 }
 
+/** 获取所有房间列表 GET /api/undercover/room/list */
+export async function getAllRoomsUsingGet(options?: { [key: string]: any }) {
+  return request<API.BaseResponseListUndercoverRoomVO_>('/api/undercover/room/list', {
+    method: 'GET',
+    ...(options || {}),
+  });
+}
+
 /** 获取房间内所有玩家详细信息 GET /api/undercover/room/players-detail */
 export async function getRoomPlayersDetailUsingGet(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
@@ -164,9 +179,16 @@ export async function quitRoomUsingPost(
 }
 
 /** 移除当前活跃房间（仅管理员） POST /api/undercover/room/remove */
-export async function removeActiveRoomUsingPost(options?: { [key: string]: any }) {
+export async function removeActiveRoomUsingPost(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.removeActiveRoomUsingPOSTParams,
+  options?: { [key: string]: any },
+) {
   return request<API.BaseResponseBoolean_>('/api/undercover/room/remove', {
     method: 'POST',
+    params: {
+      ...params,
+    },
     ...(options || {}),
   });
 }
