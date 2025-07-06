@@ -1,11 +1,13 @@
 .post-detail-container {
   display: flex;
   flex-direction: column;
-  width: 1200px;
+  width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
   box-sizing: border-box;
   position: relative;
+  overflow-x: hidden;
 }
 
 .post-detail-header {
@@ -42,11 +44,13 @@
   gap: 20px;
   width: 100%;
   position: relative;
+  flex-wrap: wrap;
 }
 
 .post-detail-main {
   flex: 1;
   min-width: 0; /* 防止内容溢出 */
+  width: 100%;
 }
 
 .post-detail-sidebar {
@@ -109,6 +113,9 @@
   font-size: 16px;
   line-height: 1.6;
   padding: 10px 0;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
 
   h1, h2, h3, h4, h5, h6 {
     margin-top: 24px;
@@ -146,6 +153,7 @@
     max-width: 100%;
     box-sizing: content-box;
     background-color: #fff;
+    height: auto;
   }
 
   code {
@@ -154,16 +162,19 @@
     font-size: 85%;
     background-color: rgba(27, 31, 35, 0.05);
     border-radius: 3px;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
   }
 
   pre {
     padding: 16px;
-    overflow: auto;
+    overflow-x: auto;
     font-size: 85%;
     line-height: 1.45;
     background-color: #f6f8fa;
     border-radius: 3px;
     margin-bottom: 16px;
+    max-width: 100%;
   }
 
   pre code {
@@ -190,7 +201,7 @@
   table {
     display: block;
     width: 100%;
-    overflow: auto;
+    overflow-x: auto;
     margin-bottom: 16px;
     border-spacing: 0;
     border-collapse: collapse;
@@ -617,13 +628,30 @@
   }
 }
 
+@media screen and (max-width: 768px) {
+  .post-detail-card {
+    padding: 16px;
+  }
+  
+  .post-detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+    
+    .post-actions-buttons {
+      margin-top: 12px;
+      width: 100%;
+      justify-content: flex-start;
+    }
+  }
+}
+
 @media screen and (max-width: 576px) {
   .post-detail-container {
-    padding: 12px;
+    padding: 12px 8px;
   }
   
   .post-detail-title h3.ant-typography {
-    font-size: 20px;
+    font-size: 18px;
   }
   
   .post-detail-comments {
@@ -631,20 +659,60 @@
   }
   
   .comment-fixed-top {
-    padding: 12px;
+    padding: 12px 8px;
   }
   
   .comment-scrollable-content {
-    padding: 12px;
+    padding: 12px 8px;
   }
   
   .comment-item {
-    padding: 10px;
+    padding: 8px 6px;
   }
   
   .child-comments {
-    margin-left: 12px;
-    padding-left: 8px;
+    margin-left: 8px;
+    padding-left: 6px;
+  }
+  
+  .comment-editor {
+    flex-direction: column;
+    
+    .comment-avatar {
+      margin-bottom: 8px;
+    }
+    
+    .comment-input {
+      width: 100%;
+    }
+  }
+  
+  .post-actions {
+    gap: 4px;
+    
+    .action-button {
+      padding: 0 8px;
+    }
+  }
+  
+  .vditor-reset {
+    font-size: 14px;
+    
+    pre {
+      max-width: 100%;
+      overflow-x: auto;
+    }
+    
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+    
+    table {
+      display: block;
+      width: 100%;
+      overflow-x: auto;
+    }
   }
 }
 

@@ -653,6 +653,7 @@ const ChatRoom: React.FC = () => {
                       isAdmin: record.messageWrapper.message.quotedMessage.sender?.isAdmin || false,
                       region:
                         record.messageWrapper?.message.quotedMessage?.sender?.region || '未知地区',
+                      country: record.messageWrapper?.message.quotedMessage?.sender?.country,
                       avatarFramerUrl:
                         record.messageWrapper?.message.quotedMessage?.sender?.avatarFramerUrl,
                       titleId: record.messageWrapper?.message.quotedMessage?.sender?.titleId,
@@ -665,9 +666,12 @@ const ChatRoom: React.FC = () => {
                   }
                 : undefined,
               region: userIpInfo?.region || '未知地区',
+              country: userIpInfo?.country,
+              workdayType: workdayType,
+              currentWeekType: currentWeekType,
             };
           })
-          .filter(Boolean); // 过滤掉null值
+          .filter(Boolean) as Message[]; // 使用类型断言
 
         // 将新消息的ID添加到已加载集合中
         historyMessages.forEach((msg) => loadedMessageIds.add(msg.id));
@@ -681,12 +685,12 @@ const ChatRoom: React.FC = () => {
         // 处理历史消息，确保正确的时间顺序（旧消息在上，新消息在下）
         if (isFirstLoad) {
           // 首次加载时，反转消息顺序，使最旧的消息在上面
-          setMessages(historyMessages.reverse());
+          setMessages(historyMessages.reverse() as Message[]);
         } else {
           // 加载更多历史消息时，新的历史消息应该在当前消息的上面
           // 只有在有新消息时才更新状态
           if (historyMessages.length > 0) {
-            setMessages((prev) => [...historyMessages.reverse(), ...prev]);
+            setMessages((prev) => [...(historyMessages.reverse() as Message[]), ...prev]);
           }
         }
 
@@ -2903,7 +2907,7 @@ const ChatRoom: React.FC = () => {
             <Badge dot={undercoverNotification === UNDERCOVER_NOTIFICATION.NEW_ROOM} className={styles.roomInfoBadge}>
               <Button
                 icon={<TeamOutlined />}
-                className={styles.roomInfoButton}
+                className={`${styles.roomInfoButton} ${styles.hideOnMobile}`}
                 onClick={handleRoomInfoClick}
               />
             </Badge>
@@ -2935,7 +2939,7 @@ const ChatRoom: React.FC = () => {
             placement="top"
             overlayClassName={styles.moreOptionsPopover}
           >
-            <Button icon={<EllipsisOutlined />} className={styles.moreOptionsButton} />
+            <Button icon={<EllipsisOutlined />} className={`${styles.moreOptionsButton} ${styles.hideOnMobile}`} />
           </Popover>
           <Input.TextArea
             ref={inputRef}

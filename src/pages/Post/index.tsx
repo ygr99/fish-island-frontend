@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, List, Tag, Space, Button, Input, Tabs, Avatar, Badge, message, Modal } from 'antd';
+import type { SizeType } from 'antd/es/config-provider/SizeContext';
 import {
   FireOutlined,
   RiseOutlined,
@@ -11,7 +12,8 @@ import {
   SearchOutlined,
   UserOutlined,
   DeleteOutlined,
-  EditOutlined
+  EditOutlined,
+  MenuOutlined
 } from '@ant-design/icons';
 import { history, Link } from '@umijs/max';
 import { listPostVoByPageUsingPost, getPostVoByIdUsingGet, deletePostByStringIdUsingPost } from '@/services/backend/postController';
@@ -42,6 +44,9 @@ const PostPage: React.FC = () => {
     pageSize: 5,
     total: 0,
   });
+
+  // 检测是否为移动设备
+  const [isMobile, setIsMobile] = useState<boolean>(false);
 
   // 获取当前用户信息
   const fetchCurrentUser = async () => {
@@ -241,6 +246,24 @@ const PostPage: React.FC = () => {
     return moment(timeString).format('YYYY-MM-DD HH:mm');
   };
 
+  useEffect(() => {
+    // 检测窗口宽度，设置是否为移动设备
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 576);
+    };
+    
+    // 初始检测
+    checkMobile();
+    
+    // 监听窗口大小变化
+    window.addEventListener('resize', checkMobile);
+    
+    // 组件卸载时移除监听
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
+
   return (
     <div className="post-page">
       {/* 删除确认对话框 */}
@@ -298,7 +321,7 @@ const PostPage: React.FC = () => {
                   className="search-button"
                   onClick={() => handleSearch(searchText)}
                 >
-                  搜索
+                  {!isMobile && '搜索'}
                 </Button>
               </div>
             </div>
@@ -312,17 +335,18 @@ const PostPage: React.FC = () => {
                   className="post-tabs"
                   activeKey={currentTab}
                   onChange={handleTabChange}
+                  size={isMobile ? "small" as SizeType : "middle" as SizeType}
                 >
                   <TabPane
-                    tab={<span><ClockCircleOutlined /> 最新发布</span>}
+                    tab={<span>{!isMobile && <ClockCircleOutlined />} 最新发布</span>}
                     key="latest"
                   />
                   <TabPane
-                    tab={<span><FireOutlined /> 热门讨论</span>}
+                    tab={<span>{!isMobile && <FireOutlined />} 热门讨论</span>}
                     key="hot"
                   />
                   <TabPane
-                    tab={<span><RiseOutlined /> 精华内容</span>}
+                    tab={<span>{!isMobile && <RiseOutlined />} 精华内容</span>}
                     key="featured"
                   />
                 </Tabs>
@@ -333,7 +357,7 @@ const PostPage: React.FC = () => {
                   icon={<PlusOutlined />}
                   onClick={handleCreatePost}
                 >
-                  发布帖子
+                  {isMobile ? "发布" : "发布帖子"}
                 </Button>
               </div>
             </div>
@@ -347,7 +371,8 @@ const PostPage: React.FC = () => {
                 pageSize: pagination.pageSize,
                 total: pagination.total,
                 onChange: handlePageChange,
-                simple: true,
+                simple: isMobile, // 移动端使用简单分页
+                size: isMobile ? "small" : "default",
               }}
               dataSource={posts}
               renderItem={item => (
@@ -357,9 +382,9 @@ const PostPage: React.FC = () => {
                   onClick={() => history.push(`/post/${String(item.id)}`)}
                   style={{ cursor: 'pointer' }}
                   actions={[
-                    <span onClick={(e) => e.stopPropagation()}><EyeOutlined /> {item.viewNum || 0}</span>,
-                    <span onClick={(e) => e.stopPropagation()}><LikeOutlined /> {item.thumbNum || 0}</span>,
-                    <span onClick={(e) => e.stopPropagation()}><MessageOutlined /> {item.commentNum || 0}</span>,
+                    <span onClick={(e) => e.stopPropagation()}><EyeOutlined /> {isMobile ? '' : '浏览'} {item.viewNum || 0}</span>,
+                    <span onClick={(e) => e.stopPropagation()}><LikeOutlined /> {isMobile ? '' : '点赞'} {item.thumbNum || 0}</span>,
+                    <span onClick={(e) => e.stopPropagation()}><MessageOutlined /> {isMobile ? '' : '评论'} {item.commentNum || 0}</span>,
                     canDeletePost(item) && (
                       <span 
                         onClick={(e) => {
@@ -368,7 +393,7 @@ const PostPage: React.FC = () => {
                         }}
                         className="edit-action"
                       >
-                        <EditOutlined style={{ color: '#1890ff' }} /> 编辑
+                        <EditOutlined style={{ color: '#1890ff' }} /> {isMobile ? '' : '编辑'}
                       </span>
                     ),
                     canDeletePost(item) && (
@@ -380,13 +405,13 @@ const PostPage: React.FC = () => {
                         }}
                         className="delete-action"
                       >
-                        <DeleteOutlined style={{ color: '#ff4d4f' }} /> 删除
+                        <DeleteOutlined style={{ color: '#ff4d4f' }} /> {isMobile ? '' : '删除'}
                       </span>
                     ),
                   ].filter(Boolean)}
                 >
                   <div className="post-item-header">
-                    <Avatar src={item.user?.userAvatar || 'https://joeschmoe.io/api/v1/random'} size={40} />
+                    <Avatar src={item.user?.userAvatar || 'https://joeschmoe.io/api/v1/random'} size={isMobile ? 32 : 40} />
                     <div className="post-author-info">
                       <div className="author-name">
                         <span>{item.user?.userName || '匿名用户'}</span>
@@ -397,6 +422,8 @@ const PostPage: React.FC = () => {
                           // 查找对应的标签ID以获取颜色
                           const tagObj = tags.find(t => t.tagsName === tag);
                           const color = tagObj ? getTagColor(tagObj.id) : 'blue';
+                          // 在移动设备上限制显示的标签数量
+                          if (isMobile && index > 1) return null;
                           return (
                             <Tag 
                               key={index} 
@@ -408,6 +435,12 @@ const PostPage: React.FC = () => {
                             </Tag>
                           );
                         })}
+                        {/* 如果在移动设备上有更多标签，显示+N */}
+                        {isMobile && item.tagList && item.tagList.length > 2 && (
+                          <Tag className="category-tag-small">
+                            +{item.tagList.length - 2}
+                          </Tag>
+                        )}
                       </div>
                     </div>
                   </div>
