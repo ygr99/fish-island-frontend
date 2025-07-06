@@ -23,7 +23,8 @@ import {doPostFavourUsingPost} from '@/services/backend/postFavourController';
 import {
   addCommentUsingPost,
   getCommentTreeUsingPost,
-  getChildCommentsUsingPost
+  getChildCommentsUsingPost,
+  deletePostUsingPost as deleteCommentUsingPost
 } from '@/services/backend/commentController';
 import {doThumbUsingPost} from '@/services/backend/commentThumbController';
 import {getLoginUserUsingGet} from '@/services/backend/userController';
@@ -47,6 +48,7 @@ interface ExtendedCommentNodeVO extends API.CommentNodeVO {
   children?: ExtendedCommentNodeVO[];
   previewChildren?: ExtendedCommentNodeVO[];
   childrenExpanded?: boolean; // 控制子评论的展开/收起状态
+  hasLoadedAllChildren?: boolean; // 标记是否已加载全部子评论
   parentComment?: {
     user?: {
       userName?: string;
@@ -140,6 +142,43 @@ const PostDetail: React.FC = () => {
                   // 为代码块添加复制按钮
                   Vditor.codeRender(block as HTMLElement);
                 });
+                
+                // 处理表格和图片，确保不会导致横向滚动
+                contentRef.current?.querySelectorAll('table').forEach((table) => {
+                  table.style.maxWidth = '100%';
+                  table.style.display = 'block';
+                  table.style.overflowX = 'auto';
+                  table.style.width = 'fit-content';
+                  table.style.margin = '0 auto';
+                });
+                
+                contentRef.current?.querySelectorAll('img').forEach((img) => {
+                  img.style.maxWidth = '100%';
+                  img.style.height = 'auto';
+                  // 防止图片加载后撑开容器
+                  img.addEventListener('load', () => {
+                    img.style.maxWidth = '100%';
+                  });
+                });
+                
+                // 处理可能导致溢出的元素
+                contentRef.current?.querySelectorAll('iframe, video, embed, object').forEach((elem) => {
+                  elem.setAttribute('style', 'max-width: 100%; width: 100%;');
+                });
+                
+                // 处理长链接文本
+                contentRef.current?.querySelectorAll('a').forEach((link) => {
+                  link.style.wordBreak = 'break-word';
+                  link.style.overflowWrap = 'break-word';
+                });
+                
+                // 处理代码块
+                contentRef.current?.querySelectorAll('pre').forEach((pre) => {
+                  pre.style.maxWidth = '100%';
+                  pre.style.overflowX = 'auto';
+                  pre.style.whiteSpace = 'pre-wrap';
+                  pre.style.wordBreak = 'break-word';
+                });
               }
             });
           }
@@ -176,6 +215,7 @@ const PostDetail: React.FC = () => {
           replyContent: '',
           replyLoading: false,
           childrenExpanded: true, // 默认展开子评论
+          hasLoadedAllChildren: false, // 默认未加载全部子评论
           // 处理previewChildren
           previewChildren: comment.previewChildren ? comment.previewChildren.map((child: any) => ({
             ...child,
@@ -211,7 +251,7 @@ const PostDetail: React.FC = () => {
 
     try {
       const res = await getChildCommentsUsingPost({
-        rootId: rootId,
+        rootId: rootId as any,
         current: 1,
         pageSize: 20, // 一次性获取较多子评论
         sortField: 'createTime',
@@ -232,7 +272,9 @@ const PostDetail: React.FC = () => {
           if (comment.id === rootId) {
             return {
               ...comment,
-              children: childComments
+              children: childComments,
+              previewChildren: [], // 清空预览子评论，避免重复显示
+              hasLoadedAllChildren: true // 标记已加载全部子评论
             };
           }
           return comment;
@@ -692,6 +734,65 @@ const PostDetail: React.FC = () => {
     }
   };
 
+  // 处理删除评论
+  const handleDeleteComment = async (commentId: number | string) => {
+    if (!currentUser) {
+      message.warning('请先登录');
+      return;
+    }
+    
+    Modal.confirm({
+      title: '确认删除',
+      content: '确定要删除这条评论吗？删除后将无法恢复。',
+      okText: '确认',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const res = await deleteCommentUsingPost({
+            id: commentId
+          } as any);
+          
+          if (res.data) {
+            message.success('评论删除成功');
+            
+            // 从评论列表中移除已删除的评论
+            setComments(comments.filter(comment => {
+              // 如果是根评论被删除
+              if (comment.id === commentId) {
+                return false;
+              }
+              
+              // 检查子评论是否被删除
+              if (comment.children && comment.children.length > 0) {
+                comment.children = comment.children.filter(child => child.id !== commentId);
+              }
+              
+              // 检查预览子评论是否被删除
+              if (comment.previewChildren && comment.previewChildren.length > 0) {
+                comment.previewChildren = comment.previewChildren.filter(child => child.id !== commentId);
+              }
+              
+              return true;
+            }));
+            
+            // 更新帖子的评论数
+            if (post) {
+              setPost({
+                ...post,
+                commentNum: Math.max((post.commentNum || 0) - 1, 0)
+              });
+            }
+          } else {
+            message.error('评论删除失败');
+          }
+        } catch (error) {
+          console.error('删除评论失败:', error);
+          message.error('删除评论失败');
+        }
+      }
+    });
+  };
+
   // 切换子评论的展开/收起状态
   const toggleChildrenExpanded = (commentId: number | string) => {
     console.log('切换子评论展开状态:', commentId);
@@ -762,7 +863,19 @@ const PostDetail: React.FC = () => {
         <div className="comment-item-content">
           <div className="comment-item-header">
             <Text strong>{item.user?.userName}</Text>
-            <Text type="secondary">{formatTime(item.createTime)}</Text>
+            <div className="comment-item-meta">
+              <Text type="secondary">{formatTime(item.createTime)}</Text>
+              {canDeleteComment(item.user?.id) && (
+                <Button
+                  type="text"
+                  danger
+                  size="small"
+                  icon={<DeleteOutlined/>}
+                  onClick={() => handleDeleteComment(item.id || 0)}
+                  className="delete-button"
+                />
+              )}
+            </div>
           </div>
           <div className="comment-item-body">
             {item.parentComment && (
@@ -770,7 +883,7 @@ const PostDetail: React.FC = () => {
                 回复 <Text strong>{item.parentComment.user?.userName}</Text>:
               </div>
             )}
-            <Paragraph>{item.content}</Paragraph>
+            <Paragraph ellipsis={{ rows: 20, expandable: true, symbol: '展开' }}>{item.content}</Paragraph>
           </div>
           <div className="comment-item-actions">
             <Button
@@ -849,7 +962,7 @@ const PostDetail: React.FC = () => {
           )}
 
           {/* 渲染预览子评论 */}
-          {!isChild && item.childrenExpanded && item.previewChildren && item.previewChildren.length > 0 && (
+          {!isChild && item.childrenExpanded && item.previewChildren && item.previewChildren.length > 0 && !item.hasLoadedAllChildren && (
             <div className="child-comments">
               {item.previewChildren.map(child => renderCommentItem(child, true, item.id))}
 
@@ -869,7 +982,7 @@ const PostDetail: React.FC = () => {
           )}
 
           {/* 如果已经加载了完整的子评论列表，则显示它们 */}
-          {!isChild && item.childrenExpanded && item.children && item.children.length > 0 && item.children.length > (item.previewChildren?.length || 0) && (
+          {!isChild && item.childrenExpanded && item.children && item.children.length > 0 && (
             <div className="child-comments">
               {item.children.map(child => renderCommentItem(child, true, item.id))}
             </div>
@@ -888,6 +1001,17 @@ const PostDetail: React.FC = () => {
 
     // 普通用户只能编辑自己的帖子
     return currentUser.id === post.userId;
+  };
+
+  // 判断当前用户是否有权限删除评论
+  const canDeleteComment = (commentUserId?: number) => {
+    if (!currentUser) return false;
+
+    // 管理员可以删除任何评论
+    if (currentUser.userRole === 'admin') return true;
+
+    // 普通用户只能删除自己的评论
+    return currentUser.id === commentUserId;
   };
 
   // 编辑帖子
@@ -1102,7 +1226,10 @@ const PostDetail: React.FC = () => {
               display: 'flex',
               flexDirection: 'column',
               height: 'calc(100vh - 120px)',
-              visibility: commentCollapsed ? 'hidden' : 'visible'
+              visibility: commentCollapsed ? 'hidden' : 'visible',
+              overflow: 'hidden',
+              width: '100%',
+              maxWidth: '100%'
             }}
           >
             {!commentCollapsed && (

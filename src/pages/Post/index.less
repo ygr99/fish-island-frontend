@@ -68,6 +68,43 @@
           display: flex;
           flex-direction: column;
           gap: 16px;
+          
+          // 添加搜索开关样式
+          .search-toggle {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: -8px;
+            
+            button {
+              padding: 0 12px;
+              font-size: 14px;
+              height: 32px;
+              color: #1890ff;
+              transition: all 0.3s;
+              border-radius: 6px;
+              
+              &:hover {
+                color: #40a9ff;
+                transform: translateY(-2px);
+                background-color: rgba(24, 144, 255, 0.1);
+              }
+              
+              .anticon {
+                margin-right: 4px;
+                transition: all 0.3s;
+                font-size: 16px;
+              }
+              
+              // 添加图标动画效果
+              &:hover .anticon-filter {
+                transform: rotate(90deg);
+              }
+              
+              &:hover .anticon-up {
+                transform: rotate(-180deg);
+              }
+            }
+          }
         }
 
         .category-filter {
@@ -144,14 +181,35 @@
           display: flex;
           align-items: center;
           width: 100%;
+          margin-bottom: 8px;
+          animation: fadeIn 0.3s ease-in-out;
+          
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(-10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
           
           .search-input {
             flex: 1;
             border-radius: 8px 0 0 8px;
             height: 40px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
             
             .search-icon {
-              color: #bfbfbf;
+              color: #1890ff;
+              transition: all 0.3s;
+            }
+            
+            &:hover .search-icon {
+              color: #40a9ff;
+              transform: scale(1.1);
             }
             
             &.ant-input-affix-wrapper:focus,
@@ -159,6 +217,10 @@
               border-color: #1890ff;
               box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
               border-right: none;
+              
+              .search-icon {
+                color: #1890ff;
+              }
             }
           }
           
@@ -166,6 +228,17 @@
             height: 40px;
             border-radius: 0 8px 8px 0;
             margin-left: -1px;
+            box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
+            transition: all 0.3s;
+            
+            &:hover {
+              transform: translateX(2px);
+              box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+            }
+            
+            .anticon {
+              font-size: 16px;
+            }
           }
         }
       }

@@ -13,7 +13,10 @@ import {
   UserOutlined,
   DeleteOutlined,
   EditOutlined,
-  MenuOutlined
+  MenuOutlined,
+  UpOutlined,
+  DownOutlined,
+  FilterOutlined
 } from '@ant-design/icons';
 import {history, Link} from '@umijs/max';
 import {listPostVoByPageUsingPost, deletePostUsingPost1} from '@/services/backend/postController';
@@ -38,6 +41,7 @@ const PostPage: React.FC = () => {
   const [deleteModalVisible, setDeleteModalVisible] = useState<boolean>(false);
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
+  const [searchVisible, setSearchVisible] = useState<boolean>(false);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 5,
@@ -202,6 +206,11 @@ const PostPage: React.FC = () => {
     }
   };
 
+  // 切换搜索框显示/隐藏
+  const toggleSearchVisible = () => {
+    setSearchVisible(!searchVisible);
+  };
+
   // 初始化数据
   useEffect(() => {
     fetchTags();
@@ -283,6 +292,7 @@ const PostPage: React.FC = () => {
         <div className="post-main">
           <Card className="post-filter-card">
             <div className="filter-container">
+              
               <div className="category-filter">
                 <span className="filter-label">标签：</span>
                 <div className="tag-container">
@@ -305,25 +315,39 @@ const PostPage: React.FC = () => {
                   ))}
                 </div>
               </div>
-              <div className="post-search">
-                <Input
-                  placeholder="搜索帖子"
-                  prefix={<SearchOutlined className="search-icon"/>}
-                  allowClear
-                  className="search-input"
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  onPressEnter={() => handleSearch(searchText)}
-                />
-                <Button
-                  type="primary"
-                  icon={<SearchOutlined/>}
-                  className="search-button"
-                  onClick={() => handleSearch(searchText)}
+              {/* 搜索框开关 */}
+              <div className="search-toggle">
+                <Button 
+                  type="link" 
+                  onClick={toggleSearchVisible}
+                  icon={searchVisible ? <UpOutlined /> : <FilterOutlined />}
                 >
-                  {!isMobile && '搜索'}
+                  {searchVisible ? '收起搜索' : '展开搜索'}
                 </Button>
               </div>
+              
+              {/* 可收起的搜索框 */}
+              {searchVisible && (
+                <div className="post-search">
+                  <Input
+                    placeholder="搜索帖子"
+                    prefix={<SearchOutlined className="search-icon"/>}
+                    allowClear
+                    className="search-input"
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    onPressEnter={() => handleSearch(searchText)}
+                  />
+                  <Button
+                    type="primary"
+                    icon={<SearchOutlined/>}
+                    className="search-button"
+                    onClick={() => handleSearch(searchText)}
+                  >
+                    {!isMobile && '搜索'}
+                  </Button>
+                </div>
+              )}
             </div>
           </Card>
 

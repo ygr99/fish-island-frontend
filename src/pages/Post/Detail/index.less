@@ -2,6 +2,9 @@
   padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
+  overflow-x: hidden; /* 添加这一行防止溢出 */
+  width: 100%; /* 确保容器占满可用宽度 */
+  box-sizing: border-box; /* 确保padding不会导致宽度溢出 */
 }
 
 .post-detail-header {
@@ -9,6 +12,8 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  flex-wrap: wrap; /* 添加这一行允许在小屏幕上换行 */
+  gap: 10px; /* 添加间距 */
 }
 
 .back-button {
@@ -27,19 +32,24 @@
   gap: 24px;
   position: relative;
   min-width: 0;
-  overflow-x: auto;
+  /* 删除 overflow-x: auto; 这会导致横向滚动条 */
+  max-width: 100%;
+  width: 100%; /* 确保宽度不超过容器 */
+  box-sizing: border-box; /* 确保padding和边框不会增加元素宽度 */
 }
 
 .post-detail-main {
   flex: 1 1 auto;
-  min-width: 600px;
+  min-width: 0; /* 修改这里，不要设置固定的最小宽度 */
   width: 100%;
   transition: flex 0.3s ease;
+  max-width: 100%;
+  overflow-x: hidden; /* 防止内容溢出 */
 }
 
 @media (max-width: 992px) {
   .post-detail-main {
-    min-width: 450px;
+    min-width: 0; /* 修改这里，不要设置固定的最小宽度 */
   }
 }
 
@@ -54,7 +64,8 @@
   }
   
   .post-detail-main {
-    min-width: 100%;
+    min-width: 0; /* 修改这里，不要设置固定的最小宽度 */
+    width: 100%;
   }
 }
 
@@ -63,6 +74,7 @@
   flex: 0 0 auto;
   position: relative;
   transition: all 0.3s ease;
+  overflow: hidden;
   
   &.sticky {
     position: sticky;
@@ -168,6 +180,9 @@
   display: flex;
   flex-direction: column;
   transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s ease;
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
 }
 
 .comments-header {
@@ -225,19 +240,31 @@
   flex: 1;
   overflow-y: auto;
   padding: 0 16px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .comment-list {
   padding: 16px 0;
+  width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  max-width: 100%;
 }
 
 .comment-item {
   display: flex;
   margin-bottom: 16px;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
   
   &.child-comment {
     margin-left: 24px;
     margin-bottom: 12px;
+    width: calc(100% - 24px);
+    max-width: calc(100% - 24px); /* 添加这一行确保子评论不会溢出 */
   }
 }
 
@@ -249,16 +276,41 @@
 .comment-item-content {
   flex: 1;
   min-width: 0;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .comment-item-header {
   display: flex;
   justify-content: space-between;
   margin-bottom: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.comment-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  .delete-button {
+    padding: 0 4px;
+    height: 22px;
+    line-height: 22px;
+  }
 }
 
 .comment-item-body {
   margin-bottom: 8px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+  white-space: normal;
+  overflow: hidden;
 }
 
 .reply-info {
@@ -269,6 +321,8 @@
 .comment-item-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  margin-top: 4px;
   
   .reply-button {
     margin-right: 16px;
@@ -279,13 +333,21 @@
       color: #1890ff;
     }
   }
+  
+  .delete-button {
+    margin-left: 16px;
+  }
 }
 
 .reply-box {
   margin-top: 8px;
+  width: 100%;
   
   .reply-textarea {
     margin-bottom: 8px;
+    width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
   }
   
   .reply-actions {
@@ -305,6 +367,11 @@
 
 .child-comments {
   margin-top: 8px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .load-more-comments {
@@ -388,5 +455,44 @@
     top: -15px;
     transform: translateX(-50%) rotate(90deg);
     transition: top 0.3s ease, transform 0.3s ease;
+  }
+} 
+
+.vditor-reset {
+  max-width: 100%;
+  overflow-x: hidden;
+  word-wrap: break-word; /* 确保长文本可以换行 */
+  
+  img {
+    max-width: 100%; /* 确保图片不会溢出容器 */
+    height: auto;
+  }
+  
+  pre, code {
+    white-space: pre-wrap; /* 允许代码块自动换行 */
+    word-break: break-all; /* 允许在任何字符间断行 */
+    overflow-wrap: break-word; /* 允许长单词换行 */
+    max-width: 100%;
+    overflow-x: auto; /* 对于特别长的代码行，允许在代码块内滚动而不影响整体布局 */
+  }
+  
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    width: fit-content; /* 使表格宽度适应内容 */
+    margin: 0 auto; /* 居中表格 */
+  }
+  
+  /* 确保所有内容元素都不会溢出 */
+  p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+  
+  /* 处理可能的溢出元素 */
+  iframe, video, embed, object {
+    max-width: 100%;
   }
 } 
