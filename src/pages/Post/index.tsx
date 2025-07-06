@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Card, List, Tag, Space, Button, Input, Tabs, Avatar, Badge } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, List, Tag, Space, Button, Input, Tabs, Avatar, Badge, message, Modal } from 'antd';
 import {
   FireOutlined,
   RiseOutlined,
@@ -8,155 +8,298 @@ import {
   LikeOutlined,
   EyeOutlined,
   PlusOutlined,
-  SearchOutlined
+  SearchOutlined,
+  UserOutlined,
+  DeleteOutlined,
+  EditOutlined
 } from '@ant-design/icons';
+import { history, Link } from '@umijs/max';
+import { listPostVoByPageUsingPost, getPostVoByIdUsingGet, deletePostByStringIdUsingPost } from '@/services/backend/postController';
+import { getHotPostListUsingPost } from '@/services/backend/hotPostController';
+import { listTagsVoByPageUsingPost } from '@/services/backend/tagsController';
+import { getLoginUserUsingGet } from '@/services/backend/userController';
 import './index.less';
+import moment from 'moment';
 
 const { TabPane } = Tabs;
 const { Search } = Input;
 
-// 模拟分类数据
-const categories = [
-  { id: 1, name: '职场', color: 'blue' },
-  { id: 2, name: '技术', color: 'green' },
-  { id: 3, name: '生活', color: 'orange' },
-  { id: 4, name: '娱乐', color: 'purple' },
-  { id: 5, name: '游戏', color: 'red' },
-  { id: 6, name: '美食', color: 'cyan' },
-  { id: 7, name: '旅行', color: 'gold' },
-  { id: 8, name: '其他', color: 'gray' },
-];
-
-// 模拟帖子数据
-const posts = [
-  {
-    id: 1,
-    title: '今天在办公室发现了什么？一个隐藏的休息室！',
-    author: '摸鱼达人',
-    avatar: 'https://joeschmoe.io/api/v1/random',
-    category: 1,
-    content: '今天无意中发现了办公室的隐藏休息室，里面居然有按摩椅...',
-    createTime: '2小时前',
-    views: 256,
-    likes: 32,
-    comments: 18,
-  },
-  {
-    id: 2,
-    title: 'React 18新特性体验，值得升级吗？',
-    author: '前端小能手',
-    avatar: 'https://joeschmoe.io/api/v1/joe',
-    category: 2,
-    content: '最近体验了React 18的并发特性，感觉性能提升明显...',
-    createTime: '4小时前',
-    views: 512,
-    likes: 64,
-    comments: 24,
-  },
-  {
-    id: 3,
-    title: '分享一个五分钟午休的高效方法',
-    author: '职场达人',
-    avatar: 'https://joeschmoe.io/api/v1/jess',
-    category: 3,
-    content: '只要五分钟，就能让下午的工作效率提升30%...',
-    createTime: '昨天',
-    views: 1024,
-    likes: 128,
-    comments: 42,
-  },
-  {
-    id: 4,
-    title: '最近很火的这部剧，到底值不值得追？',
-    author: '剧评人',
-    avatar: 'https://joeschmoe.io/api/v1/james',
-    category: 4,
-    content: '这部剧前三集节奏有点慢，但是后面剧情反转...',
-    createTime: '3天前',
-    views: 2048,
-    likes: 256,
-    comments: 96,
-  },
-  {
-    id: 5,
-    title: '这款新出的独立游戏，玩了三天停不下来',
-    author: '游戏迷',
-    avatar: 'https://joeschmoe.io/api/v1/jana',
-    category: 5,
-    content: '画风清新，玩法创新，剧情感人，强烈推荐...',
-    createTime: '4天前',
-    views: 1536,
-    likes: 192,
-    comments: 64,
-  },
-];
-
-// 模拟热门话题数据
-const hotTopics = [
-  { id: 1, title: '远程办公还是现场办公？', count: 128 },
-  { id: 2, title: '如何平衡工作和生活', count: 96 },
-  { id: 3, title: '最佳摸鱼时间段', count: 85 },
-  { id: 4, title: '有哪些高效办公技巧', count: 72 },
-  { id: 5, title: '周五下午如何度过', count: 64 },
-];
-
 const PostPage: React.FC = () => {
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [selectedTag, setSelectedTag] = useState<number | null>(null);
+  const [posts, setPosts] = useState<API.PostVO[]>([]);
+  const [hotTopics, setHotTopics] = useState<API.HotPostDataVO[]>([]);
+  const [tags, setTags] = useState<API.TagsVO[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [searchText, setSearchText] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [currentTab, setCurrentTab] = useState<string>('latest');
+  const [currentUser, setCurrentUser] = useState<API.UserVO>();
+  const [deleteModalVisible, setDeleteModalVisible] = useState<boolean>(false);
+  const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 5,
+    total: 0,
+  });
 
-  // 根据选中的分类筛选帖子
-  const filteredPosts = selectedCategory
-    ? posts.filter(post => post.category === selectedCategory)
-    : posts;
-
-  // 获取分类名称
-  const getCategoryName = (categoryId: number) => {
-    const category = categories.find(c => c.id === categoryId);
-    return category ? category.name : '';
+  // 获取当前用户信息
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await getLoginUserUsingGet();
+      if (res.data) {
+        setCurrentUser(res.data);
+      }
+    } catch (error) {
+      console.error('获取用户信息失败', error);
+    }
   };
 
-  // 获取分类颜色
-  const getCategoryColor = (categoryId: number) => {
-    const category = categories.find(c => c.id === categoryId);
-    return category ? category.color : 'default';
+  // 获取标签列表
+  const fetchTags = async () => {
+    try {
+      const result = await listTagsVoByPageUsingPost({
+        pageSize: 20, // 一次性获取足够多的标签
+        current: 1,
+      });
+      if (result.data?.records) {
+        setTags(result.data.records);
+      }
+    } catch (error) {
+      console.error('获取标签列表失败:', error);
+      message.error('获取标签列表失败');
+    }
+  };
+
+  // 标签颜色列表
+  const tagColors = [
+    'magenta', 'red', 'volcano', 'orange', 'gold',
+    'lime', 'green', 'cyan', 'blue', 'geekblue',
+    'purple', 'pink'
+  ];
+
+  // 根据标签ID获取颜色
+  const getTagColor = (tagId: number | undefined) => {
+    if (!tagId) return tagColors[0];
+    // 使用取模运算确保颜色循环使用
+    return tagColors[tagId % tagColors.length];
+  };
+
+  // 获取热门话题
+  const fetchHotTopics = async () => {
+    try {
+      const result = await getHotPostListUsingPost();
+      if (result.data) {
+        // 将所有热门数据源的数据合并为一个数组
+        const allTopics: API.HotPostDataVO[] = [];
+        result.data.forEach(hotPost => {
+          if (hotPost.data) {
+            allTopics.push(...hotPost.data);
+          }
+        });
+        // 按照参与人数排序，取前5个
+        const sortedTopics = allTopics.sort((a, b) =>
+          (b.followerCount || 0) - (a.followerCount || 0)
+        ).slice(0, 5);
+        setHotTopics(sortedTopics);
+      }
+    } catch (error) {
+      console.error('获取热门话题失败:', error);
+      message.error('获取热门话题失败');
+    }
+  };
+
+  // 获取帖子列表
+  const fetchPosts = async () => {
+    setLoading(true);
+    try {
+      // 构建查询参数
+      const params: API.PostQueryRequest = {
+        current: pagination.current,
+        pageSize: pagination.pageSize,
+        searchText: searchQuery || undefined,
+      };
+
+      // 根据当前选中的标签筛选
+      if (selectedTag) {
+        params.tags = [tags.find(tag => tag.id === selectedTag)?.tagsName || ''];
+      }
+
+      // 根据当前选中的Tab设置排序
+      if (currentTab === 'hot') {
+        params.sortField = 'thumbNum'; // 按点赞数排序
+        params.sortOrder = 'descend';
+      } else if (currentTab === 'featured') {
+        params.isFeatured = 1; // 精华内容
+      } else {
+        // 默认按创建时间排序
+        params.sortField = 'createTime';
+        params.sortOrder = 'descend';
+      }
+
+      const result = await listPostVoByPageUsingPost(params);
+      if (result.data) {
+        setPosts(result.data.records || []);
+        setPagination({
+          ...pagination,
+          total: result.data.total || 0,
+        });
+      }
+    } catch (error) {
+      console.error('获取帖子列表失败:', error);
+      message.error('获取帖子列表失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 判断当前用户是否有权限删除帖子
+  const canDeletePost = (post: API.PostVO) => {
+    if (!currentUser) return false;
+    
+    // 管理员可以删除所有帖子
+    if (currentUser.userRole === 'admin') return true;
+    
+    // 普通用户只能删除自己的帖子
+    return currentUser.id === post.userId;
+  };
+
+  // 显示删除确认对话框
+  const showDeleteConfirm = (postId: any) => {
+    // 确保ID是字符串类型
+    setPostToDelete(String(postId));
+    setDeleteModalVisible(true);
+  };
+
+  // 处理删除帖子
+  const handleDeletePost = async () => {
+    if (!postToDelete) return;
+    
+    setDeleteLoading(true);
+    try {
+      // 直接使用字符串ID，避免精度丢失
+      const res = await deletePostByStringIdUsingPost(String(postToDelete));
+      
+      if (res.data) {
+        message.success('帖子删除成功');
+        // 删除成功后刷新帖子列表
+        fetchPosts();
+      } else {
+        message.error('帖子删除失败');
+      }
+    } catch (error) {
+      console.error('删除帖子失败:', error);
+      message.error('删除帖子失败');
+    } finally {
+      setDeleteLoading(false);
+      setDeleteModalVisible(false);
+      setPostToDelete(null);
+    }
+  };
+
+  // 初始化数据
+  useEffect(() => {
+    fetchTags();
+    fetchHotTopics();
+    fetchCurrentUser();
+  }, []);
+
+  // 当分页、标签选择、搜索条件或Tab变化时，重新获取帖子列表
+  useEffect(() => {
+    fetchPosts();
+  }, [pagination.current, pagination.pageSize, selectedTag, searchQuery, currentTab]);
+
+  // 处理搜索
+  const handleSearch = (value: string) => {
+    setSearchQuery(value);
+    setPagination({ ...pagination, current: 1 }); // 重置到第一页
+  };
+
+  // 处理Tab切换
+  const handleTabChange = (key: string) => {
+    setCurrentTab(key);
+    setPagination({ ...pagination, current: 1 }); // 重置到第一页
+  };
+
+  // 处理分页变化
+  const handlePageChange = (page: number, pageSize?: number) => {
+    setPagination({
+      ...pagination,
+      current: page,
+      pageSize: pageSize || pagination.pageSize,
+    });
+  };
+
+  // 跳转到发布帖子页面
+  const handleCreatePost = () => {
+    history.push('/post/create');
+  };
+
+  // 格式化时间
+  const formatTime = (timeString?: string) => {
+    if (!timeString) return '';
+    return moment(timeString).format('YYYY-MM-DD HH:mm');
   };
 
   return (
     <div className="post-page">
-
+      {/* 删除确认对话框 */}
+      <Modal
+        title="删除确认"
+        open={deleteModalVisible}
+        onOk={handleDeletePost}
+        onCancel={() => setDeleteModalVisible(false)}
+        okText="确认删除"
+        cancelText="取消"
+        confirmLoading={deleteLoading}
+      >
+        <p>确定要删除这篇帖子吗？删除后将无法恢复。</p>
+      </Modal>
+      
       <div className="post-container">
         <div className="post-main">
           <Card className="post-filter-card">
             <div className="filter-container">
               <div className="category-filter">
-                <span className="filter-label">分类：</span>
+                <span className="filter-label">标签：</span>
                 <div className="tag-container">
-                  <Tag 
-                    color={selectedCategory === null ? 'orange' : ''}
-                    className={selectedCategory === null ? 'category-tag active' : 'category-tag'} 
-                    onClick={() => setSelectedCategory(null)}
+                  <Tag
+                    color={selectedTag === null ? 'orange' : ''}
+                    className={selectedTag === null ? 'category-tag active' : 'category-tag'}
+                    onClick={() => setSelectedTag(null)}
                   >
                     全部
                   </Tag>
-                  {categories.map(category => (
+                  {tags.map(tag => (
                     <Tag
-                      key={category.id}
-                      color={selectedCategory === category.id ? category.color : ''}
-                      className={selectedCategory === category.id ? 'category-tag active' : 'category-tag'}
-                      onClick={() => setSelectedCategory(category.id)}
+                      key={tag.id}
+                      color={selectedTag === tag.id ? getTagColor(tag.id) : getTagColor(tag.id)}
+                      className={selectedTag === tag.id ? 'category-tag active' : 'category-tag'}
+                      onClick={() => setSelectedTag(tag.id || null)}
                     >
-                      {category.name}
+                      {tag.tagsName}
                     </Tag>
                   ))}
                 </div>
               </div>
               <div className="post-search">
-                <Input 
-                  placeholder="搜索帖子" 
+                <Input
+                  placeholder="搜索帖子"
                   prefix={<SearchOutlined className="search-icon" />}
-                  allowClear 
+                  allowClear
                   className="search-input"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  onPressEnter={() => handleSearch(searchText)}
                 />
-                <Button type="primary" icon={<SearchOutlined />} className="search-button">搜索</Button>
+                <Button
+                  type="primary"
+                  icon={<SearchOutlined />}
+                  className="search-button"
+                  onClick={() => handleSearch(searchText)}
+                >
+                  搜索
+                </Button>
               </div>
             </div>
           </Card>
@@ -164,62 +307,122 @@ const PostPage: React.FC = () => {
           <Card className="post-list-card">
             <div className="post-list-header">
               <div className="tabs-container">
-                <Tabs defaultActiveKey="latest" className="post-tabs">
-                  <TabPane 
-                    tab={<span><ClockCircleOutlined /> 最新发布</span>} 
-                    key="latest" 
+                <Tabs
+                  defaultActiveKey="latest"
+                  className="post-tabs"
+                  activeKey={currentTab}
+                  onChange={handleTabChange}
+                >
+                  <TabPane
+                    tab={<span><ClockCircleOutlined /> 最新发布</span>}
+                    key="latest"
                   />
-                  <TabPane 
-                    tab={<span><FireOutlined /> 热门讨论</span>} 
-                    key="hot" 
+                  <TabPane
+                    tab={<span><FireOutlined /> 热门讨论</span>}
+                    key="hot"
                   />
-                  <TabPane 
-                    tab={<span><RiseOutlined /> 精华内容</span>} 
-                    key="featured" 
+                  <TabPane
+                    tab={<span><RiseOutlined /> 精华内容</span>}
+                    key="featured"
                   />
                 </Tabs>
               </div>
               <div className="button-container">
-                <Button type="primary" icon={<PlusOutlined />}>发布帖子</Button>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleCreatePost}
+                >
+                  发布帖子
+                </Button>
               </div>
             </div>
 
             <List
               itemLayout="vertical"
               size="large"
+              loading={loading}
               pagination={{
-                pageSize: 5,
+                current: pagination.current,
+                pageSize: pagination.pageSize,
+                total: pagination.total,
+                onChange: handlePageChange,
                 simple: true,
               }}
-              dataSource={filteredPosts}
+              dataSource={posts}
               renderItem={item => (
                 <List.Item
                   key={item.id}
                   className="post-item"
+                  onClick={() => history.push(`/post/${String(item.id)}`)}
+                  style={{ cursor: 'pointer' }}
                   actions={[
-                    <span><EyeOutlined /> {item.views}</span>,
-                    <span><LikeOutlined /> {item.likes}</span>,
-                    <span><MessageOutlined /> {item.comments}</span>,
-                  ]}
+                    <span onClick={(e) => e.stopPropagation()}><EyeOutlined /> {item.viewNum || 0}</span>,
+                    <span onClick={(e) => e.stopPropagation()}><LikeOutlined /> {item.thumbNum || 0}</span>,
+                    <span onClick={(e) => e.stopPropagation()}><MessageOutlined /> {item.commentNum || 0}</span>,
+                    canDeletePost(item) && (
+                      <span 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          history.push(`/post/edit/${item.id}`);
+                        }}
+                        className="edit-action"
+                      >
+                        <EditOutlined style={{ color: '#1890ff' }} /> 编辑
+                      </span>
+                    ),
+                    canDeletePost(item) && (
+                      <span 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // 直接传递原始ID，避免Number()转换导致精度丢失
+                          showDeleteConfirm(item.id);
+                        }}
+                        className="delete-action"
+                      >
+                        <DeleteOutlined style={{ color: '#ff4d4f' }} /> 删除
+                      </span>
+                    ),
+                  ].filter(Boolean)}
                 >
-                  <List.Item.Meta
-                    avatar={<Avatar src={item.avatar} />}
-                    title={
-                      <div className="post-title">
-                        <a href={`/post/${item.id}`}>{item.title}</a>
-                        <Tag color={getCategoryColor(item.category)} className="category-tag-small">
-                          {getCategoryName(item.category)}
-                        </Tag>
+                  <div className="post-item-header">
+                    <Avatar src={item.user?.userAvatar || 'https://joeschmoe.io/api/v1/random'} size={40} />
+                    <div className="post-author-info">
+                      <div className="author-name">
+                        <span>{item.user?.userName || '匿名用户'}</span>
+                        <span className="post-time">{formatTime(item.createTime)}</span>
                       </div>
-                    }
-                    description={
-                      <div className="post-meta">
-                        <span className="post-author">{item.author}</span>
-                        <span className="post-time">{item.createTime}</span>
+                      <div className="post-tags">
+                        {item.tagList && item.tagList.map((tag, index) => {
+                          // 查找对应的标签ID以获取颜色
+                          const tagObj = tags.find(t => t.tagsName === tag);
+                          const color = tagObj ? getTagColor(tagObj.id) : 'blue';
+                          return (
+                            <Tag 
+                              key={index} 
+                              color={color} 
+                              className="category-tag-small"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {tag}
+                            </Tag>
+                          );
+                        })}
                       </div>
-                    }
-                  />
-                  <div className="post-content hot-comment">最热的一条评论</div>
+                    </div>
+                  </div>
+                  
+                  <div className="post-content-wrapper">
+                    <div className="post-title">
+                      {item.title}
+                    </div>
+                    
+                    {item.latestComment && (
+                      <div className="post-content hot-comment">
+                        {item.latestComment.content}
+                      </div>
+                    )}
+                  </div>
                 </List.Item>
               )}
             />
@@ -240,8 +443,8 @@ const PostPage: React.FC = () => {
                       marginRight: '8px'
                     }}
                   />
-                  <a href={`/topic/${item.id}`}>{item.title}</a>
-                  <span className="topic-count">{item.count}人参与</span>
+                  <Link to={item.url || '#'}>{item.title}</Link>
+                  <span className="topic-count">{item.followerCount || 0}人参与</span>
                 </List.Item>
               )}
             />

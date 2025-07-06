@@ -118,3 +118,38 @@ export async function updatePostUsingPost(
     ...(options || {}),
   });
 }
+
+/** 删除帖子（使用字符串ID） POST /api/post/delete */
+export async function deletePostByStringIdUsingPost(
+  id: string,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseBoolean_>('/api/post/delete', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: { id },
+    ...(options || {}),
+  });
+}
+
+/** 编辑帖子（使用字符串ID） POST /api/post/edit */
+export async function editPostByStringIdUsingPost(
+  body: {
+    id: string;
+    title?: string;
+    content?: string;
+    tags?: string[];
+  },
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseBoolean_>('/api/post/edit', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  });
+}

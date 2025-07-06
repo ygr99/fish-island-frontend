@@ -7,7 +7,7 @@ export async function doThumbUsingPost1(
   body: API.PostThumbAddRequest,
   options?: { [key: string]: any },
 ) {
-  return request<API.BaseResponseInt_>('/api/post_thumb/', {
+  return request<API.BaseResponseInt_>('/api/post_thumb/do', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

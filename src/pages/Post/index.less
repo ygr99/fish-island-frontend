@@ -93,18 +93,32 @@
 
             &:hover {
               transform: translateY(-2px);
+              box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
             }
 
             &.active {
               font-weight: 500;
               transform: translateY(-2px);
-              box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+              box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
               
               &[color="orange"] {
                 color: #fff;
                 font-weight: 500;
                 box-shadow: 0 2px 6px rgba(250, 140, 22, 0.2);
               }
+
+              &[color="magenta"] { box-shadow: 0 2px 6px rgba(194, 24, 91, 0.2); }
+              &[color="red"] { box-shadow: 0 2px 6px rgba(244, 67, 54, 0.2); }
+              &[color="volcano"] { box-shadow: 0 2px 6px rgba(230, 81, 0, 0.2); }
+              &[color="orange"] { box-shadow: 0 2px 6px rgba(255, 152, 0, 0.2); }
+              &[color="gold"] { box-shadow: 0 2px 6px rgba(255, 193, 7, 0.2); }
+              &[color="lime"] { box-shadow: 0 2px 6px rgba(205, 220, 57, 0.2); }
+              &[color="green"] { box-shadow: 0 2px 6px rgba(76, 175, 80, 0.2); }
+              &[color="cyan"] { box-shadow: 0 2px 6px rgba(0, 188, 212, 0.2); }
+              &[color="blue"] { box-shadow: 0 2px 6px rgba(33, 150, 243, 0.2); }
+              &[color="geekblue"] { box-shadow: 0 2px 6px rgba(63, 81, 181, 0.2); }
+              &[color="purple"] { box-shadow: 0 2px 6px rgba(156, 39, 176, 0.2); }
+              &[color="pink"] { box-shadow: 0 2px 6px rgba(233, 30, 99, 0.2); }
             }
             
             &[color="orange"] {
@@ -222,49 +236,77 @@
           &:hover {
             background-color: #f9fbff;
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(24, 144, 255, 0.1);
           }
-
-          .post-title {
+          
+          .post-item-header {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 17px;
-            font-weight: 500;
-
-            a {
-              color: #333;
-              margin-right: 8px;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            
+            .ant-avatar {
+              margin-right: 12px;
+              flex-shrink: 0;
+            }
+            
+            .post-author-info {
               flex: 1;
-              transition: all 0.3s;
-
-              &:hover {
-                color: #1890ff;
+              
+              .author-name {
+                display: flex;
+                align-items: center;
+                margin-bottom: 6px;
+                
+                span:first-child {
+                  font-weight: 500;
+                  color: #333;
+                  font-size: 15px;
+                  margin-right: 12px;
+                }
+                
+                .post-time {
+                  color: #999;
+                  font-size: 13px;
+                  font-weight: normal;
+                }
+              }
+              
+              .post-tags {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                
+                .category-tag-small {
+                  font-size: 12px;
+                  padding: 1px 8px;
+                  border-radius: 4px;
+                  font-weight: normal;
+                  margin: 0;
+                  transition: all 0.3s;
+                  
+                  &:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                  }
+                }
               }
             }
-
-            .category-tag-small {
-              font-size: 12px;
-              padding: 2px 8px;
-              border-radius: 4px;
-              font-weight: normal;
-            }
           }
-
-          .post-meta {
-            display: flex;
-            align-items: center;
-            margin-top: 6px;
-            color: #999;
-            font-size: 13px;
-
-            .post-author {
-              margin-right: 16px;
+          
+          .post-content-wrapper {
+            .post-title {
+              font-size: 17px;
               font-weight: 500;
-              color: #666;
-            }
-
-            .post-time {
-              color: #999;
+              margin-bottom: 12px;
+              
+              a {
+                color: #333;
+                transition: all 0.3s;
+                
+                &:hover {
+                  color: #1890ff;
+                }
+              }
             }
           }
 
@@ -312,6 +354,22 @@
                 color: #1890ff;
               }
             }
+          }
+
+          .edit-action, .delete-action {
+            cursor: pointer;
+            &:hover {
+              text-decoration: underline;
+            }
+          }
+          
+          .edit-action {
+            margin-right: 12px;
+            color: #1890ff;
+          }
+          
+          .delete-action {
+            color: #ff4d4f;
           }
         }
       }
