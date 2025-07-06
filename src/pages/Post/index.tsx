@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Card, List, Tag, Space, Button, Input, Tabs, Avatar, Badge, message, Modal } from 'antd';
-import type { SizeType } from 'antd/es/config-provider/SizeContext';
+import React, {useState, useEffect} from 'react';
+import {Card, List, Tag, Space, Button, Input, Tabs, Avatar, Badge, message, Modal} from 'antd';
+import type {SizeType} from 'antd/es/config-provider/SizeContext';
 import {
   FireOutlined,
   RiseOutlined,
@@ -15,16 +15,15 @@ import {
   EditOutlined,
   MenuOutlined
 } from '@ant-design/icons';
-import { history, Link } from '@umijs/max';
-import { listPostVoByPageUsingPost, getPostVoByIdUsingGet, deletePostByStringIdUsingPost } from '@/services/backend/postController';
-import { getHotPostListUsingPost } from '@/services/backend/hotPostController';
-import { listTagsVoByPageUsingPost } from '@/services/backend/tagsController';
-import { getLoginUserUsingGet } from '@/services/backend/userController';
+import {history, Link} from '@umijs/max';
+import {listPostVoByPageUsingPost, deletePostUsingPost1} from '@/services/backend/postController';
+import {listTagsVoByPageUsingPost} from '@/services/backend/tagsController';
+import {getLoginUserUsingGet} from '@/services/backend/userController';
 import './index.less';
 import moment from 'moment';
 
-const { TabPane } = Tabs;
-const { Search } = Input;
+const {TabPane} = Tabs;
+const {Search} = Input;
 
 const PostPage: React.FC = () => {
   const [selectedTag, setSelectedTag] = useState<number | null>(null);
@@ -93,20 +92,21 @@ const PostPage: React.FC = () => {
   // 获取热门话题
   const fetchHotTopics = async () => {
     try {
-      const result = await getHotPostListUsingPost();
-      if (result.data) {
-        // 将所有热门数据源的数据合并为一个数组
-        const allTopics: API.HotPostDataVO[] = [];
-        result.data.forEach(hotPost => {
-          if (hotPost.data) {
-            allTopics.push(...hotPost.data);
-          }
-        });
-        // 按照参与人数排序，取前5个
-        const sortedTopics = allTopics.sort((a, b) =>
-          (b.followerCount || 0) - (a.followerCount || 0)
-        ).slice(0, 5);
-        setHotTopics(sortedTopics);
+      // 使用热门讨论的参数获取热门话题
+      const params: API.PostQueryRequest = {
+        current: 1,
+        pageSize: 5,
+        sortField: 'thumbNum', // 按点赞数排序
+        sortOrder: 'descend',
+      };
+
+      const result = await listPostVoByPageUsingPost(params);
+      if (result.data?.records) {
+        setHotTopics(result.data.records.map(post => ({
+          title: post.title || '',
+          url: `/post/${post.id}`,
+          followerCount: post.commentNum || 0, // 使用评论数作为参与人数
+        })));
       }
     } catch (error) {
       console.error('获取热门话题失败:', error);
@@ -161,10 +161,10 @@ const PostPage: React.FC = () => {
   // 判断当前用户是否有权限删除帖子
   const canDeletePost = (post: API.PostVO) => {
     if (!currentUser) return false;
-    
+
     // 管理员可以删除所有帖子
     if (currentUser.userRole === 'admin') return true;
-    
+
     // 普通用户只能删除自己的帖子
     return currentUser.id === post.userId;
   };
@@ -179,12 +179,12 @@ const PostPage: React.FC = () => {
   // 处理删除帖子
   const handleDeletePost = async () => {
     if (!postToDelete) return;
-    
+
     setDeleteLoading(true);
     try {
       // 直接使用字符串ID，避免精度丢失
-      const res = await deletePostByStringIdUsingPost(String(postToDelete));
-      
+      const res = await deletePostUsingPost1({id: String(postToDelete)});
+
       if (res.data) {
         message.success('帖子删除成功');
         // 删除成功后刷新帖子列表
@@ -217,13 +217,13 @@ const PostPage: React.FC = () => {
   // 处理搜索
   const handleSearch = (value: string) => {
     setSearchQuery(value);
-    setPagination({ ...pagination, current: 1 }); // 重置到第一页
+    setPagination({...pagination, current: 1}); // 重置到第一页
   };
 
   // 处理Tab切换
   const handleTabChange = (key: string) => {
     setCurrentTab(key);
-    setPagination({ ...pagination, current: 1 }); // 重置到第一页
+    setPagination({...pagination, current: 1}); // 重置到第一页
   };
 
   // 处理分页变化
@@ -251,13 +251,13 @@ const PostPage: React.FC = () => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 576);
     };
-    
+
     // 初始检测
     checkMobile();
-    
+
     // 监听窗口大小变化
     window.addEventListener('resize', checkMobile);
-    
+
     // 组件卸载时移除监听
     return () => {
       window.removeEventListener('resize', checkMobile);
@@ -278,7 +278,7 @@ const PostPage: React.FC = () => {
       >
         <p>确定要删除这篇帖子吗？删除后将无法恢复。</p>
       </Modal>
-      
+
       <div className="post-container">
         <div className="post-main">
           <Card className="post-filter-card">
@@ -308,7 +308,7 @@ const PostPage: React.FC = () => {
               <div className="post-search">
                 <Input
                   placeholder="搜索帖子"
-                  prefix={<SearchOutlined className="search-icon" />}
+                  prefix={<SearchOutlined className="search-icon"/>}
                   allowClear
                   className="search-input"
                   value={searchText}
@@ -317,7 +317,7 @@ const PostPage: React.FC = () => {
                 />
                 <Button
                   type="primary"
-                  icon={<SearchOutlined />}
+                  icon={<SearchOutlined/>}
                   className="search-button"
                   onClick={() => handleSearch(searchText)}
                 >
@@ -338,15 +338,15 @@ const PostPage: React.FC = () => {
                   size={isMobile ? "small" as SizeType : "middle" as SizeType}
                 >
                   <TabPane
-                    tab={<span>{!isMobile && <ClockCircleOutlined />} 最新发布</span>}
+                    tab={<span>{!isMobile && <ClockCircleOutlined/>} 最新发布</span>}
                     key="latest"
                   />
                   <TabPane
-                    tab={<span>{!isMobile && <FireOutlined />} 热门讨论</span>}
+                    tab={<span>{!isMobile && <FireOutlined/>} 热门讨论</span>}
                     key="hot"
                   />
                   <TabPane
-                    tab={<span>{!isMobile && <RiseOutlined />} 精华内容</span>}
+                    tab={<span>{!isMobile && <RiseOutlined/>} 精华内容</span>}
                     key="featured"
                   />
                 </Tabs>
@@ -354,7 +354,7 @@ const PostPage: React.FC = () => {
               <div className="button-container">
                 <Button
                   type="primary"
-                  icon={<PlusOutlined />}
+                  icon={<PlusOutlined/>}
                   onClick={handleCreatePost}
                 >
                   {isMobile ? "发布" : "发布帖子"}
@@ -380,24 +380,28 @@ const PostPage: React.FC = () => {
                   key={item.id}
                   className="post-item"
                   onClick={() => history.push(`/post/${String(item.id)}`)}
-                  style={{ cursor: 'pointer' }}
+                  style={{cursor: 'pointer'}}
                   actions={[
-                    <span onClick={(e) => e.stopPropagation()}><EyeOutlined /> {isMobile ? '' : '浏览'} {item.viewNum || 0}</span>,
-                    <span onClick={(e) => e.stopPropagation()}><LikeOutlined /> {isMobile ? '' : '点赞'} {item.thumbNum || 0}</span>,
-                    <span onClick={(e) => e.stopPropagation()}><MessageOutlined /> {isMobile ? '' : '评论'} {item.commentNum || 0}</span>,
+                    // 在移动端不显示阅读量、点赞数和评论数
+                    !isMobile &&
+                    <span onClick={(e) => e.stopPropagation()}><EyeOutlined/> 浏览 {item.viewNum || 0}</span>,
+                    !isMobile &&
+                    <span onClick={(e) => e.stopPropagation()}><LikeOutlined/> 点赞 {item.thumbNum || 0}</span>,
+                    !isMobile &&
+                    <span onClick={(e) => e.stopPropagation()}><MessageOutlined/> 评论 {item.commentNum || 0}</span>,
                     canDeletePost(item) && (
-                      <span 
+                      <span
                         onClick={(e) => {
                           e.stopPropagation();
                           history.push(`/post/edit/${item.id}`);
                         }}
                         className="edit-action"
                       >
-                        <EditOutlined style={{ color: '#1890ff' }} /> {isMobile ? '' : '编辑'}
+                        <EditOutlined style={{color: '#1890ff'}}/> {isMobile ? '' : '编辑'}
                       </span>
                     ),
                     canDeletePost(item) && (
-                      <span 
+                      <span
                         onClick={(e) => {
                           e.stopPropagation();
                           // 直接传递原始ID，避免Number()转换导致精度丢失
@@ -405,13 +409,14 @@ const PostPage: React.FC = () => {
                         }}
                         className="delete-action"
                       >
-                        <DeleteOutlined style={{ color: '#ff4d4f' }} /> {isMobile ? '' : '删除'}
+                        <DeleteOutlined style={{color: '#ff4d4f'}}/> {isMobile ? '' : '删除'}
                       </span>
                     ),
                   ].filter(Boolean)}
                 >
                   <div className="post-item-header">
-                    <Avatar src={item.user?.userAvatar || 'https://joeschmoe.io/api/v1/random'} size={isMobile ? 32 : 40} />
+                    <Avatar src={item.user?.userAvatar || 'https://joeschmoe.io/api/v1/random'}
+                            size={isMobile ? 32 : 40}/>
                     <div className="post-author-info">
                       <div className="author-name">
                         <span>{item.user?.userName || '匿名用户'}</span>
@@ -425,9 +430,9 @@ const PostPage: React.FC = () => {
                           // 在移动设备上限制显示的标签数量
                           if (isMobile && index > 1) return null;
                           return (
-                            <Tag 
-                              key={index} 
-                              color={color} 
+                            <Tag
+                              key={index}
+                              color={color}
                               className="category-tag-small"
                               onClick={(e) => e.stopPropagation()}
                             >
@@ -444,12 +449,12 @@ const PostPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="post-content-wrapper">
                     <div className="post-title">
                       {item.title}
                     </div>
-                    
+
                     {item.latestComment && (
                       <div className="post-content hot-comment">
                         {item.latestComment.content}

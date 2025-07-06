@@ -3,7 +3,7 @@ import { Card, Input, Button, Form, Select, Space, message, Spin, Modal } from '
 import { history, useParams } from '@umijs/max';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { listTagsVoByPageUsingPost } from '@/services/backend/tagsController';
-import { editPostByStringIdUsingPost, getPostVoByIdUsingGet } from '@/services/backend/postController';
+import { editPostUsingPost, getPostVoByIdUsingGet } from '@/services/backend/postController';
 import { getLoginUserUsingGet } from '@/services/backend/userController';
 import { uploadFileByMinioUsingPost } from '@/services/backend/fileController';
 import { BACKEND_HOST_LOCAL } from '@/constants';
@@ -44,12 +44,12 @@ const PostEdit: React.FC = () => {
   // 检查用户是否有权限编辑帖子
   const checkEditPermission = (postData: API.PostVO, userData?: API.LoginUserVO) => {
     if (!userData) return false;
-    
+
     // 管理员可以编辑任何帖子
     if (userData.userRole === 'admin') {
       return true;
     }
-    
+
     // 普通用户只能编辑自己的帖子
     return userData.id === postData.userId;
   };
@@ -76,41 +76,41 @@ const PostEdit: React.FC = () => {
   useEffect(() => {
     setLoading(true);
     fetchTags();
-    
+
     // 初始化数据
     const initData = async () => {
       if (!id) return;
-      
+
       try {
         // 先获取当前用户信息
         const userData = await fetchCurrentUser();
-        
+
         // 再获取帖子详情
-        const res = await getPostVoByIdUsingGet({ 
-          id: id 
+        const res = await getPostVoByIdUsingGet({
+          id: id
         } as any);
-        
+
         if (res.data) {
           setPost(res.data);
-          
+
           // 检查用户是否有权限编辑该帖子
           const hasPermission = checkEditPermission(res.data, userData);
           setHasEditPermission(hasPermission);
-          
+
           if (!hasPermission) {
             message.error('您没有权限编辑该帖子');
             history.push(`/post/${id}`);
             return;
           }
-          
+
           setContent(res.data.content || '');
-          
+
           // 设置表单初始值
           form.setFieldsValue({
             title: res.data.title,
             tags: res.data.tagList,
           });
-          
+
           // 获取到帖子内容后再初始化编辑器
           initEditor(res.data.content || '');
         }
@@ -119,18 +119,18 @@ const PostEdit: React.FC = () => {
         history.push('/post');
       }
     };
-    
+
     initData();
-    
+
   }, []);
-  
+
   // 初始化编辑器
   const initEditor = (initialContent: string) => {
     // 清除可能存在的旧编辑器实例
     if (vd) {
       vd.destroy();
     }
-    
+
     // 初始化编辑器配置
     const vditor = new Vditor('vditor-container', {
       height: 500,
@@ -208,10 +208,10 @@ const PostEdit: React.FC = () => {
           try {
             console.log('上传响应:', responseText);
             const res = JSON.parse(responseText);
-            
+
             if (res.code === 0 && res.data) {
               message.success('图片上传成功');
-              
+
               // 延迟执行，确保编辑器能正确处理图片
               setTimeout(() => {
                 if (vd) {
@@ -220,7 +220,7 @@ const PostEdit: React.FC = () => {
                   vd.setValue(currentContent);
                 }
               }, 100);
-              
+
               // 返回符合Vditor要求的格式
               return JSON.stringify({
                 msg: '',
@@ -284,7 +284,7 @@ const PostEdit: React.FC = () => {
   // 提交表单
   const handleSubmit = async (values: any) => {
     if (!id || !post) return;
-    
+
     // 再次检查权限
     if (!hasEditPermission) {
       message.error('您没有权限编辑该帖子');
@@ -292,18 +292,18 @@ const PostEdit: React.FC = () => {
       history.push(`/post/${id}`);
       return;
     }
-    
+
     setSubmitting(true);
     try {
       // 使用字符串ID，避免精度丢失
-      const postData = {
+      const postData: API.PostEditRequest  = {
         id: id, // 直接使用字符串ID
         title: values.title,
         content: content,
         tags: values.tags,
       };
 
-      const result = await editPostByStringIdUsingPost(postData);
+      const result = await editPostUsingPost(postData);
       if (result.code === 0 && result.data) {
         message.success('帖子更新成功');
         setShowDetailsModal(false);
@@ -337,7 +337,7 @@ const PostEdit: React.FC = () => {
         <Spin spinning={loading}>
           <div className="editor-container">
             <div id="vditor-container" className="vditor-container"></div>
-            
+
             <div className="editor-actions">
               <Space>
                 <Button onClick={() => history.push(`/post/${id}`)}>取消</Button>
@@ -405,4 +405,4 @@ const PostEdit: React.FC = () => {
   );
 };
 
-export default PostEdit; 
+export default PostEdit;

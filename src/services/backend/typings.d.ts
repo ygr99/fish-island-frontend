@@ -360,7 +360,7 @@ declare namespace API {
   type ChildCommentQueryRequest = {
     current?: number;
     pageSize?: number;
-    parentId?: number;
+    rootId?: number;
     sortField?: string;
     sortOrder?: string;
   };
@@ -369,6 +369,7 @@ declare namespace API {
     content?: string;
     parentId?: number;
     postId?: number;
+    rootId?: number;
   };
 
   type CommentNodeVO = {
@@ -435,7 +436,7 @@ declare namespace API {
   };
 
   type DeleteRequest = {
-    id?: number;
+    id?: string;
   };
 
   type DonationRecords = {
@@ -1064,7 +1065,7 @@ declare namespace API {
   type PostEditRequest = {
     content?: string;
     coverImage?: string;
-    id?: number;
+    id?: string;
     tags?: string[];
     title?: string;
   };
@@ -1102,7 +1103,7 @@ declare namespace API {
   type PostUpdateRequest = {
     content?: string;
     coverImage?: string;
-    id?: number;
+    id?: string;
     tags?: string[];
     title?: string;
   };

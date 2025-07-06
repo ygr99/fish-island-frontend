@@ -1,22 +1,40 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useParams, history, Link } from 'umi';
-import { Card, Avatar, Typography, Space, Divider, List, Button, message, Spin, Input, Pagination, Modal } from 'antd';
-import { LikeOutlined, LikeFilled, StarOutlined, StarFilled, MessageOutlined, ArrowLeftOutlined, SendOutlined, CommentOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { getPostVoByIdUsingGet, deletePostByStringIdUsingPost } from '@/services/backend/postController';
-import { doThumbUsingPost1 } from '@/services/backend/postThumbController';
-import { doPostFavourUsingPost } from '@/services/backend/postFavourController';
-import { addCommentUsingPost, getCommentTreeUsingPost, getChildCommentsUsingPost } from '@/services/backend/commentController';
-import { doThumbUsingPost } from '@/services/backend/commentThumbController';
-import { getLoginUserUsingGet } from '@/services/backend/userController';
-import MessageContent from '@/components/MessageContent';
+import React, {useEffect, useState, useRef} from 'react';
+import {useParams, history, Link} from 'umi';
+import {Card, Avatar, Typography, Space, Divider, List, Button, message, Spin, Input, Pagination, Modal} from 'antd';
+import {
+  LikeOutlined,
+  LikeFilled,
+  StarOutlined,
+  StarFilled,
+  MessageOutlined,
+  ArrowLeftOutlined,
+  SendOutlined,
+  CommentOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  LeftOutlined,
+  RightOutlined,
+  UpOutlined,
+  DownOutlined
+} from '@ant-design/icons';
+import {getPostVoByIdUsingGet, deletePostUsingPost1} from '@/services/backend/postController';
+import {doThumbUsingPost1} from '@/services/backend/postThumbController';
+import {doPostFavourUsingPost} from '@/services/backend/postFavourController';
+import {
+  addCommentUsingPost,
+  getCommentTreeUsingPost,
+  getChildCommentsUsingPost
+} from '@/services/backend/commentController';
+import {doThumbUsingPost} from '@/services/backend/commentThumbController';
+import {getLoginUserUsingGet} from '@/services/backend/userController';
 import Vditor from 'vditor';
 import moment from 'moment';
 import 'moment/locale/zh-cn';
 import 'vditor/dist/index.css';
 import './index.less';
 
-const { Title, Text, Paragraph } = Typography;
-const { TextArea } = Input;
+const {Title, Text, Paragraph} = Typography;
+const {TextArea} = Input;
 
 moment.locale('zh-cn');
 
@@ -37,7 +55,7 @@ interface ExtendedCommentNodeVO extends API.CommentNodeVO {
 }
 
 const PostDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const {id} = useParams<{ id: string }>();
   const [post, setPost] = useState<API.PostVO>();
   const [comments, setComments] = useState<ExtendedCommentNodeVO[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -53,13 +71,17 @@ const PostDetail: React.FC = () => {
   const contentRef = useRef<HTMLDivElement>(null);
   const [deleteModalVisible, setDeleteModalVisible] = useState<boolean>(false);
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
+  const [commentCollapsed, setCommentCollapsed] = useState<boolean>(false);
+  const [isScrolling, setIsScrolling] = useState<boolean>(false);
+  const mainContentRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
 
   // 格式化时间
   const formatTime = (timeString?: string) => {
     if (!timeString) return '';
     const date = moment(timeString);
     const now = moment();
-    
+
     if (now.diff(date, 'days') < 1) {
       // 今天内的时间显示为"xx小时前"或"xx分钟前"
       return date.fromNow();
@@ -90,13 +112,13 @@ const PostDetail: React.FC = () => {
   // 获取帖子详情
   const fetchPostDetail = async () => {
     if (!id) return;
-    
+
     setLoading(true);
     try {
-      const res = await getPostVoByIdUsingGet({ 
-        id: id 
+      const res = await getPostVoByIdUsingGet({
+        id: id
       } as any);
-      
+
       if (res.data) {
         setPost(res.data);
         // 使用 Vditor 预览模式渲染内容
@@ -133,7 +155,7 @@ const PostDetail: React.FC = () => {
   // 获取评论列表
   const fetchComments = async () => {
     if (!id) return;
-    
+
     setCommentsLoading(true);
     try {
       const res = await getCommentTreeUsingPost({
@@ -143,7 +165,7 @@ const PostDetail: React.FC = () => {
         sortField: 'createTime',
         sortOrder: 'descend'
       });
-      
+
       if (res.data) {
         // 将API返回的评论数据转换为ExtendedCommentNodeVO类型
         const commentsList = res.data.records || [];
@@ -186,16 +208,16 @@ const PostDetail: React.FC = () => {
   // 加载更多子评论
   const loadMoreChildComments = async (rootId: number | string) => {
     if (!id) return;
-    
+
     try {
       const res = await getChildCommentsUsingPost({
-        parentId: rootId as unknown as number,
+        rootId: rootId,
         current: 1,
-        pageSize: 100, // 一次性获取较多子评论
+        pageSize: 20, // 一次性获取较多子评论
         sortField: 'createTime',
         sortOrder: 'ascend'
       });
-      
+
       if (res.data && res.data.records) {
         // 处理子评论数据
         const childComments = res.data.records.map((child: any) => ({
@@ -204,7 +226,7 @@ const PostDetail: React.FC = () => {
           replyContent: '',
           replyLoading: false
         }));
-        
+
         // 更新评论列表中对应根评论的子评论
         setComments(comments.map(comment => {
           if (comment.id === rootId) {
@@ -237,12 +259,12 @@ const PostDetail: React.FC = () => {
       return;
     }
     if (!id || !post) return;
-    
+
     try {
-      await doThumbUsingPost1({ 
-        postId: id 
+      await doThumbUsingPost1({
+        postId: id
       } as any);
-      
+
       // 不刷新整个页面，只更新点赞状态和数量
       setPost({
         ...post,
@@ -261,12 +283,12 @@ const PostDetail: React.FC = () => {
       return;
     }
     if (!id || !post) return;
-    
+
     try {
-      await doPostFavourUsingPost({ 
-        postId: id 
+      await doPostFavourUsingPost({
+        postId: id
       } as any);
-      
+
       // 不刷新整个页面，只更新收藏状态和数量
       setPost({
         ...post,
@@ -285,10 +307,10 @@ const PostDetail: React.FC = () => {
       return;
     }
     try {
-      await doThumbUsingPost({ 
-        commentId: commentId 
+      await doThumbUsingPost({
+        commentId: commentId
       } as any);
-      
+
       // 不刷新整个页面，只更新该评论的点赞状态和数量
       setComments(comments.map(comment => {
         if (comment.id === commentId) {
@@ -340,12 +362,12 @@ const PostDetail: React.FC = () => {
   // 切换回复框显示状态
   const toggleReplyBox = (commentId: number | string) => {
     console.log('切换回复框:', commentId);
-    
+
     setComments(comments.map(comment => {
       if (comment.id === commentId) {
         const newShowReplyBox = !comment.showReplyBox;
         console.log('根评论切换回复框状态:', newShowReplyBox);
-        
+
         return {
           ...comment,
           showReplyBox: newShowReplyBox,
@@ -353,7 +375,7 @@ const PostDetail: React.FC = () => {
           replyContent: newShowReplyBox ? '' : comment.replyContent
         };
       }
-      
+
       // 检查子评论
       if (comment.children && comment.children.length > 0) {
         let found = false;
@@ -362,7 +384,7 @@ const PostDetail: React.FC = () => {
             found = true;
             const newShowReplyBox = !child.showReplyBox;
             console.log('子评论切换回复框状态:', newShowReplyBox);
-            
+
             return {
               ...child,
               showReplyBox: newShowReplyBox,
@@ -372,7 +394,7 @@ const PostDetail: React.FC = () => {
           }
           return child;
         });
-        
+
         if (found) {
           return {
             ...comment,
@@ -380,7 +402,7 @@ const PostDetail: React.FC = () => {
           };
         }
       }
-      
+
       // 检查预览子评论
       if (comment.previewChildren && comment.previewChildren.length > 0) {
         let found = false;
@@ -389,7 +411,7 @@ const PostDetail: React.FC = () => {
             found = true;
             const newShowReplyBox = !child.showReplyBox;
             console.log('预览子评论切换回复框状态:', newShowReplyBox);
-            
+
             return {
               ...child,
               showReplyBox: newShowReplyBox,
@@ -399,7 +421,7 @@ const PostDetail: React.FC = () => {
           }
           return child;
         });
-        
+
         if (found) {
           return {
             ...comment,
@@ -407,7 +429,7 @@ const PostDetail: React.FC = () => {
           };
         }
       }
-      
+
       return comment;
     }));
   };
@@ -433,7 +455,7 @@ const PostDetail: React.FC = () => {
           }
           return child;
         });
-        
+
         return {
           ...comment,
           children: updatedChildren
@@ -450,7 +472,7 @@ const PostDetail: React.FC = () => {
           }
           return child;
         });
-        
+
         return {
           ...comment,
           previewChildren: updatedPreviewChildren
@@ -463,11 +485,11 @@ const PostDetail: React.FC = () => {
   // 提交回复
   const handleSubmitReply = async (parentId: number | string, rootId: number | string | null = null) => {
     console.log('提交回复 - 参数:', parentId, rootId);
-    
+
     // 找到对应的评论
     let replyContent = '';
     let foundComment: ExtendedCommentNodeVO | undefined;
-    
+
     // 查找评论及其回复内容
     for (const comment of comments) {
       // 检查是否是根评论
@@ -476,7 +498,7 @@ const PostDetail: React.FC = () => {
         foundComment = comment;
         break;
       }
-      
+
       // 检查子评论
       if (comment.children && comment.children.length > 0) {
         const child = comment.children.find(c => c.id === parentId);
@@ -486,7 +508,7 @@ const PostDetail: React.FC = () => {
           break;
         }
       }
-      
+
       // 检查预览子评论
       if (comment.previewChildren && comment.previewChildren.length > 0) {
         const child = comment.previewChildren.find(c => c.id === parentId);
@@ -497,32 +519,32 @@ const PostDetail: React.FC = () => {
         }
       }
     }
-    
+
     console.log('回复内容:', replyContent, '评论ID:', parentId, '找到评论:', foundComment);
-    
+
     if (!foundComment) {
       console.error('未找到对应的评论');
       message.warning('回复失败：未找到对应的评论');
       return;
     }
-    
+
     if (!replyContent.trim()) {
       console.error('回复内容为空');
       message.warning('回复内容不能为空');
       return;
     }
-    
+
     if (!currentUser) {
       message.warning('请先登录');
       return;
     }
-    
+
     if (!id) return;
-    
+
     // 确保rootId有效，如果没有提供，则使用parentId作为rootId
     const finalRootId = rootId || parentId;
     console.log('最终rootId:', finalRootId);
-    
+
     // 更新评论的加载状态
     setComments(comments.map(comment => {
       if (comment.id === parentId) {
@@ -561,7 +583,7 @@ const PostDetail: React.FC = () => {
       }
       return comment;
     }));
-    
+
     try {
       await addCommentUsingPost({
         postId: id as unknown as number,
@@ -569,9 +591,9 @@ const PostDetail: React.FC = () => {
         parentId: parentId as unknown as number,
         rootId: finalRootId as unknown as number
       } as any);
-      
+
       message.success('回复成功');
-      
+
       // 清空回复框并隐藏
       setComments(comments.map(comment => {
         if (comment.id === parentId) {
@@ -616,10 +638,10 @@ const PostDetail: React.FC = () => {
         }
         return comment;
       }));
-      
+
       // 重新获取评论列表，显示最新评论
       fetchComments();
-      
+
       // 更新帖子的评论数
       if (post) {
         setPost({
@@ -673,7 +695,7 @@ const PostDetail: React.FC = () => {
   // 切换子评论的展开/收起状态
   const toggleChildrenExpanded = (commentId: number | string) => {
     console.log('切换子评论展开状态:', commentId);
-    
+
     setComments(comments.map(comment => {
       if (comment.id === commentId) {
         return {
@@ -696,14 +718,14 @@ const PostDetail: React.FC = () => {
       return;
     }
     if (!id) return;
-    
+
     setCommentLoading(true);
     try {
       await addCommentUsingPost({
         postId: id as unknown as number,
         content: commentContent,
       } as any);
-      
+
       message.success('评论成功');
       setCommentContent('');
       // 重新获取评论列表，显示最新评论
@@ -712,7 +734,7 @@ const PostDetail: React.FC = () => {
         current: 1 // 重置到第一页以查看新评论
       });
       fetchComments();
-      
+
       // 更新帖子的评论数
       if (post) {
         setPost({
@@ -731,11 +753,11 @@ const PostDetail: React.FC = () => {
   const renderCommentItem = (item: ExtendedCommentNodeVO, isChild = false, rootId: number | string | null = null) => {
     // 确定当前评论的根评论ID
     const currentRootId = isChild ? rootId : item.id;
-    
+
     return (
       <div className={`comment-item ${isChild ? 'child-comment' : ''}`} key={item.id}>
         <div className="comment-item-avatar">
-          <Avatar src={item.user?.userAvatar} size={isChild ? 32 : 36} />
+          <Avatar src={item.user?.userAvatar} size={isChild ? 32 : 36}/>
         </div>
         <div className="comment-item-content">
           <div className="comment-item-header">
@@ -753,7 +775,7 @@ const PostDetail: React.FC = () => {
           <div className="comment-item-actions">
             <Button
               type="text"
-              icon={<CommentOutlined />}
+              icon={<CommentOutlined/>}
               onClick={() => toggleReplyBox(item.id || 0)}
               className="reply-button"
             >
@@ -761,19 +783,19 @@ const PostDetail: React.FC = () => {
             </Button>
             <Button
               type="text"
-              icon={item.hasThumb ? <LikeFilled /> : <LikeOutlined />}
+              icon={item.hasThumb ? <LikeFilled/> : <LikeOutlined/>}
               onClick={() => handleThumbComment(String(item.id))}
               className={item.hasThumb ? 'like-button active' : 'like-button'}
             >
               {item.thumbNum || 0}
             </Button>
           </div>
-          
+
           {item.showReplyBox && (
             <div className="reply-box">
               <TextArea
                 placeholder={`回复 ${item.user?.userName}...`}
-                autoSize={{ minRows: 2, maxRows: 4 }}
+                autoSize={{minRows: 2, maxRows: 4}}
                 value={item.replyContent || ''}
                 onChange={(e) => {
                   console.log('TextArea onChange:', item.id, e.target.value);
@@ -798,7 +820,7 @@ const PostDetail: React.FC = () => {
                 <Button
                   type="primary"
                   size="small"
-                  icon={<SendOutlined />}
+                  icon={<SendOutlined/>}
                   loading={item.replyLoading}
                   onClick={() => handleSubmitReply(item.id || 0, currentRootId)}
                   disabled={!item.replyContent?.trim()}
@@ -808,7 +830,7 @@ const PostDetail: React.FC = () => {
               </div>
             </div>
           )}
-          
+
           {/* 渲染子评论 */}
           {!isChild && ((item.previewChildren && item.previewChildren.length > 0) || (item.children && item.children.length > 0)) && (
             <div className="child-comments-header">
@@ -816,8 +838,8 @@ const PostDetail: React.FC = () => {
               <div className="child-comments-count">
                 {item.childCount || (item.previewChildren?.length || 0) || (item.children?.length || 0)} 条回复
               </div>
-              <Button 
-                type="link" 
+              <Button
+                type="link"
                 size="small"
                 onClick={() => toggleChildrenExpanded(item.id || 0)}
               >
@@ -825,17 +847,17 @@ const PostDetail: React.FC = () => {
               </Button>
             </div>
           )}
-          
+
           {/* 渲染预览子评论 */}
           {!isChild && item.childrenExpanded && item.previewChildren && item.previewChildren.length > 0 && (
             <div className="child-comments">
               {item.previewChildren.map(child => renderCommentItem(child, true, item.id))}
-              
+
               {/* 显示加载更多按钮 */}
               {item.childCount && item.childCount > (item.previewChildren?.length || 0) && (
                 <div className="load-more-comments">
-                  <Button 
-                    type="link" 
+                  <Button
+                    type="link"
                     size="small"
                     onClick={() => loadMoreChildComments(item.id || 0)}
                   >
@@ -845,7 +867,7 @@ const PostDetail: React.FC = () => {
               )}
             </div>
           )}
-          
+
           {/* 如果已经加载了完整的子评论列表，则显示它们 */}
           {!isChild && item.childrenExpanded && item.children && item.children.length > 0 && item.children.length > (item.previewChildren?.length || 0) && (
             <div className="child-comments">
@@ -860,14 +882,14 @@ const PostDetail: React.FC = () => {
   // 判断当前用户是否有权限编辑或删除帖子
   const canEditPost = () => {
     if (!currentUser || !post) return false;
-    
+
     // 管理员可以编辑所有帖子
     if (currentUser.userRole === 'admin') return true;
-    
+
     // 普通用户只能编辑自己的帖子
     return currentUser.id === post.userId;
   };
-  
+
   // 编辑帖子
   const handleEditPost = () => {
     if (!id) return;
@@ -882,12 +904,12 @@ const PostDetail: React.FC = () => {
   // 处理删除帖子
   const handleDeletePost = async () => {
     if (!id) return;
-    
+
     setDeleteLoading(true);
     try {
       // 直接使用字符串ID，避免精度丢失
-      const res = await deletePostByStringIdUsingPost(id);
-      
+      const res = await deletePostUsingPost1({id: id});
+
       if (res.data) {
         message.success('帖子删除成功');
         // 删除成功后返回帖子列表页
@@ -903,6 +925,36 @@ const PostDetail: React.FC = () => {
       setDeleteModalVisible(false);
     }
   };
+
+  // 切换评论区收缩状态
+  const toggleCommentCollapse = () => {
+    setCommentCollapsed(!commentCollapsed);
+  };
+
+  // 添加滚动监听
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolling(window.scrollY > 100);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  // 添加窗口大小监听
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    handleResize(); // 初始化
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   // 初始化数据
   useEffect(() => {
@@ -922,7 +974,7 @@ const PostDetail: React.FC = () => {
   if (loading) {
     return (
       <div className="post-detail-loading">
-        <Spin size="large" />
+        <Spin size="large"/>
       </div>
     );
   }
@@ -936,7 +988,7 @@ const PostDetail: React.FC = () => {
       <div className="post-detail-header">
         <Link to="/post">
           <div className="back-button">
-            <ArrowLeftOutlined />
+            <ArrowLeftOutlined/>
             <span>返回帖子列表</span>
           </div>
         </Link>
@@ -945,9 +997,9 @@ const PostDetail: React.FC = () => {
           {canEditPost() && (
             <Button
               type="primary"
-              icon={<EditOutlined />}
+              icon={<EditOutlined/>}
               onClick={handleEditPost}
-              style={{ marginRight: 8 }}
+              style={{marginRight: 8}}
             >
               编辑帖子
             </Button>
@@ -956,7 +1008,7 @@ const PostDetail: React.FC = () => {
           {canEditPost() && (
             <Button
               danger
-              icon={<DeleteOutlined />}
+              icon={<DeleteOutlined/>}
               onClick={showDeleteConfirm}
             >
               删除帖子
@@ -964,7 +1016,7 @@ const PostDetail: React.FC = () => {
           )}
         </div>
       </div>
-      
+
       {/* 删除确认对话框 */}
       <Modal
         title="删除确认"
@@ -977,21 +1029,21 @@ const PostDetail: React.FC = () => {
       >
         <p>确定要删除这篇帖子吗？删除后将无法恢复。</p>
       </Modal>
-      
+
       <div className="post-detail-layout">
-        <div className="post-detail-main">
+        <div className="post-detail-main" ref={mainContentRef}>
           <Card className="post-detail-card">
             <div className="post-detail-title">
               <Title level={3}>{post.title}</Title>
               <div className="post-detail-meta">
                 <Space>
-                  <Avatar src={post.user?.userAvatar} size="small" />
+                  <Avatar src={post.user?.userAvatar} size="small"/>
                   <Text strong>{post.user?.userName}</Text>
                   <Text type="secondary">{formatTime(post.createTime)}</Text>
                 </Space>
               </div>
             </div>
-            <Divider />
+            <Divider/>
             <div className="post-detail-body">
               {/* Vditor 预览区域 */}
               <div ref={contentRef} className="vditor-reset"></div>
@@ -999,20 +1051,30 @@ const PostDetail: React.FC = () => {
           </Card>
         </div>
 
-        <div className="post-detail-sidebar">
-          <Card 
-            className="post-detail-comments" 
+        <div className={`post-detail-sidebar ${commentCollapsed ? 'collapsed' : ''} ${isScrolling ? 'sticky' : ''}`}>
+          <div
+            className="comment-collapse-button"
+            onClick={toggleCommentCollapse}
+            data-tooltip={commentCollapsed ? '展开评论' : '收起评论'}
+          >
+            {isMobile ?
+              (commentCollapsed ? <DownOutlined/> : <UpOutlined/>) :
+              (commentCollapsed ? <LeftOutlined/> : <RightOutlined/>)
+            }
+          </div>
+          <Card
+            className="post-detail-comments"
             title={
               <div className="comments-header">
                 <span>评论</span>
                 <span className="comment-count">{commentPagination.total}</span>
               </div>
-            } 
+            }
             extra={
               <div className="post-actions">
                 <Button
                   type="text"
-                  icon={post.hasThumb ? <LikeFilled /> : <LikeOutlined />}
+                  icon={post.hasThumb ? <LikeFilled/> : <LikeOutlined/>}
                   onClick={handleThumbPost}
                   className={post.hasThumb ? 'action-button active' : 'action-button'}
                 >
@@ -1020,78 +1082,88 @@ const PostDetail: React.FC = () => {
                 </Button>
                 <Button
                   type="text"
-                  icon={post.hasFavour ? <StarFilled /> : <StarOutlined />}
+                  icon={post.hasFavour ? <StarFilled/> : <StarOutlined/>}
                   onClick={handleFavourPost}
                   className={post.hasFavour ? 'action-button active' : 'action-button'}
                 >
                   {post.favourNum || 0}
                 </Button>
-                <Button 
+                <Button
                   type="text"
-                  icon={<MessageOutlined />}
+                  icon={<MessageOutlined/>}
                   className="action-button"
                 >
                   {post.commentNum || 0}
                 </Button>
               </div>
             }
-            bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}
+            bodyStyle={{
+              padding: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              height: 'calc(100vh - 120px)',
+              visibility: commentCollapsed ? 'hidden' : 'visible'
+            }}
           >
-            <div className="comment-fixed-top">
-              <div className="comment-editor">
-                <div className="comment-avatar">
-                  <Avatar src={currentUser?.userAvatar} size={40} />
-                </div>
-                <div className="comment-input">
-                  <TextArea
-                    placeholder="写下你的评论..."
-                    autoSize={{ minRows: 2, maxRows: 6 }}
-                    value={commentContent}
-                    onChange={(e) => setCommentContent(e.target.value)}
-                    className="comment-textarea"
-                  />
-                  <Button
-                    type="primary"
-                    icon={<SendOutlined />}
-                    onClick={handleSubmitComment}
-                    loading={commentLoading}
-                    disabled={!commentContent.trim()}
-                  >
-                    发布评论
-                  </Button>
-                </div>
-              </div>
-            </div>
-            
-            <div className="comment-scrollable-content">
-              {commentsLoading ? (
-                <div className="comments-loading">
-                  <Spin />
-                </div>
-              ) : comments.length > 0 ? (
-                <div className="comment-list">
-                  {comments.map(item => renderCommentItem(item))}
-                  
-                  {commentPagination.total > commentPagination.pageSize && (
-                    <div className="comment-pagination">
-                      <Pagination
-                        current={commentPagination.current}
-                        pageSize={commentPagination.pageSize}
-                        total={commentPagination.total}
-                        onChange={handleCommentPageChange}
-                        size="small"
-                        simple
+            {!commentCollapsed && (
+              <>
+                <div className="comment-fixed-top">
+                  <div className="comment-editor">
+                    <div className="comment-avatar">
+                      <Avatar src={currentUser?.userAvatar} size={40}/>
+                    </div>
+                    <div className="comment-input">
+                      <TextArea
+                        placeholder="写下你的评论..."
+                        autoSize={{minRows: 2, maxRows: 6}}
+                        value={commentContent}
+                        onChange={(e) => setCommentContent(e.target.value)}
+                        className="comment-textarea"
                       />
+                      <Button
+                        type="primary"
+                        icon={<SendOutlined/>}
+                        onClick={handleSubmitComment}
+                        loading={commentLoading}
+                        disabled={!commentContent.trim()}
+                      >
+                        发布评论
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="comment-scrollable-content">
+                  {commentsLoading ? (
+                    <div className="comments-loading">
+                      <Spin/>
+                    </div>
+                  ) : comments.length > 0 ? (
+                    <div className="comment-list">
+                      {comments.map(item => renderCommentItem(item))}
+
+                      {commentPagination.total > commentPagination.pageSize && (
+                        <div className="comment-pagination">
+                          <Pagination
+                            current={commentPagination.current}
+                            pageSize={commentPagination.pageSize}
+                            total={commentPagination.total}
+                            onChange={handleCommentPageChange}
+                            size="small"
+                            simple
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="no-comments">
+                      <MessageOutlined style={{fontSize: 24}}/>
+                      <p>暂无评论，快来发表第一条评论吧！</p>
                     </div>
                   )}
                 </div>
-              ) : (
-                <div className="no-comments">
-                  <MessageOutlined style={{ fontSize: 24 }} />
-                  <p>暂无评论，快来发表第一条评论吧！</p>
-                </div>
-              )}
-            </div>
+              </>
+            )}
           </Card>
         </div>
       </div>
@@ -1099,4 +1171,4 @@ const PostDetail: React.FC = () => {
   );
 };
 
-export default PostDetail; 
+export default PostDetail;
