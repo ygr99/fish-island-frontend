@@ -43,6 +43,7 @@ const PostPage: React.FC = () => {
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
   const [searchVisible, setSearchVisible] = useState<boolean>(false);
+  const [myPostsVisible, setMyPostsVisible] = useState<boolean>(false);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 5,
@@ -81,18 +82,27 @@ const PostPage: React.FC = () => {
     }
   };
 
-  // 标签颜色列表
-  const tagColors = [
-    'magenta', 'red', 'volcano', 'orange', 'gold',
-    'lime', 'green', 'cyan', 'blue', 'geekblue',
-    'purple', 'pink'
-  ];
+  // 根据标签获取颜色
+  const getTagColor = (tag: API.TagsVO | undefined) => {
+    // 如果标签有自定义颜色，则使用自定义颜色
+    if (tag && tag.color) {
+      return tag.color;
+    }
+    // 默认颜色
+    return 'blue';
+  };
 
-  // 根据标签ID获取颜色
-  const getTagColor = (tagId: number | undefined) => {
-    if (!tagId) return tagColors[0];
-    // 使用取模运算确保颜色循环使用
-    return tagColors[tagId % tagColors.length];
+  // 渲染标签图标
+  const renderTagIcon = (tag: API.TagsVO | undefined) => {
+    if (tag && tag.icon) {
+      // 如果是URL图标，渲染为img标签
+      if (tag.icon.startsWith('http')) {
+        return <img src={tag.icon} alt={tag.tagsName} style={{ width: 16, height: 16, marginRight: 4 }} />;
+      }
+      // 否则可能是图标名称，可以根据需求处理
+      return <span style={{ marginRight: 4 }}>{tag.icon}</span>;
+    }
+    return null;
   };
 
   // 获取热门话题
@@ -142,6 +152,18 @@ const PostPage: React.FC = () => {
         params.sortOrder = 'descend';
       } else if (currentTab === 'featured') {
         params.isFeatured = 1; // 精华内容
+      } else if (currentTab === 'my') {
+        // 我的帖子，传递当前用户ID
+        if (currentUser?.id) {
+          params.userId = currentUser.id;
+        } else {
+          // 如果用户未登录，显示提示信息
+          message.warning('请先登录查看我的帖子');
+          setMyPostsVisible(false);
+          return;
+        }
+        params.sortField = 'createTime';
+        params.sortOrder = 'descend';
       } else {
         // 默认按创建时间排序
         params.sortField = 'createTime';
@@ -249,6 +271,13 @@ const PostPage: React.FC = () => {
     setPagination({...pagination, current: 1}); // 重置到第一页
     setPosts([]); // 清空现有数据
     setHasMore(true); // 重置hasMore状态
+    
+    // 如果切换到"我的帖子"标签，检查用户是否已登录
+    if (key === 'my' && !currentUser) {
+      message.warning('请先登录查看我的帖子');
+      // 可以选择跳转到登录页面
+      // history.push('/user/login');
+    }
   };
 
   // 加载更多数据
@@ -343,7 +372,7 @@ const PostPage: React.FC = () => {
                 <span className="filter-label">标签：</span>
                 <div className="tag-container">
                   <Tag
-                    color={selectedTag === null ? 'orange' : ''}
+                    color="orange"
                     className={selectedTag === null ? 'category-tag active' : 'category-tag'}
                     onClick={() => handleTagClick(null)}
                   >
@@ -352,10 +381,11 @@ const PostPage: React.FC = () => {
                   {tags.map(tag => (
                     <Tag
                       key={tag.id}
-                      color={selectedTag === tag.id ? getTagColor(tag.id) : getTagColor(tag.id)}
+                      color={getTagColor(tag)}
                       className={selectedTag === tag.id ? 'category-tag active' : 'category-tag'}
                       onClick={() => handleTagClick(tag.id || null)}
                     >
+                      {renderTagIcon(tag)}
                       {tag.tagsName}
                     </Tag>
                   ))}
@@ -418,6 +448,10 @@ const PostPage: React.FC = () => {
                   <TabPane
                     tab={<span>{!isMobile && <RiseOutlined/>} 精华内容</span>}
                     key="featured"
+                  />
+                  <TabPane
+                    tab={<span>{!isMobile && <UserOutlined/>} 我的帖子</span>}
+                    key="my"
                   />
                 </Tabs>
               </div>
@@ -505,9 +539,9 @@ const PostPage: React.FC = () => {
                             </div>
                             <div className="post-tags">
                               {item.tagList && item.tagList.map((tag, index) => {
-                                // 查找对应的标签ID以获取颜色
+                                // 查找对应的标签对象以获取颜色和图标
                                 const tagObj = tags.find(t => t.tagsName === tag);
-                                const color = tagObj ? getTagColor(tagObj.id) : 'blue';
+                                const color = tagObj ? getTagColor(tagObj) : 'blue';
                                 // 在移动设备上限制显示的标签数量
                                 if (isMobile && index > 1) return null;
                                 return (
@@ -517,6 +551,7 @@ const PostPage: React.FC = () => {
                                     className="category-tag-small"
                                     onClick={(e) => e.stopPropagation()}
                                   >
+                                    {renderTagIcon(tagObj)}
                                     {tag}
                                   </Tag>
                                 );
