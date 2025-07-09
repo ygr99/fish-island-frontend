@@ -615,7 +615,9 @@ const PostPage: React.FC = () => {
 
                         {item.latestComment && (
                           <div className="post-content hot-comment">
-                            {item.latestComment.content}
+                            {item.latestComment.content && item.latestComment.content.match(/\[img\](.*?)\[\/img\]/i) 
+                              ? '【图片】' 
+                              : item.latestComment.content}
                           </div>
                         )}
                       </div>
