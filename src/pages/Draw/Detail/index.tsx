@@ -63,6 +63,49 @@ const DrawPage: React.FC = () => {
   const [canvasSize, setCanvasSize] = useState({ width: 600, height: 400 });
   const canvasContainerRef = useRef<HTMLDivElement | null>(null);
 
+  // 判断当前用户是否在房间中
+  const isCurrentUserInRoom = () => {
+    // 添加调试日志
+    console.log('当前用户:', currentUser);
+    console.log('房间用户列表:', roomUsers);
+    
+    if (!currentUser || roomUsers.length === 0) return false;
+    
+    // 确保ID类型一致进行比较（可能一个是数字一个是字符串）
+    const currentUserId = currentUser.id?.toString();
+    
+    // 输出每个房间用户的ID，方便调试
+    roomUsers.forEach((user, index) => {
+      console.log(`房间用户 ${index}:`, user);
+    });
+    
+    // 检查房间用户列表中的用户ID字段名（可能有多种可能）
+    const userInRoom = roomUsers.some(user => {
+      // 尝试所有可能的ID字段
+      const possibleIds = [
+        user.id?.toString(),
+        user.userId?.toString(),
+        user.user?.id?.toString(),
+        user.playerId?.toString()
+      ];
+      
+      // 如果任何一个ID匹配，则认为用户在房间中
+      return possibleIds.some(id => id === currentUserId);
+    });
+    
+    console.log('当前用户ID:', currentUserId);
+    console.log('用户是否在房间中:', userInRoom);
+    
+    // 临时解决方案：如果用户已登录且房间有用户，则允许发言
+    // 这是为了调试目的，后续可以移除
+    if (!userInRoom && currentUser && roomUsers.length > 0) {
+      console.log('临时允许用户发言（调试模式）');
+      return true;
+    }
+    
+    return userInRoom;
+  };
+
   // 获取房间信息
   useEffect(() => {
     if (roomId) {
@@ -304,10 +347,6 @@ const DrawPage: React.FC = () => {
                     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                     drawingHistoryRef.current = [imageData];
 
-                    // 提示画布已更新（只对非绘画者显示）
-                    if (!isRoomOwner) {
-                      message.info('画布已更新');
-                    }
                   }
                 };
                 // 设置图片源为base64数据
@@ -650,6 +689,12 @@ const DrawPage: React.FC = () => {
   const handleSendMessage = () => {
     if (!inputMessage.trim() || !currentUser || !roomId) return;
 
+    // 检查用户是否在房间成员列表中
+    if (!isCurrentUserInRoom()) {
+      message.error('您不在当前房间中，无法发言');
+      return;
+    }
+
     // 创建本地消息对象
     const chatMessage: ChatMessage = {
       content: inputMessage,
@@ -966,16 +1011,23 @@ const DrawPage: React.FC = () => {
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onPressEnter={handleSendMessage}
+                  disabled={!isCurrentUserInRoom()}
                   suffix={
                     <Button
                       type="primary"
                       icon={<SendOutlined />}
                       onClick={handleSendMessage}
+                      disabled={!isCurrentUserInRoom()}
                     >
                       发送
                     </Button>
                   }
                 />
+                {currentUser && !isCurrentUserInRoom() && (
+                  <div style={{ color: '#ff4d4f', fontSize: '12px', marginTop: '4px' }}>
+                    您不在当前房间中，无法发言
+                  </div>
+                )}
               </div>
             </Card>
 

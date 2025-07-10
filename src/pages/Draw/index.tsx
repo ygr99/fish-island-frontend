@@ -206,8 +206,8 @@ const DrawRoomPage: React.FC = () => {
                         <Button
                           type="primary"
                           onClick={() => {
-                            if (isUserInRoom) {
-                              // 如果用户已在房间，直接进入
+                            if (isUserInRoom || room.status === 'PLAYING') {
+                              // 如果用户已在房间或者是观战模式，直接进入
                               history.push(`/draw/${room.roomId}`);
                             } else {
                               // 否则调用加入房间的方法
