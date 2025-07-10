@@ -1,728 +1,415 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useModel } from '@umijs/max';
+import React, { useState, useEffect } from 'react';
 import { PageContainer } from '@ant-design/pro-components';
-import { Card, Input, Button, List, Avatar, message, Typography, Modal } from 'antd';
-import { SendOutlined, UndoOutlined, ClearOutlined, SaveOutlined } from '@ant-design/icons';
-import { wsService } from '@/services/websocket';
+import { Card, List, Button, Typography, Space, Badge, Input, Modal, Form, message, Empty, Avatar, Tooltip, Tag, Row, Col, Divider } from 'antd';
+import { SearchOutlined, PlusOutlined, UserOutlined, TeamOutlined, ClockCircleOutlined, InfoCircleOutlined, ReloadOutlined } from '@ant-design/icons';
+import { getAllRoomsUsingGet, createRoomUsingPost, joinRoomUsingPost, getRoomByIdUsingGet } from '@/services/backend/drawGameController';
+import { useModel, history } from '@umijs/max';
 import './index.less';
 
-const { Text } = Typography;
+const { Title, Text } = Typography;
 
-interface DrawMessage {
-  type: 'draw' | 'clear' | 'chat';
-  data: any;
-  sender: {
-    id: string;
-    name: string;
-    avatar: string;
-  };
-  timestamp: number;
-}
+// 使用与后端接口一致的类型
+type RoomItem = API.DrawRoomVO;
 
-interface ChatMessage {
-  content: string;
-  sender: {
-    id: string;
-    name: string;
-    avatar: string;
-  };
-  timestamp: number;
-}
-
-const DrawPage: React.FC = () => {
+const DrawRoomPage: React.FC = () => {
+  // 使用initialState获取当前用户信息
   const { initialState } = useModel('@@initialState');
   const currentUser = initialState?.currentUser;
-  const [isRoomOwner, setIsRoomOwner] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputMessage, setInputMessage] = useState('');
-  const [roomUsers, setRoomUsers] = useState<any[]>([]);
-  const [currentWord, setCurrentWord] = useState<string>('');
-  const [roundTime, setRoundTime] = useState<number>(60);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [color, setColor] = useState('#000000');
-  const [brushSize, setBrushSize] = useState(3);
-  const [tool, setTool] = useState<'brush' | 'eraser'>('brush'); // 添加工具类型状态
-  const [eraserSize, setEraserSize] = useState(20); // 橡皮擦大小
   
-  // 记录绘画操作历史
-  const [drawOperations, setDrawOperations] = useState<any[]>([]);
+  // 调试信息
+  console.log('initialState:', initialState);
+  console.log('currentUser:', currentUser);
   
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const chatListRef = useRef<HTMLDivElement | null>(null);
-  const drawingHistoryRef = useRef<ImageData[]>([]);
-  const currentPathRef = useRef<{ x: number; y: number }[]>([]);
+  // 状态管理
+  const [rooms, setRooms] = useState<RoomItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
   
-  // 添加canvas尺寸状态
-  const [canvasSize, setCanvasSize] = useState({ width: 600, height: 400 });
-  const canvasContainerRef = useRef<HTMLDivElement | null>(null);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [createRoomVisible, setCreateRoomVisible] = useState(false);
   
-  // 调整canvas大小以适应容器
-  useEffect(() => {
-    const resizeCanvas = () => {
-      if (canvasContainerRef.current && canvasRef.current) {
-        const containerWidth = canvasContainerRef.current.clientWidth;
-        const containerHeight = Math.min(400, window.innerHeight * 0.5); // 限制最大高度
-        
-        // 更新canvas尺寸状态
-        setCanvasSize({
-          width: containerWidth,
-          height: containerHeight
-        });
-        
-        // 设置canvas的实际尺寸与显示尺寸一致
-        canvasRef.current.width = containerWidth;
-        canvasRef.current.height = containerHeight;
-        
-        // 如果之前有内容，需要重新绘制
-        if (drawingHistoryRef.current.length > 0 && canvasRef.current) {
-          const ctx = canvasRef.current.getContext('2d');
-          if (ctx) {
-            const lastState = drawingHistoryRef.current[drawingHistoryRef.current.length - 1];
-            ctx.putImageData(lastState, 0, 0);
-          }
-        }
+  const [form] = Form.useForm();
+
+  // 获取房间列表
+  const fetchRooms = async () => {
+    setLoading(true);
+    try {
+      const res = await getAllRoomsUsingGet();
+      if (res.data && res.code === 0) {
+        setRooms(res.data);
+      } else {
+        message.error('获取房间列表失败');
       }
-    };
-    
-    // 初始调整
-    resizeCanvas();
-    
-    // 监听窗口大小变化
-    window.addEventListener('resize', resizeCanvas);
-    
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-    };
+    } catch (error) {
+      console.error('获取房间列表出错:', error);
+      message.error('获取房间列表出错');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 初始加载房间列表
+  useEffect(() => {
+    fetchRooms();
   }, []);
   
-  // 连接到WebSocket
-  useEffect(() => {
-    if (currentUser) {
-      // 使用空字符串，实际连接会在WebSocketService内部使用请求头授权
-      wsService.connect('');
-      
-      // 监听连接状态变化
-      const checkConnection = () => {
-        const connected = wsService.isConnected();
-        setIsConnected(connected);
-      };
-      
-      const interval = setInterval(checkConnection, 1000);
-      
-      // 设置房主状态 (简化示例，实际上应该从服务端获取)
-      setIsRoomOwner(true); // 暂时默认为房主
-      
-      return () => {
-        clearInterval(interval);
-        wsService.disconnect();
-      };
-    }
-  }, [currentUser]);
+  // 过滤房间列表
+  const filteredRooms = rooms.filter(room => 
+    (room.creatorName?.toLowerCase().includes(searchKeyword.toLowerCase()) || 
+    room.roomId?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+    room.wordHint?.toLowerCase().includes(searchKeyword.toLowerCase()))
+  );
   
-  // 注册WebSocket消息处理
-  useEffect(() => {
-    // 处理画板消息
-    wsService.addMessageHandler('draw', (data) => {
-      handleDrawMessageReceived(data);
-    });
+  // 计算房间剩余时间
+  const getRemainingTime = (room: RoomItem) => {
+    if (!room.roundEndTime) return null;
     
-    // 处理聊天消息
-    wsService.addMessageHandler('chat', (data) => {
-      const newMessage: ChatMessage = {
-        content: data.data.content,
-        sender: data.data.sender,
-        timestamp: data.timestamp
-      };
-      setMessages(prev => [...prev, newMessage]);
+    const now = Date.now();
+    const endTime = room.roundEndTime;
+    const remainingSeconds = Math.max(0, Math.floor((endTime - now) / 1000));
+    
+    return remainingSeconds > 0 ? `${remainingSeconds}秒` : '即将结束';
+  };
+  
+  // 创建房间
+  const handleCreateRoom = async (values: any) => {
+    try {
+      const res = await createRoomUsingPost({
+        maxPlayers: values.maxPlayers,
+        roundDuration: values.roundDuration || 60,
+        customWord: values.customWord || '',
+        wordHint: values.wordHint || '',
+      });
       
-      // 检查是否猜对了
-      if (isRoomOwner && currentWord && data.data.content.includes(currentWord)) {
-        message.success(`${data.data.sender.name} 猜对了词语：${currentWord}`);
-        wsService.send({
-          type: 'draw',
-          action: 'correct_guess',
-          data: {
-            userId: data.data.sender.id,
-            word: currentWord
-          }
-        });
+      if (res.data && res.code === 0) {
+        message.success('创建房间成功');
+        setCreateRoomVisible(false);
+        form.resetFields();
+        
+        // 创建完后直接进入房间
+        history.push(`/draw/${res.data}`);
+      } else {
+        message.error(res.message || '创建房间失败');
       }
-    });
-    
-    // 处理用户加入/离开消息
-    wsService.addMessageHandler('user_event', (data) => {
-      if (data.data.action === 'join') {
-        setRoomUsers(prev => [...prev, data.data.user]);
-        message.info(`${data.data.user.name} 加入了房间`);
-      } else if (data.data.action === 'leave') {
-        setRoomUsers(prev => prev.filter(user => user.id !== data.data.user.id));
-        message.info(`${data.data.user.name} 离开了房间`);
-      }
-    });
-    
-    // 处理游戏状态更新
-    wsService.addMessageHandler('game_state', (data) => {
-      if (data.data.currentWord) {
-        setCurrentWord(data.data.currentWord);
-      }
-      if (data.data.roundTime) {
-        setRoundTime(data.data.roundTime);
-      }
-    });
-    
-    return () => {
-      wsService.clearMessageHandlers();
-    };
-  }, [isRoomOwner, currentWord]);
-  
-  // 自动滚动聊天到底部
-  useEffect(() => {
-    if (chatListRef.current) {
-      chatListRef.current.scrollTop = chatListRef.current.scrollHeight;
-    }
-  }, [messages]);
-  
-  // 处理画板消息
-  const handleDrawMessageReceived = (data: DrawMessage) => {
-    if (!canvasRef.current) return;
-    
-    const ctx = canvasRef.current.getContext('2d');
-    if (!ctx) return;
-    
-    switch (data.type) {
-      case 'draw':
-        if (data.data.action === 'start') {
-          ctx.beginPath();
-          ctx.moveTo(data.data.x, data.data.y);
-          
-          if (data.data.tool === 'brush') {
-            ctx.strokeStyle = data.data.color;
-            ctx.lineWidth = data.data.brushSize;
-          } else if (data.data.tool === 'eraser') {
-            ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = data.data.eraserSize;
-          }
-          
-          ctx.lineCap = 'round';
-          ctx.lineJoin = 'round';
-        } else if (data.data.action === 'move') {
-          ctx.lineTo(data.data.x, data.data.y);
-          ctx.stroke();
-        }
-        break;
-      case 'clear':
-        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-        drawingHistoryRef.current = [];
-        break;
-      default:
-        break;
+    } catch (error) {
+      console.error('创建房间出错:', error);
+      message.error('创建房间失败，请稍后再试');
     }
   };
   
-  // Canvas事件处理 - 修复坐标计算
-  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isRoomOwner || !canvasRef.current) return;
+  // 加入房间
+  const handleJoinRoom = async (room: RoomItem) => {
+    // 如果房间已满
+    if (room.currentPlayers && room.maxPlayers && room.currentPlayers >= room.maxPlayers) {
+      message.error('房间已满');
+      return;
+    }
     
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
+    if (!room.roomId) {
+      message.error('房间ID无效');
+      return;
+    }
     
-    // 使用缩放比例来正确计算坐标
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-    
-    setIsDrawing(true);
-    currentPathRef.current = [{ x, y }];
-    
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      // 保存当前画布状态
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      drawingHistoryRef.current.push(imageData);
-      
-      if (tool === 'brush') {
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = brushSize;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round'; // 添加线条连接方式
-        
-        // 记录绘画操作，但不发送
-        const operation = {
-          action: 'start',
-          tool: 'brush',
-          x,
-          y,
-          color,
-          brushSize
-        };
-        
-        setDrawOperations(prev => [...prev, operation]);
-      } else if (tool === 'eraser') {
-        // 橡皮擦工具
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.strokeStyle = '#FFFFFF'; // 白色橡皮擦
-        ctx.lineWidth = eraserSize;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        
-        // 记录橡皮擦操作
-        const operation = {
-          action: 'start',
-          tool: 'eraser',
-          x,
-          y,
-          eraserSize
-        };
-        
-        setDrawOperations(prev => [...prev, operation]);
+    try {
+      const res = await joinRoomUsingPost({ roomId: room.roomId });
+      if (res.data && res.code === 0) {
+        message.success('加入房间成功');
+        history.push(`/draw/${room.roomId}`);
+      } else {
+        message.error(res.message || '加入房间失败');
       }
+    } catch (error) {
+      console.error('加入房间出错:', error);
+      message.error('加入房间失败，请稍后再试');
     }
   };
-  
-  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !isRoomOwner || !canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    
-    // 使用缩放比例来正确计算坐标
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-    
-    currentPathRef.current.push({ x, y });
-    
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.lineTo(x, y);
-      ctx.stroke();
-      
-      // 记录绘画操作，但不发送
-      const operation = {
-        action: 'move',
-        tool: tool,
-        x,
-        y
-      };
-      
-      setDrawOperations(prev => [...prev, operation]);
-    }
-  };
-  
-  // 添加触摸设备支持
-  const handleCanvasTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isRoomOwner || !canvasRef.current) return;
-    e.preventDefault(); // 防止页面滚动
-    
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const touch = e.touches[0];
-    
-    // 使用缩放比例来正确计算坐标
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    
-    const x = (touch.clientX - rect.left) * scaleX;
-    const y = (touch.clientY - rect.top) * scaleY;
-    
-    setIsDrawing(true);
-    currentPathRef.current = [{ x, y }];
-    
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      // 保存当前画布状态
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      drawingHistoryRef.current.push(imageData);
-      
-      if (tool === 'brush') {
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = brushSize;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        
-        // 记录绘画操作
-        const operation = {
-          action: 'start',
-          tool: 'brush',
-          x,
-          y,
-          color,
-          brushSize
-        };
-        
-        setDrawOperations(prev => [...prev, operation]);
-      } else if (tool === 'eraser') {
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = eraserSize;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        
-        // 记录橡皮擦操作
-        const operation = {
-          action: 'start',
-          tool: 'eraser',
-          x,
-          y,
-          eraserSize
-        };
-        
-        setDrawOperations(prev => [...prev, operation]);
-      }
-    }
-  };
-  
-  const handleCanvasTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !isRoomOwner || !canvasRef.current) return;
-    e.preventDefault(); // 防止页面滚动
-    
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const touch = e.touches[0];
-    
-    // 使用缩放比例来正确计算坐标
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    
-    const x = (touch.clientX - rect.left) * scaleX;
-    const y = (touch.clientY - rect.top) * scaleY;
-    
-    currentPathRef.current.push({ x, y });
-    
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.lineTo(x, y);
-      ctx.stroke();
-      
-      // 记录绘画操作
-      const operation = {
-        action: 'move',
-        tool: tool,
-        x,
-        y
-      };
-      
-      setDrawOperations(prev => [...prev, operation]);
-    }
-  };
-  
-  const handleCanvasMouseUp = () => {
-    if (!isDrawing || !isRoomOwner) return;
-    setIsDrawing(false);
-  };
-  
-  // 撤销上一步
-  const handleUndo = () => {
-    if (!canvasRef.current || drawingHistoryRef.current.length === 0) return;
-    
-    const ctx = canvasRef.current.getContext('2d');
-    if (ctx) {
-      const prevState = drawingHistoryRef.current.pop();
-      if (prevState) {
-        ctx.putImageData(prevState, 0, 0);
-        
-        // 记录撤销操作
-        const operation = {
-          action: 'undo'
-        };
-        
-        setDrawOperations(prev => [...prev, operation]);
-      }
-    }
-  };
-  
-  // 清空画布
-  const handleClear = () => {
-    if (!canvasRef.current) return;
-    
-    const ctx = canvasRef.current.getContext('2d');
-    if (ctx) {
-      ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-      drawingHistoryRef.current = [];
-      
-      // 记录清空操作
-      const operation = {
-        action: 'clear'
-      };
-      
-      setDrawOperations(prev => [...prev, operation]);
-    }
-  };
-  
-  // 保存画布并上传
-  const handleSave = () => {
-    if (!canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    
-    // 获取画布数据
-    const imageDataUrl = canvas.toDataURL('image/png');
-    
-    // 打印上传参数
-    console.log('保存画布数据：', {
-      imageDataUrl,
-      operations: drawOperations,
-      word: currentWord,
-      timestamp: new Date().toISOString()
-    });
-    
-    message.success('画布数据已准备好，请查看控制台');
-    
-    // 这里将来会调用上传API
-    // API调用示例:
-    // uploadDrawing({
-    //   imageData: imageDataUrl,
-    //   operations: drawOperations,
-    //   word: currentWord
-    // }).then(() => {
-    //   message.success('绘画保存成功!');
-    // }).catch(err => {
-    //   message.error('保存失败: ' + err.message);
-    // });
-  };
-  
-  // 发送聊天消息
-  const handleSendMessage = () => {
-    if (!inputMessage.trim() || !currentUser) return;
-    
-    const message = {
-      type: 'chat',
-      data: {
-        content: inputMessage,
-        sender: {
-          id: currentUser.id,
-          name: currentUser.userName,
-          avatar: currentUser.userAvatar
-        }
-      }
-    };
-    
-    wsService.send(message);
-    setInputMessage('');
-  };
-  
-  // 设置新的绘画词语
-  const handleSetNewWord = () => {
-    Modal.confirm({
-      title: '设置绘画词语',
-      content: (
-        <Input 
-          placeholder="输入新的绘画词语" 
-          onChange={(e) => setCurrentWord(e.target.value)}
-          value={currentWord}
-        />
-      ),
-      onOk() {
-        if (currentWord.trim()) {
-          wsService.send({
-            type: 'draw',
-            action: 'set_word',
-            data: {
-              word: currentWord
-            }
-          });
-          message.success(`成功设置词语: ${currentWord}`);
-        }
-      }
-    });
-  };
-  
-  // 切换绘图工具
-  const switchTool = (selectedTool: 'brush' | 'eraser') => {
-    setTool(selectedTool);
-    // 如果切换到画笔，记得保存当前画笔设置
-    message.info(`已切换到${selectedTool === 'brush' ? '画笔' : '橡皮擦'}`);
-  };
-  
-  const colorOptions = ['#000000', '#FF0000', '#0000FF', '#00FF00', '#FFFF00', '#FF00FF', '#00FFFF'];
   
   return (
-    <PageContainer>
-      <div className="draw-game-container">
-        <div className="draw-game-content">
-          {/* 画板区域 */}
-          <div className="draw-canvas-section">
-            <Card 
-              title={
-                <div className="canvas-header">
-                  <span>{isRoomOwner ? "你是绘画者" : "猜词环节"}</span>
-                  {isRoomOwner && (
-                    <div className="word-display">
-                      当前词语: <Text strong>{currentWord || '(未设置)'}</Text>
-                      <Button size="small" type="primary" onClick={handleSetNewWord}>
-                        设置词语
-                      </Button>
-                    </div>
-                  )}
-                  <div className="timer">剩余时间: {roundTime}s</div>
-                </div>
-              } 
-              className="draw-canvas-card"
-            >
-              <div className="canvas-container" ref={canvasContainerRef}>
-                <canvas
-                  ref={canvasRef}
-                  width={canvasSize.width}
-                  height={canvasSize.height}
-                  className="draw-canvas"
-                  onMouseDown={handleCanvasMouseDown}
-                  onMouseMove={handleCanvasMouseMove}
-                  onMouseUp={handleCanvasMouseUp}
-                  onMouseLeave={handleCanvasMouseUp}
-                  onTouchStart={handleCanvasTouchStart}
-                  onTouchMove={handleCanvasTouchMove}
-                  onTouchEnd={handleCanvasMouseUp}
+    <PageContainer
+      header={{
+        title: '你画我猜房间列表',
+      }}
+    >
+      <Row justify="center">
+        <Col xs={24} sm={24} md={20} lg={18} xl={16}>
+          <div className="room-controls">
+            <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }} size="large">
+              <div>
+                <Input
+                  placeholder="搜索房间"
+                  prefix={<SearchOutlined className="search-icon" />}
+                  value={searchKeyword}
+                  onChange={e => setSearchKeyword(e.target.value)}
+                  style={{ width: 250 }}
+                  allowClear
+                  className="search-input"
                 />
               </div>
-              
-              {isRoomOwner && (
-                <div className="canvas-toolbar">
-                  <div className="tool-selector">
-                    <Button 
-                      type={tool === 'brush' ? 'primary' : 'default'}
-                      onClick={() => switchTool('brush')}
-                      className="tool-button"
-                    >
-                      画笔
-                    </Button>
-                    <Button 
-                      type={tool === 'eraser' ? 'primary' : 'default'}
-                      onClick={() => switchTool('eraser')}
-                      className="tool-button"
-                    >
-                      橡皮擦
-                    </Button>
-                  </div>
-                  
-                  {tool === 'brush' ? (
-                    <>
-                      <div className="color-palette">
-                        {colorOptions.map((c) => (
-                          <div 
-                            key={c} 
-                            className={`color-option ${color === c ? 'selected' : ''}`}
-                            style={{ backgroundColor: c }}
-                            onClick={() => setColor(c)}
-                          />
-                        ))}
-                      </div>
-                      
-                      <div className="brush-size-controls">
-                        <span>笔触大小:</span>
-                        <input 
-                          type="range" 
-                          min="1" 
-                          max="20" 
-                          value={brushSize} 
-                          onChange={(e) => setBrushSize(parseInt(e.target.value))}
-                        />
-                        <span>{brushSize}px</span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="brush-size-controls">
-                      <span>橡皮大小:</span>
-                      <input 
-                        type="range" 
-                        min="5" 
-                        max="50" 
-                        value={eraserSize} 
-                        onChange={(e) => setEraserSize(parseInt(e.target.value))}
-                      />
-                      <span>{eraserSize}px</span>
-                    </div>
-                  )}
-                  
-                  <div className="canvas-actions">
-                    <Button icon={<UndoOutlined />} onClick={handleUndo}>撤销</Button>
-                    <Button icon={<ClearOutlined />} danger onClick={handleClear}>清空</Button>
-                    <Button 
-                      icon={<SaveOutlined />} 
-                      type="primary"
-                      onClick={handleSave}
-                    >
-                      保存
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </Card>
+              <div>
+                <Space>
+                  <Button 
+                    type="primary" 
+                    icon={<PlusOutlined />} 
+                    onClick={() => setCreateRoomVisible(true)}
+                    className="create-button"
+                  >
+                    创建房间
+                  </Button>
+                  <Button 
+                    onClick={fetchRooms}
+                    loading={loading}
+                    icon={<ReloadOutlined />}
+                  >
+                    刷新
+                  </Button>
+                </Space>
+              </div>
+            </Space>
           </div>
           
-          {/* 聊天室区域 */}
-          <div className="chat-section">
-            <Card title="聊天室" className="chat-card">
-              <div className="chat-list" ref={chatListRef}>
-                <List
-                  itemLayout="horizontal"
-                  dataSource={messages}
-                  renderItem={item => (
-                    <List.Item>
+          <Card 
+            className="room-list-card" 
+            loading={loading}
+            title={
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 12px' }}>
+                <span>房间列表</span>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  共 {filteredRooms.length} 个房间
+                </Text>
+              </div>
+            }
+            headStyle={{ padding: '16px 12px' }}
+          >
+            {filteredRooms.length > 0 ? (
+              <List
+                itemLayout="horizontal"
+                dataSource={filteredRooms}
+                renderItem={room => {
+                  const remainingTime = getRemainingTime(room);
+                  const isRoomFull = !!(room.currentPlayers && room.maxPlayers && room.currentPlayers >= room.maxPlayers);
+                  
+                  // 检查当前用户是否已在房间中
+                  const isUserInRoom = currentUser && room.participants && 
+                    room.participants.some(player => {
+                      if (!currentUser || !player.userId) return false;
+                      
+                      // 将两个ID都转换为字符串进行比较
+                      const currentUserId = String(currentUser.id);
+                      const playerUserId = String(player.userId);
+                      
+                      
+                      return currentUserId === playerUserId;
+                    });
+                  
+                  
+                  return (
+                    <List.Item
+                      className="room-list-item"
+                      actions={[
+                        <Button 
+                          type="primary"
+                          onClick={() => {
+                            if (isUserInRoom) {
+                              // 如果用户已在房间，直接进入
+                              history.push(`/draw/${room.roomId}`);
+                            } else {
+                              // 否则调用加入房间的方法
+                              handleJoinRoom(room);
+                            }
+                          }}
+                          className={`join-button ${isUserInRoom ? 'join-button-detail' : 
+                            (room.status === 'WAITING' ? 'join-button-waiting' : 'join-button-playing')}`}
+                          disabled={!isUserInRoom && isRoomFull}
+                        >
+                          {isUserInRoom ? '查看详情' : (room.status === 'WAITING' ? '加入' : '观战')}
+                        </Button>
+                      ]}
+                    >
                       <List.Item.Meta
-                        avatar={<Avatar src={item.sender.avatar} />}
-                        title={<span>{item.sender.name} <Text type="secondary" style={{ fontSize: '12px' }}>
-                          {new Date(item.timestamp).toLocaleTimeString()}
-                        </Text></span>}
-                        description={item.content}
+                        avatar={
+                          <Avatar src={room.creatorAvatar} size={40} className="room-avatar" />
+                        }
+                        title={
+                          <div className="room-title">
+                            <Text strong className="room-name">{room.creatorName}的房间</Text>
+                            <Badge 
+                              status={room.status === 'WAITING' ? 'success' : 'processing'} 
+                              text={
+                                <span className={`room-status ${room.status === 'WAITING' ? 'status-waiting' : 'status-playing'}`}>
+                                  {room.status === 'WAITING' ? '等待中' : '游戏中'}
+                                </span>
+                              } 
+                            />
+                            {room.status === 'PLAYING' && room.currentDrawerName && (
+                              <Tag color="blue">
+                                当前绘画者: {room.currentDrawerName}
+                              </Tag>
+                            )}
+                            {isUserInRoom && (
+                              <Tag color="success" className="user-joined-tag">
+                                已加入
+                              </Tag>
+                            )}
+                          </div>
+                        }
+                        description={
+                          <div className="room-info">
+                            <div className="room-owner">
+                              <UserOutlined className="owner-icon" /> 
+                              <span>房主: {room.creatorName}</span>
+                            </div>
+                            <div className="room-players">
+                              <TeamOutlined className="players-icon" /> 
+                              <span className={isRoomFull ? 'room-full' : ''}>
+                                {room.currentPlayers}/{room.maxPlayers}
+                              </span>
+                            </div>
+                            {room.status === 'PLAYING' && remainingTime && (
+                              <div className="room-timer">
+                                <ClockCircleOutlined /> 
+                                <span>剩余时间: {remainingTime}</span>
+                              </div>
+                            )}
+                            {/* 隐藏提示词 */}
+                            <div className="room-create-time">
+                              <span>创建时间: {new Date(room.createTime || '').toLocaleString()}</span>
+                              <Tooltip title={`房间ID: ${room.roomId}`}>
+                                <InfoCircleOutlined style={{ marginLeft: 8, cursor: 'pointer' }} />
+                              </Tooltip>
+                            </div>
+                            {room.participants && room.participants.length > 0 && (
+                              <div className="room-participants">
+                                <span>参与者: </span>
+                                <Avatar.Group maxCount={5} size={20}>
+                                  {room.participants.map((player, index) => (
+                                    <Tooltip 
+                                      key={index} 
+                                      title={
+                                        <>
+                                          {player.userName}
+                                          {currentUser && String(player.userId) === String(currentUser.id) && ' (你)'}
+                                        </>
+                                      }
+                                    >
+                                      <Avatar 
+                                        src={player.userAvatar} 
+                                        size={20} 
+                                        style={currentUser && String(player.userId) === String(currentUser.id) ? 
+                                          { border: '2px solid #52c41a' } : undefined}
+                                      />
+                                    </Tooltip>
+                                  ))}
+                                </Avatar.Group>
+                                {currentUser && room.participants.some(p => 
+                                  String(p.userId) === String(currentUser.id)
+                                ) && (
+                                  <Tag color="success" style={{ marginLeft: 8 }}>已加入</Tag>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        }
                       />
                     </List.Item>
-                  )}
-                />
-              </div>
-              
-              <div className="chat-input">
-                <Input 
-                  placeholder="输入你的猜测..." 
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onPressEnter={handleSendMessage}
-                  disabled={isRoomOwner}
-                  suffix={
-                    <Button 
-                      type="primary" 
-                      icon={<SendOutlined />} 
-                      onClick={handleSendMessage}
-                      disabled={isRoomOwner}
-                    >
-                      发送
-                    </Button>
-                  }
-                />
-                {isRoomOwner && <div className="drawing-hint">你是绘画者，不能参与猜词</div>}
-              </div>
-            </Card>
-            
-            <Card title="房间成员" className="users-card">
-              <List
-                dataSource={roomUsers}
-                renderItem={item => (
-                  <List.Item>
-                    <List.Item.Meta
-                      avatar={<Avatar src={item.avatar} />}
-                      title={item.name}
-                      description={item.isOwner ? '(房主)' : '玩家'}
-                    />
-                    <div>{item.score || 0}分</div>
-                  </List.Item>
-                )}
+                  );
+                }}
               />
-            </Card>
-          </div>
-        </div>
-      </div>
+            ) : (
+              <Empty 
+                description="暂无房间，创建一个吧！" 
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                style={{ margin: '40px 0', padding: '20px 0' }}
+                imageStyle={{ height: 60 }}
+              >
+                <Button 
+                  type="primary" 
+                  icon={<PlusOutlined />} 
+                  onClick={() => setCreateRoomVisible(true)}
+                  style={{ marginTop: 16 }}
+                >
+                  创建房间
+                </Button>
+              </Empty>
+            )}
+          </Card>
+        </Col>
+      </Row>
+      
+      {/* 创建房间的模态框 */}
+      <Modal
+        title={<div className="create-room-title">创建你画我猜房间</div>}
+        open={createRoomVisible}
+        onCancel={() => setCreateRoomVisible(false)}
+        footer={null}
+        className="create-room-modal"
+        width={420}
+        centered
+      >
+        <Form 
+          form={form} 
+          layout="vertical" 
+          onFinish={handleCreateRoom}
+          initialValues={{
+            maxPlayers: 8,
+            roundDuration: 60,
+          }}
+          className="create-room-form"
+        >
+          <Form.Item
+            name="maxPlayers"
+            label={<span className="form-label">最大玩家数</span>}
+            rules={[{ required: true, message: '请选择最大玩家数' }]}
+          >
+            <Input 
+              type="number" 
+              min={2} 
+              max={10} 
+              prefix={<TeamOutlined className="input-prefix-icon" />}
+              className="styled-input"
+            />
+          </Form.Item>
+          
+          <Form.Item
+            name="roundDuration"
+            label={<span className="form-label">回合时间（秒）</span>}
+            rules={[{ required: true, message: '请输入回合时间' }]}
+          >
+            <Input 
+              type="number" 
+              min={30} 
+              max={180} 
+              className="styled-input"
+            />
+          </Form.Item>
+          
+          <Form.Item
+            name="customWord"
+            label={<span className="form-label">自定义词语（可选）</span>}
+          >
+            <Input 
+              placeholder="请输入自定义词语" 
+              className="styled-input"
+            />
+          </Form.Item>
+          
+          <Form.Item
+            name="wordHint"
+            label={<span className="form-label">词语提示（可选）</span>}
+          >
+            <Input 
+              placeholder="请输入词语提示" 
+              className="styled-input"
+            />
+          </Form.Item>
+          
+          <Form.Item className="submit-button-container">
+            <Button type="primary" htmlType="submit" block className="create-room-button">
+              创建房间
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
     </PageContainer>
   );
 };
 
-export default DrawPage;
+export default DrawRoomPage;

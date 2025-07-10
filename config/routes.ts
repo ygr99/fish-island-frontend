@@ -15,6 +15,7 @@ export default [
   {path: '/post/:id',component: './Post/Detail', requireAuth: true},
   {path: '/reader', icon: 'BookOutlined', component: './Reader', name: '摸鱼阅读', requireAuth: true},
   // { path: '/draw', icon: 'MessageOutlined', component: './Draw', name: '你画我猜', requireAuth: true },
+  // {path: '/draw/:id',component: './Draw/Detail', requireAuth: true},
   {
     path: '/game',
     icon: 'DesktopOutlined',
