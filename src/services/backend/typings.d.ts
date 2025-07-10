@@ -1272,7 +1272,7 @@ declare namespace API {
     hasThumb?: boolean;
     id?: number;
     isFeatured?: number;
-    latestComment?: CommentVO;
+    thumbComment?: CommentVO;
     tagList?: string[];
     thumbNum?: number;
     title?: string;
