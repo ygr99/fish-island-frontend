@@ -355,6 +355,12 @@ const GuessHero: React.FC = () => {
                 <div>名称：<strong>{newHero.cname}</strong></div>
                 <div>上线时间：<strong>{newHero.releaseDate}</strong></div>
               </div>
+              <div>
+                <div>定位：<strong>{typeMap[newHero.primaryType as keyof typeof typeMap] || newHero.primaryType}</strong>
+                </div>
+                <div>种族：<strong>{newHero.race || '无'}</strong></div>
+              </div>
+
             </Space>
           ) : (
             <span style={{color: '#888'}}>暂无最新英雄信息</span>
