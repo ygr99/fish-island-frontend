@@ -32,6 +32,21 @@ export async function endGameUsingPost(
   });
 }
 
+/** nextRound POST /api/draw/game/next-round */
+export async function nextRoundUsingPost(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.nextRoundUsingPOSTParams,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseBoolean_>('/api/draw/game/next-round', {
+    method: 'POST',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  });
+}
+
 /** startGame POST /api/draw/game/start */
 export async function startGameUsingPost(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)

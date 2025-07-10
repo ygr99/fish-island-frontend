@@ -524,6 +524,7 @@ declare namespace API {
 
   type DrawGuessRequest = {
     guessWord?: string;
+    messageWrapper?: MessageWrapper;
     roomId?: string;
   };
 
@@ -547,10 +548,8 @@ declare namespace API {
   };
 
   type DrawRoomCreateRequest = {
-    customWord?: string;
     maxPlayers?: number;
-    roundDuration?: number;
-    wordHint?: string;
+    totalRounds?: number;
   };
 
   type DrawRoomVO = {
@@ -562,6 +561,7 @@ declare namespace API {
     currentDrawerId?: number;
     currentDrawerName?: string;
     currentPlayers?: number;
+    currentRound?: number;
     currentWord?: string;
     drawData?: string;
     maxPlayers?: number;
@@ -570,6 +570,7 @@ declare namespace API {
     roundEndTime?: number;
     startTime?: string;
     status?: 'WAITING' | 'PLAYING' | 'ENDED';
+    totalRounds?: number;
     wordHint?: string;
   };
 
@@ -970,6 +971,11 @@ declare namespace API {
     newUserCount?: number;
   };
 
+  type nextRoundUsingPOSTParams = {
+    /** roomId */
+    roomId: string;
+  };
+
   type OrderItem = {
     asc?: boolean;
     column?: string;
@@ -1272,8 +1278,8 @@ declare namespace API {
     hasThumb?: boolean;
     id?: number;
     isFeatured?: number;
-    thumbComment?: CommentVO;
     tagList?: string[];
+    thumbComment?: CommentVO;
     thumbNum?: number;
     title?: string;
     updateTime?: string;

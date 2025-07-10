@@ -15,18 +15,18 @@ const DrawRoomPage: React.FC = () => {
   // 使用initialState获取当前用户信息
   const { initialState } = useModel('@@initialState');
   const currentUser = initialState?.currentUser;
-  
+
   // 调试信息
   console.log('initialState:', initialState);
   console.log('currentUser:', currentUser);
-  
+
   // 状态管理
   const [rooms, setRooms] = useState<RoomItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  
+
   const [searchKeyword, setSearchKeyword] = useState('');
   const [createRoomVisible, setCreateRoomVisible] = useState(false);
-  
+
   const [form] = Form.useForm();
 
   // 获取房间列表
@@ -51,40 +51,38 @@ const DrawRoomPage: React.FC = () => {
   useEffect(() => {
     fetchRooms();
   }, []);
-  
+
   // 过滤房间列表
-  const filteredRooms = rooms.filter(room => 
-    (room.creatorName?.toLowerCase().includes(searchKeyword.toLowerCase()) || 
+  const filteredRooms = rooms.filter(room =>
+    (room.creatorName?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
     room.roomId?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
     room.wordHint?.toLowerCase().includes(searchKeyword.toLowerCase()))
   );
-  
+
   // 计算房间剩余时间
   const getRemainingTime = (room: RoomItem) => {
     if (!room.roundEndTime) return null;
-    
+
     const now = Date.now();
     const endTime = room.roundEndTime;
     const remainingSeconds = Math.max(0, Math.floor((endTime - now) / 1000));
-    
+
     return remainingSeconds > 0 ? `${remainingSeconds}秒` : '即将结束';
   };
-  
+
   // 创建房间
   const handleCreateRoom = async (values: any) => {
     try {
       const res = await createRoomUsingPost({
         maxPlayers: values.maxPlayers,
-        roundDuration: values.roundDuration || 60,
-        customWord: values.customWord || '',
-        wordHint: values.wordHint || '',
+        totalRounds: values.totalRounds || 3,
       });
-      
+
       if (res.data && res.code === 0) {
         message.success('创建房间成功');
         setCreateRoomVisible(false);
         form.resetFields();
-        
+
         // 创建完后直接进入房间
         history.push(`/draw/${res.data}`);
       } else {
@@ -95,7 +93,7 @@ const DrawRoomPage: React.FC = () => {
       message.error('创建房间失败，请稍后再试');
     }
   };
-  
+
   // 加入房间
   const handleJoinRoom = async (room: RoomItem) => {
     // 如果房间已满
@@ -103,12 +101,12 @@ const DrawRoomPage: React.FC = () => {
       message.error('房间已满');
       return;
     }
-    
+
     if (!room.roomId) {
       message.error('房间ID无效');
       return;
     }
-    
+
     try {
       const res = await joinRoomUsingPost({ roomId: room.roomId });
       if (res.data && res.code === 0) {
@@ -122,7 +120,7 @@ const DrawRoomPage: React.FC = () => {
       message.error('加入房间失败，请稍后再试');
     }
   };
-  
+
   return (
     <PageContainer
       header={{
@@ -146,15 +144,15 @@ const DrawRoomPage: React.FC = () => {
               </div>
               <div>
                 <Space>
-                  <Button 
-                    type="primary" 
-                    icon={<PlusOutlined />} 
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
                     onClick={() => setCreateRoomVisible(true)}
                     className="create-button"
                   >
                     创建房间
                   </Button>
-                  <Button 
+                  <Button
                     onClick={fetchRooms}
                     loading={loading}
                     icon={<ReloadOutlined />}
@@ -165,9 +163,9 @@ const DrawRoomPage: React.FC = () => {
               </div>
             </Space>
           </div>
-          
-          <Card 
-            className="room-list-card" 
+
+          <Card
+            className="room-list-card"
             loading={loading}
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 12px' }}>
@@ -186,26 +184,26 @@ const DrawRoomPage: React.FC = () => {
                 renderItem={room => {
                   const remainingTime = getRemainingTime(room);
                   const isRoomFull = !!(room.currentPlayers && room.maxPlayers && room.currentPlayers >= room.maxPlayers);
-                  
+
                   // 检查当前用户是否已在房间中
-                  const isUserInRoom = currentUser && room.participants && 
+                  const isUserInRoom = currentUser && room.participants &&
                     room.participants.some(player => {
                       if (!currentUser || !player.userId) return false;
-                      
+
                       // 将两个ID都转换为字符串进行比较
                       const currentUserId = String(currentUser.id);
                       const playerUserId = String(player.userId);
-                      
-                      
+
+
                       return currentUserId === playerUserId;
                     });
-                  
-                  
+
+
                   return (
                     <List.Item
                       className="room-list-item"
                       actions={[
-                        <Button 
+                        <Button
                           type="primary"
                           onClick={() => {
                             if (isUserInRoom) {
@@ -216,7 +214,7 @@ const DrawRoomPage: React.FC = () => {
                               handleJoinRoom(room);
                             }
                           }}
-                          className={`join-button ${isUserInRoom ? 'join-button-detail' : 
+                          className={`join-button ${isUserInRoom ? 'join-button-detail' :
                             (room.status === 'WAITING' ? 'join-button-waiting' : 'join-button-playing')}`}
                           disabled={!isUserInRoom && isRoomFull}
                         >
@@ -231,13 +229,13 @@ const DrawRoomPage: React.FC = () => {
                         title={
                           <div className="room-title">
                             <Text strong className="room-name">{room.creatorName}的房间</Text>
-                            <Badge 
-                              status={room.status === 'WAITING' ? 'success' : 'processing'} 
+                            <Badge
+                              status={room.status === 'WAITING' ? 'success' : 'processing'}
                               text={
                                 <span className={`room-status ${room.status === 'WAITING' ? 'status-waiting' : 'status-playing'}`}>
                                   {room.status === 'WAITING' ? '等待中' : '游戏中'}
                                 </span>
-                              } 
+                              }
                             />
                             {room.status === 'PLAYING' && room.currentDrawerName && (
                               <Tag color="blue">
@@ -254,18 +252,18 @@ const DrawRoomPage: React.FC = () => {
                         description={
                           <div className="room-info">
                             <div className="room-owner">
-                              <UserOutlined className="owner-icon" /> 
+                              <UserOutlined className="owner-icon" />
                               <span>房主: {room.creatorName}</span>
                             </div>
                             <div className="room-players">
-                              <TeamOutlined className="players-icon" /> 
+                              <TeamOutlined className="players-icon" />
                               <span className={isRoomFull ? 'room-full' : ''}>
                                 {room.currentPlayers}/{room.maxPlayers}
                               </span>
                             </div>
                             {room.status === 'PLAYING' && remainingTime && (
                               <div className="room-timer">
-                                <ClockCircleOutlined /> 
+                                <ClockCircleOutlined />
                                 <span>剩余时间: {remainingTime}</span>
                               </div>
                             )}
@@ -281,8 +279,8 @@ const DrawRoomPage: React.FC = () => {
                                 <span>参与者: </span>
                                 <Avatar.Group maxCount={5} size={20}>
                                   {room.participants.map((player, index) => (
-                                    <Tooltip 
-                                      key={index} 
+                                    <Tooltip
+                                      key={index}
                                       title={
                                         <>
                                           {player.userName}
@@ -290,16 +288,16 @@ const DrawRoomPage: React.FC = () => {
                                         </>
                                       }
                                     >
-                                      <Avatar 
-                                        src={player.userAvatar} 
-                                        size={20} 
-                                        style={currentUser && String(player.userId) === String(currentUser.id) ? 
+                                      <Avatar
+                                        src={player.userAvatar}
+                                        size={20}
+                                        style={currentUser && String(player.userId) === String(currentUser.id) ?
                                           { border: '2px solid #52c41a' } : undefined}
                                       />
                                     </Tooltip>
                                   ))}
                                 </Avatar.Group>
-                                {currentUser && room.participants.some(p => 
+                                {currentUser && room.participants.some(p =>
                                   String(p.userId) === String(currentUser.id)
                                 ) && (
                                   <Tag color="success" style={{ marginLeft: 8 }}>已加入</Tag>
@@ -314,15 +312,15 @@ const DrawRoomPage: React.FC = () => {
                 }}
               />
             ) : (
-              <Empty 
-                description="暂无房间，创建一个吧！" 
+              <Empty
+                description="暂无房间，创建一个吧！"
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 style={{ margin: '40px 0', padding: '20px 0' }}
                 imageStyle={{ height: 60 }}
               >
-                <Button 
-                  type="primary" 
-                  icon={<PlusOutlined />} 
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
                   onClick={() => setCreateRoomVisible(true)}
                   style={{ marginTop: 16 }}
                 >
@@ -333,7 +331,7 @@ const DrawRoomPage: React.FC = () => {
           </Card>
         </Col>
       </Row>
-      
+
       {/* 创建房间的模态框 */}
       <Modal
         title={<div className="create-room-title">创建你画我猜房间</div>}
@@ -344,13 +342,13 @@ const DrawRoomPage: React.FC = () => {
         width={420}
         centered
       >
-        <Form 
-          form={form} 
-          layout="vertical" 
+        <Form
+          form={form}
+          layout="vertical"
           onFinish={handleCreateRoom}
           initialValues={{
             maxPlayers: 8,
-            roundDuration: 60,
+            totalRounds: 6,
           }}
           className="create-room-form"
         >
@@ -359,48 +357,28 @@ const DrawRoomPage: React.FC = () => {
             label={<span className="form-label">最大玩家数</span>}
             rules={[{ required: true, message: '请选择最大玩家数' }]}
           >
-            <Input 
-              type="number" 
-              min={2} 
-              max={10} 
+            <Input
+              type="number"
+              min={2}
+              max={20}
               prefix={<TeamOutlined className="input-prefix-icon" />}
               className="styled-input"
             />
           </Form.Item>
-          
+
           <Form.Item
-            name="roundDuration"
-            label={<span className="form-label">回合时间（秒）</span>}
-            rules={[{ required: true, message: '请输入回合时间' }]}
+            name="totalRounds"
+            label={<span className="form-label">游戏轮数</span>}
+            rules={[{ required: true, message: '请输入游戏轮数' }]}
           >
-            <Input 
-              type="number" 
-              min={30} 
-              max={180} 
+            <Input
+              type="number"
+              min={1}
+              max={20}
               className="styled-input"
             />
           </Form.Item>
-          
-          <Form.Item
-            name="customWord"
-            label={<span className="form-label">自定义词语（可选）</span>}
-          >
-            <Input 
-              placeholder="请输入自定义词语" 
-              className="styled-input"
-            />
-          </Form.Item>
-          
-          <Form.Item
-            name="wordHint"
-            label={<span className="form-label">词语提示（可选）</span>}
-          >
-            <Input 
-              placeholder="请输入词语提示" 
-              className="styled-input"
-            />
-          </Form.Item>
-          
+
           <Form.Item className="submit-button-container">
             <Button type="primary" htmlType="submit" block className="create-room-button">
               创建房间
