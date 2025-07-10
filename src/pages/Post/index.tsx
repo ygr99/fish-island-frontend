@@ -615,9 +615,9 @@ const PostPage: React.FC = () => {
                             {item.title}
                           </div>
 
-                          {item.latestComment && (
+                          {item.thumbComment && (
                             <div className="post-content hot-comment">
-                              {item.latestComment.content}
+                              {item.thumbComment.content}
                             </div>
                           )}
                         </div>
