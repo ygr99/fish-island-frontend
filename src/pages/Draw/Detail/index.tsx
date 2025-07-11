@@ -68,17 +68,17 @@ const DrawPage: React.FC = () => {
     // 添加调试日志
     console.log('当前用户:', currentUser);
     console.log('房间用户列表:', roomUsers);
-    
+
     if (!currentUser || roomUsers.length === 0) return false;
-    
+
     // 确保ID类型一致进行比较（可能一个是数字一个是字符串）
     const currentUserId = currentUser.id?.toString();
-    
+
     // 输出每个房间用户的ID，方便调试
     roomUsers.forEach((user, index) => {
       console.log(`房间用户 ${index}:`, user);
     });
-    
+
     // 检查房间用户列表中的用户ID字段名（可能有多种可能）
     const userInRoom = roomUsers.some(user => {
       // 尝试所有可能的ID字段
@@ -88,21 +88,21 @@ const DrawPage: React.FC = () => {
         user.user?.id?.toString(),
         user.playerId?.toString()
       ];
-      
+
       // 如果任何一个ID匹配，则认为用户在房间中
       return possibleIds.some(id => id === currentUserId);
     });
-    
+
     console.log('当前用户ID:', currentUserId);
     console.log('用户是否在房间中:', userInRoom);
-    
+
     // 临时解决方案：如果用户已登录且房间有用户，则允许发言
     // 这是为了调试目的，后续可以移除
     if (!userInRoom && currentUser && roomUsers.length > 0) {
       console.log('临时允许用户发言（调试模式）');
       return true;
     }
-    
+
     return userInRoom;
   };
 
@@ -256,7 +256,6 @@ const DrawPage: React.FC = () => {
 
       return () => {
         clearInterval(interval);
-        wsService.disconnect();
       };
     }
   }, [currentUser, roomId, loading]);
