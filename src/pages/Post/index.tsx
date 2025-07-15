@@ -15,10 +15,15 @@ import {
   RiseOutlined,
   SearchOutlined,
   UpOutlined,
-  UserOutlined
+  UserOutlined,
+  StarOutlined
 } from '@ant-design/icons';
 import {history, Link} from '@umijs/max';
-import {deletePostUsingPost1, listPostVoByPageUsingPost} from '@/services/backend/postController';
+import {
+  deletePostUsingPost1, listMyFavourPostVoByPageUsingPost,
+  listMyPostVoByPageUsingPost,
+  listPostVoByPageUsingPost
+} from '@/services/backend/postController';
 import {listTagsVoByPageUsingPost} from '@/services/backend/tagsController';
 import {getLoginUserUsingGet} from '@/services/backend/userController';
 import './index.less';
@@ -38,6 +43,7 @@ const PostPage: React.FC = () => {
   const [searchText, setSearchText] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [currentTab, setCurrentTab] = useState<string>('latest');
+  const [favourTabVisible, setFavourTabVisible] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<API.UserVO>();
   const [deleteModalVisible, setDeleteModalVisible] = useState<boolean>(false);
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
@@ -111,7 +117,7 @@ const PostPage: React.FC = () => {
       // 使用热门讨论的参数获取热门话题
       const params: API.PostQueryRequest = {
         current: 1,
-        pageSize: 5,
+        pageSize: 10,
         sortField: 'thumbNum', // 按点赞数排序
         sortOrder: 'descend',
       };
@@ -154,11 +160,20 @@ const PostPage: React.FC = () => {
         params.isFeatured = 1; // 精华内容
       } else if (currentTab === 'my') {
         // 我的帖子，传递当前用户ID
-        if (currentUser?.id) {
-          params.userId = currentUser.id;
-        } else {
+        if (currentUser?.id === null) {
           // 如果用户未登录，显示提示信息
           message.warning('请先登录查看我的帖子');
+          setMyPostsVisible(false);
+          return;
+        }
+        params.sortField = 'createTime';
+        params.sortOrder = 'descend';
+
+      } else if (currentTab === 'myFavour') {
+        // 我的收藏，传递当前用户ID
+        if (currentUser?.id === null) {
+          // 如果用户未登录，显示提示信息
+          message.warning('请先登录查看我的收藏');
           setMyPostsVisible(false);
           return;
         }
@@ -169,8 +184,14 @@ const PostPage: React.FC = () => {
         params.sortField = 'createTime';
         params.sortOrder = 'descend';
       }
-
-      const result = await listPostVoByPageUsingPost(params);
+      // 定义接口函数映射表
+      const apiMap: Record<string, (params: API.PostQueryRequest) => Promise<any>> = {
+        my: listMyPostVoByPageUsingPost,
+        myFavour: listMyFavourPostVoByPageUsingPost,
+      };
+      // 获取对应的接口函数或使用默认函数
+      const apiFunc = apiMap[currentTab] || listPostVoByPageUsingPost;
+      const result = await apiFunc(params);
       if (result.data) {
         // 如果是第一页，直接设置数据
         if (pagination.current === 1) {
@@ -277,6 +298,9 @@ const PostPage: React.FC = () => {
       message.warning('请先登录查看我的帖子');
       // 可以选择跳转到登录页面
       // history.push('/user/login');
+    }
+    if (key === 'myFavour' && !currentUser) {
+      message.warning('请先登录查看收藏的帖子');
     }
   };
 
@@ -480,6 +504,10 @@ const PostPage: React.FC = () => {
                   <TabPane
                     tab={<span>{!isMobile && <UserOutlined/>} 我的帖子</span>}
                     key="my"
+                  />
+                  <TabPane
+                    tab={<span>{!isMobile && <StarOutlined/>} 我的收藏</span>}
+                    key="myFavour"
                   />
                 </Tabs>
               </div>
