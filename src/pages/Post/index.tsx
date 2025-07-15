@@ -14,15 +14,17 @@ import {
   PlusOutlined,
   RiseOutlined,
   SearchOutlined,
+  StarOutlined, ThunderboltOutlined,
   UpOutlined,
-  UserOutlined,
-  StarOutlined
+  UserOutlined
 } from '@ant-design/icons';
 import {history, Link} from '@umijs/max';
 import {
-  deletePostUsingPost1, listMyFavourPostVoByPageUsingPost,
+  deletePostUsingPost1,
+  listMyFavourPostVoByPageUsingPost,
   listMyPostVoByPageUsingPost,
-  listPostVoByPageUsingPost
+  listPostVoByPageUsingPost,
+  setFeaturedStatusUsingPost
 } from '@/services/backend/postController';
 import {listTagsVoByPageUsingPost} from '@/services/backend/tagsController';
 import {getLoginUserUsingGet} from '@/services/backend/userController';
@@ -217,6 +219,29 @@ const PostPage: React.FC = () => {
     }
   };
 
+  // 设置帖子为精华
+  const handleSetFeatured = async (postId: string, currentStatus: boolean | undefined) => {
+    if (!currentUser || currentUser.userRole !== 'admin') return;
+
+    try {
+      await setFeaturedStatusUsingPost({
+        id: postId,
+        isFeatured: currentStatus ? 0 : 1
+      });
+
+      message.success(`已${currentStatus ? '取消加精' : '设为精华'}帖子`);
+
+      // 更新本地状态
+      setPosts(posts.map(post =>
+        post.id === postId
+          ? {...post, isFeatured: !currentStatus}
+          : post
+      ));
+    } catch (error) {
+      console.error('操作失败:', error);
+      message.error('操作失败');
+    }
+  };
   // 判断当前用户是否有权限删除帖子
   const canDeletePost = (post: API.PostVO) => {
     if (!currentUser) return false;
@@ -585,6 +610,20 @@ const PostPage: React.FC = () => {
                             <EditOutlined style={{color: '#1890ff'}}/> {isMobile ? '' : '编辑'}
                           </span>
                         ),
+                        // 加精按钮（仅管理员可见）
+                        currentUser?.userRole === 'admin' && (
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSetFeatured(String(item.id), item.isFeatured);
+                            }}
+                            className="featured-action"
+                            style={{color: item.isFeatured ? '#999' : 'gold'}}
+                          >
+                            <ThunderboltOutlined style={{color: item.isFeatured ? '#999' : 'gold'}}/>
+                            {isMobile ? '' : (item.isFeatured ? '取消加精' : '设为精华')}
+                          </span>
+                        ),
                         canDeletePost(item) && (
                           <span
                             onClick={(e) => {
@@ -601,18 +640,26 @@ const PostPage: React.FC = () => {
                     >
                       <div className="post-item-header">
                         <Avatar src={item.user?.userAvatar || 'https://joeschmoe.io/api/v1/random'}
-                                size={isMobile ? 32 : 40}/>
+                                size={isMobile ? 32 : 48}/>
                         <div className="post-author-info">
+                          {/* 精选图片容器 - 绝对定位在右上角 */}
+                          {Boolean(item.isFeatured) && (
+                            <div className="featured-image-container">
+                              <img
+                                src={require('/public/img/Featured.png')}
+                                alt="精选"
+                                className="featured-image"
+                              />
+                            </div>
+                          )}
                           <div className="author-name">
                             <span>{item.user?.userName || '匿名用户'}</span>
                             <span className="post-time">{formatTime(item.createTime)}</span>
                           </div>
                           <div className="post-tags">
                             {item.tagList && item.tagList.map((tag, index) => {
-                              // 查找对应的标签对象以获取颜色和图标
                               const tagObj = tags.find(t => t.tagsName === tag);
                               const color = tagObj ? getTagColor(tagObj) : 'blue';
-                              // 在移动设备上限制显示的标签数量
                               if (isMobile && index > 1) return null;
                               return (
                                 <Tag
@@ -626,7 +673,6 @@ const PostPage: React.FC = () => {
                                 </Tag>
                               );
                             })}
-                            {/* 如果在移动设备上有更多标签，显示+N */}
                             {isMobile && item.tagList && item.tagList.length > 2 && (
                               <Tag className="category-tag-small">
                                 +{item.tagList.length - 2}
