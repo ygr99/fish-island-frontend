@@ -1,21 +1,20 @@
-import { Button, Form, message, Modal, Tabs } from 'antd';
-import { LockOutlined, MailOutlined, QqCircleFilled, UserOutlined } from '@ant-design/icons';
-import { LoginForm, ProFormText } from '@ant-design/pro-components';
-import { useEmotionCss } from '@ant-design/use-emotion-css';
-import { Helmet } from '@@/exports';
-import Settings from '../../../config/defaultSettings';
 import Footer from '@/components/Footer';
-import { useModel } from '@umijs/max';
-import { useState, useRef } from 'react';
-import { Captcha } from 'aj-captcha-react';
 import { BACKEND_HOST_CODE } from '@/constants';
 import styles from '@/pages/User/Register/index.less';
 import {
-  userLoginUsingPost,
   userEmailLoginUsingPost,
-  userEmailSendUsingPost,
   userEmailRegisterUsingPost,
+  userEmailSendUsingPost,
+  userLoginUsingPost,
 } from '@/services/backend/userController';
+import { Helmet } from '@@/exports';
+import { LockOutlined, MailOutlined, QqCircleFilled, UserOutlined } from '@ant-design/icons';
+import { LoginForm, ProFormText } from '@ant-design/pro-components';
+import { useEmotionCss } from '@ant-design/use-emotion-css';
+import { useModel } from '@umijs/max';
+import { Captcha } from 'aj-captcha-react';
+import { Button, Form, message, Modal, Tabs } from 'antd';
+import { useRef, useState } from 'react';
 
 interface UserLoginRequest {
   userAccount?: string;
@@ -48,7 +47,11 @@ interface LoginRegisterProps {
   onForgotPassword?: () => void;
 }
 
-const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, onForgotPassword }) => {
+const LoginRegister: React.FC<LoginRegisterProps> = ({
+  isModalOpen,
+  onCancel,
+  onForgotPassword,
+}) => {
   const [type, setType] = useState<string>('login');
   const [form] = Form.useForm();
   const [valueData, setValueData] = useState<API.UserRegisterRequest>();
@@ -148,7 +151,7 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
     }, 100);
   };
 
-// 修改原来的 handleSubmit 为实际登录逻辑
+  // 修改原来的 handleSubmit 为实际登录逻辑
   const handleLoginSubmit = async (values: UserLoginRequest) => {
     try {
       const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.userAccount || '');
@@ -188,7 +191,7 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
     <Modal footer={null} open={isModalOpen} onCancel={onCancel}>
       <div className={containerClassName}>
         <Helmet>
-          <title>{'登录'}- {Settings.title}</title>
+          <title>摸鱼岛</title>
         </Helmet>
         <div style={{ flex: '1', padding: '32px 0' }}>
           <LoginForm
@@ -197,8 +200,13 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
               minWidth: 280,
               maxWidth: '75vw',
             }}
-            logo={<img alt="logo" style={{ height: '100%' }}
-                      src="https://api.oss.cqbo.com/moyu/moyu.png" />}
+            logo={
+              <img
+                alt="logo"
+                style={{ height: '100%' }}
+                src="https://api.oss.cqbo.com/moyu/moyu.png"
+              />
+            }
             title="摸鱼岛"
             subTitle={'加入摸鱼岛一起来摸吧'}
             initialValues={{
@@ -214,7 +222,7 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
             submitter={{
               searchConfig: {
                 submitText: type === 'register' ? '注册' : '登录',
-              }
+              },
             }}
           >
             <Tabs
@@ -229,7 +237,7 @@ const LoginRegister: React.FC<LoginRegisterProps> = ({ isModalOpen, onCancel, on
                 {
                   key: 'register',
                   label: '注册',
-                }
+                },
               ]}
             />
             {type === 'login' && (
