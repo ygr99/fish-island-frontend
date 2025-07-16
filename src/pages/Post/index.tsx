@@ -689,9 +689,13 @@ const PostPage: React.FC = () => {
 
                         {item.thumbComment && (
                           <div className="post-content hot-comment">
-                            {item.thumbComment.content && item.thumbComment.content.match(/\[img\](.*?)\[\/img\]/i)
-                              ? '【图片】'
-                              : item.thumbComment.content}
+                            {item.thumbComment.content 
+                              ? (item.thumbComment.content.match(/\[img\](.*?)\[\/img\]/i)
+                                ? '【图片】'
+                                : (item.thumbComment.content.length > 50 
+                                  ? `${item.thumbComment.content.substring(0, 50)}...` 
+                                  : item.thumbComment.content))
+                              : ''}
                           </div>
                         )}
                       </div>
