@@ -3085,7 +3085,7 @@ const ChatRoom: React.FC = () => {
         okText={isRedPacketSending ? "发送中..." : "发送"}
         cancelText="取消"
         okButtonProps={{ loading: isRedPacketSending }}
-        width={400}
+        width={480}
         className={styles.redPacketModal}
       >
         <div className={styles.redPacketForm}>
