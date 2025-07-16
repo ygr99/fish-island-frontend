@@ -73,7 +73,7 @@ export default defineConfig({
    * @name layout 插件
    * @doc https://umijs.org/docs/max/layout-menu
    */
-  title: '摸鱼岛',
+  title: false,
   layout: {
     locale: true,
     ...defaultSettings,
@@ -146,7 +146,7 @@ export default defineConfig({
     { name: 'apple-mobile-web-app-title', content: '摸鱼岛' },
     { name: 'application-name', content: '摸鱼岛' },
     { name: 'msapplication-TileColor', content: '#1890ff' },
-    { name: 'msapplication-config', content: '/browserconfig.xml' }
+    { name: 'msapplication-config', content: '/browserconfig.xml' },
   ],
   links: [
     { rel: 'manifest', href: '/manifest.json' },
@@ -157,6 +157,6 @@ export default defineConfig({
     { rel: 'apple-touch-icon', sizes: '152x152', href: '/icons/icon-152x152.png' },
     { rel: 'apple-touch-icon', sizes: '192x192', href: '/icons/icon-192x192.png' },
     { rel: 'apple-touch-icon', sizes: '384x384', href: '/icons/icon-384x384.png' },
-    { rel: 'apple-touch-icon', sizes: '512x512', href: '/icons/icon-512x512.png' }
+    { rel: 'apple-touch-icon', sizes: '512x512', href: '/icons/icon-512x512.png' },
   ],
 });

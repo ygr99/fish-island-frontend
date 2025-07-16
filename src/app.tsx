@@ -1,20 +1,19 @@
-import Footer from '@/components/Footer';
-import type {RunTimeLayoutConfig} from '@umijs/max';
-import {history, useModel} from '@umijs/max';
-import defaultSettings from '../config/defaultSettings';
-import {AvatarDropdown} from './components/RightContent/AvatarDropdown';
-import {requestConfig} from './requestConfig';
-import {getLoginUserUsingGet} from "@/services/backend/userController";
-import {useEffect, useState} from "react";
-import AnnouncementModal from '@/components/AnnouncementModal';
 import BossKeySettings from '@/components/BossKeySettings';
-import SideAnnouncement from '@/components/SideAnnouncement';
+import Footer from '@/components/Footer';
 import GlobalReader from '@/components/GlobalFloatingReader';
-import routes from '../config/routes';
 import GlobalTitle from '@/components/GlobalTitle';
-import {Board, Player, Position, Move, WinningLine} from '@/game';
-import {unregisterServiceWorker} from './utils/unregisterServiceWorker';
-import {setNotificationEnabled} from './utils/notification';
+import SideAnnouncement from '@/components/SideAnnouncement';
+import { Board, Move, Player, Position, WinningLine } from '@/game';
+import { getLoginUserUsingGet } from '@/services/backend/userController';
+import type { RunTimeLayoutConfig } from '@umijs/max';
+import { history, useModel } from '@umijs/max';
+import { useEffect, useState } from 'react';
+import defaultSettings from '../config/defaultSettings';
+import routes from '../config/routes';
+import { AvatarDropdown } from './components/RightContent/AvatarDropdown';
+import { requestConfig } from './requestConfig';
+import { setNotificationEnabled } from './utils/notification';
+import { unregisterServiceWorker } from './utils/unregisterServiceWorker';
 
 const loginPath = '/user/login';
 
@@ -22,7 +21,7 @@ const loginPath = '/user/login';
 const getSiteName = () => {
   const savedSiteConfig = localStorage.getItem('siteConfig');
   if (savedSiteConfig) {
-    const {siteName} = JSON.parse(savedSiteConfig);
+    const { siteName } = JSON.parse(savedSiteConfig);
     return siteName;
   }
   return '摸鱼岛 - 有趣的在线交流平台';
@@ -30,10 +29,10 @@ const getSiteName = () => {
 
 // 监听路由变化
 const listenRouteChange = () => {
-  history.listen(({location}) => {
-    // 设置网站标题
+  history.listen(({ location }) => {
+    // 设置网站标题 - 使用defaultSettings中的固定标题
     const pathname = location.pathname;
-    let title = getSiteName();
+    let title = defaultSettings.title;
 
     document.title = title;
 
@@ -67,7 +66,7 @@ const useBossKey = () => {
   const [config, setConfig] = useState({
     image: 'https://www.baidu.com/img/flexible/logo/pc/result.png',
     title: '工作页面',
-    placeholder: '百度一下，你就知道'
+    placeholder: '百度一下，你就知道',
   });
 
   useEffect(() => {
@@ -91,7 +90,7 @@ const useBossKey = () => {
     };
   }, []);
 
-  return {isBossMode, showSettings, setShowSettings, config, setConfig};
+  return { isBossMode, showSettings, setShowSettings, config, setConfig };
 };
 
 // 检查当前路由是否需要登录验证
@@ -144,18 +143,18 @@ export async function getInitialState(): Promise<InitialState> {
     currentUser: undefined,
     gameState: undefined,
   };
-  const {location} = history;
+  const { location } = history;
 
   // 应用网站设置
   const savedSiteConfig = localStorage.getItem('siteConfig');
   if (savedSiteConfig) {
-    const {siteName, siteIcon, notificationEnabled} = JSON.parse(savedSiteConfig);
+    const { siteIcon, notificationEnabled } = JSON.parse(savedSiteConfig);
     // 更新所有图标相关的标签
     const iconTypes = ['icon', 'shortcut icon', 'apple-touch-icon'];
-    iconTypes.forEach(type => {
+    iconTypes.forEach((type) => {
       // 移除所有现有的图标标签
       const existingLinks = document.querySelectorAll(`link[rel="${type}"]`);
-      existingLinks.forEach(link => link.remove());
+      existingLinks.forEach((link) => link.remove());
 
       // 创建新的图标标签
       const newLink = document.createElement('link');
@@ -164,15 +163,16 @@ export async function getInitialState(): Promise<InitialState> {
       document.head.appendChild(newLink);
     });
 
-    // 更新网站标题
-    document.title = siteName;
-    // 更新默认设置中的标题
-    defaultSettings.title = siteName;
+    // 始终使用defaultSettings中的标题，不覆盖
+    document.title = defaultSettings.title;
 
     // 更新通知设置
     if (notificationEnabled !== undefined) {
       setNotificationEnabled(notificationEnabled);
     }
+  } else {
+    // 如果没有自定义设置，也使用defaultSettings中的标题
+    document.title = defaultSettings.title;
   }
 
   // 检查当前路由是否需要登录验证
@@ -183,7 +183,6 @@ export async function getInitialState(): Promise<InitialState> {
     } catch (error: any) {
       // 如果未登录且需要登录验证，跳转到登录页
       if (location.pathname !== loginPath) {
-
       }
     }
   }
@@ -192,8 +191,8 @@ export async function getInitialState(): Promise<InitialState> {
 
 // ProLayout 支持的api https://procomponents.ant.design/components/layout
 // @ts-ignore
-export const layout: RunTimeLayoutConfig = ({initialState}) => {
-  const {isBossMode, showSettings, setShowSettings, config, setConfig} = useBossKey();
+export const layout: RunTimeLayoutConfig = ({ initialState }) => {
+  const { isBossMode, showSettings, setShowSettings, config, setConfig } = useBossKey();
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const [showAnnouncement, setShowAnnouncement] = useState(true);
   // 使用全局状态
@@ -204,11 +203,12 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
   const registerServiceWorker = () => {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(registration => {
+        navigator.serviceWorker
+          .register('/sw.js')
+          .then((registration) => {
             console.log('ServiceWorker registration successful');
           })
-          .catch(err => {
+          .catch((err) => {
             console.log('ServiceWorker registration failed: ', err);
           });
       });
@@ -219,12 +219,35 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
   useEffect(() => {
     listenRouteChange();
     registerServiceWorker();
+
+    // 使用MutationObserver监听document.title的变化
+    const originalTitle = document.title;
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList' && document.title !== defaultSettings.title) {
+          document.title = defaultSettings.title;
+        }
+      });
+    });
+
+    // 监听document.head的变化
+    observer.observe(document.head, {
+      childList: true,
+      subtree: true,
+    });
+
+    // 设置初始标题
+    document.title = defaultSettings.title;
+
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
   if (isBossMode) {
     // @ts-ignore
     return {
-      waterMarkProps: {content: config.title},
+      waterMarkProps: { content: config.title },
       footerRender: () => null,
       menuRender: false,
       rightContentRender: false,
@@ -232,14 +255,16 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
         <>
           {config.image ? (
             // 如果有自定义图片，显示全屏图片
-            <div style={{
-              width: '100vw',
-              height: '100vh',
-              overflow: 'hidden',
-              position: 'fixed',
-              top: 0,
-              left: 0,
-            }}>
+            <div
+              style={{
+                width: '100vw',
+                height: '100vh',
+                overflow: 'hidden',
+                position: 'fixed',
+                top: 0,
+                left: 0,
+              }}
+            >
               <img
                 src={config.image}
                 alt="自定义背景图片"
@@ -252,49 +277,59 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
             </div>
           ) : (
             // 如果没有自定义图片，显示默认的百度搜索界面
-            <div style={{
-              width: '100%',
-              height: '100vh',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: '#ffffff'
-            }}>
+            <div
+              style={{
+                width: '100%',
+                height: '100vh',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: '#ffffff',
+              }}
+            >
               <img
                 src="https://www.baidu.com/img/flexible/logo/pc/result.png"
                 alt="百度搜索"
-                style={{width: '270px', marginBottom: '20px'}}
+                style={{ width: '270px', marginBottom: '20px' }}
               />
-              <div style={{
-                width: '500px',
-                display: 'flex',
-                alignItems: 'center',
-                border: '1px solid #ccc',
-                borderRadius: '24px',
-                padding: '5px 10px',
-                boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.1)'
-              }}>
-                <input type="text" placeholder="百度一下，你就知道"
-                       style={{
-                         flex: 1,
-                         height: '40px',
-                         border: 'none',
-                         outline: 'none',
-                         fontSize: '16px',
-                         paddingLeft: '10px'
-                       }}
+              <div
+                style={{
+                  width: '500px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  border: '1px solid #ccc',
+                  borderRadius: '24px',
+                  padding: '5px 10px',
+                  boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.1)',
+                }}
+              >
+                <input
+                  type="text"
+                  placeholder="百度一下，你就知道"
+                  style={{
+                    flex: 1,
+                    height: '40px',
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '16px',
+                    paddingLeft: '10px',
+                  }}
                 />
-                <button type="button" style={{
-                  backgroundColor: '#3385ff',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '20px',
-                  width: '100px',
-                  height: '36px',
-                  fontSize: '16px',
-                  cursor: 'pointer'
-                }}>搜索
+                <button
+                  type="button"
+                  style={{
+                    backgroundColor: '#3385ff',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '20px',
+                    width: '100px',
+                    height: '36px',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  搜索
                 </button>
               </div>
             </div>
@@ -312,13 +347,13 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
   return {
     avatarProps: {
       render: () => {
-        return <AvatarDropdown/>;
+        return <AvatarDropdown />;
       },
     },
     waterMarkProps: {
       content: initialState?.currentUser?.userName,
     },
-    footerRender: () => <Footer/>,
+    footerRender: () => <Footer />,
     menuHeaderRender: undefined,
     // 自定义 403 页面
     // unAccessible: <div>unAccessible</div>,
@@ -326,18 +361,15 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => {
     childrenRender: (children) => {
       return (
         <>
-          <GlobalTitle/>
+          <GlobalTitle />
           {children}
-          <SideAnnouncement/>
+          <SideAnnouncement />
           {/*<AnnouncementModal*/}
           {/*  visible={showAnnouncement}*/}
           {/*  onClose={() => setShowAnnouncement(false)}*/}
           {/*  title="系统公告"*/}
           {/*/>*/}
-          <GlobalReader
-            visible={isReaderVisible}
-            onClose={hideReader}
-          />
+          <GlobalReader visible={isReaderVisible} onClose={hideReader} />
         </>
       );
     },
