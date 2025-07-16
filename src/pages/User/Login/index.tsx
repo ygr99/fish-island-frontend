@@ -6,7 +6,8 @@ import { useEmotionCss } from '@ant-design/use-emotion-css';
 import { Helmet, history, useModel } from '@umijs/max';
 import { message, Tabs } from 'antd';
 import React, { useState } from 'react';
-import { Link } from 'umi';
+import Settings from '../../../../config/defaultSettings';
+import {Link} from "umi";
 
 // 此页面仅用于 /user/login 路径的登录功能，主注册逻辑位于 /components/RightContent/AvatarDropDown。
 const Login: React.FC = () => {
@@ -30,9 +31,9 @@ const Login: React.FC = () => {
       const res = await userLoginUsingPost({
         ...values,
       });
-      if (res.code === 0) {
+      if (res.code===0){
         const defaultLoginSuccessMessage = '登录成功！';
-        const result = res.data as any;
+        const result = res.data as any
         localStorage.setItem('tokenName', result.saTokenInfo?.tokenName as string);
         localStorage.setItem('tokenValue', result.saTokenInfo?.tokenValue as string);
         message.success(defaultLoginSuccessMessage);
@@ -53,7 +54,9 @@ const Login: React.FC = () => {
   return (
     <div className={containerClassName}>
       <Helmet>
-        <title>摸鱼岛</title>
+        <title>
+          {'登录'}- {Settings.title}
+        </title>
       </Helmet>
       <div
         style={{
@@ -66,13 +69,7 @@ const Login: React.FC = () => {
             minWidth: 280,
             maxWidth: '75vw',
           }}
-          logo={
-            <img
-              alt="logo"
-              style={{ height: '100%' }}
-              src="https://api.oss.cqbo.com/moyu/moyu.png"
-            />
-          }
+          logo={<img alt="logo" style={{ height: '100%' }} src="https://api.oss.cqbo.com/moyu/moyu.png" />}
           title="摸鱼岛"
           subTitle={'加入摸鱼岛一起来摸吧'}
           initialValues={{
