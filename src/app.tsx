@@ -34,8 +34,7 @@ const listenRouteChange = () => {
     // 设置网站标题
     const pathname = location.pathname;
     let title = getSiteName();
-
-    document.title = title;
+    setTimeout(() => { document.title = title; }, 200)
 
     // 更新 meta 描述
     let description = '摸鱼岛 - 一个有趣的在线游戏平台，提供多种休闲游戏和社交功能';
