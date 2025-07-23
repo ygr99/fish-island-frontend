@@ -162,33 +162,40 @@
 // 修改复制按钮样式
 .copyButton {
   position: absolute;
-  top: 0;
-  right: -30px; // 改为负值，让按钮位于气泡外部右侧
+  top: 2px;
+  right: -32px; // 微调位置
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
   z-index: 10;
+  transform: translateX(4px); // 初始状态稍微偏右
   
   button {
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(255, 255, 255, 0.95);
     border-radius: 50%;
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s ease;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
     
     &:hover {
       background-color: #fff;
-      transform: scale(1.1);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      transform: scale(1.05);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      border-color: rgba(24, 144, 255, 0.2);
     }
     
     .anticon {
-      font-size: 14px;
+      font-size: 13px;
+      color: rgba(0, 0, 0, 0.4);
+      transition: color 0.2s ease;
+    }
+    
+    &:hover .anticon {
       color: #1890ff;
     }
   }
@@ -198,13 +205,7 @@
 .messageContent:hover {
   .copyButton {
     opacity: 1;
-  }
-}
-
-// 添加特殊消息类型的样式
-.specialMessage {
-  .copyButton {
-    display: none; // 特殊消息不显示复制按钮
+    transform: translateX(0); // 悬停时移回原位
   }
 }
 

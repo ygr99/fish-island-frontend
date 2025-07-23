@@ -946,16 +946,21 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, onImageLoad })
     return parts;
   };
 
-  return <div className={`${styles.messageContent} ${isSpecialMessage ? styles.specialMessage : ''}`}>
-    <div className={styles.copyButton}>
-      <Button
-        type="text"
-        size="small"
-        icon={<CopyOutlined />}
-        onClick={() => copyToClipboard(content)}
-        title="复制消息"
-      />
-    </div>
+  return <div className={styles.messageContent}>
+    {!isSpecialMessage && (
+      <div className={styles.copyButton}>
+        <Button
+          type="text"
+          size="small"
+          icon={<CopyOutlined />}
+          onClick={(e) => {
+            e.stopPropagation();
+            copyToClipboard(content);
+          }}
+          title="复制消息"
+        />
+      </div>
+    )}
     {parseContent()}
   </div>;
 };
