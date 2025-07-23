@@ -1,6 +1,7 @@
 .messageContent {
   word-break: break-word;
   white-space: pre-wrap;
+  position: relative; // 添加相对定位
 
   // Markdown 样式
   h1, h2, h3, h4, h5, h6 {
@@ -155,6 +156,55 @@
 
   .token.variable {
     color: #e06c75;
+  }
+}
+
+// 修改复制按钮样式
+.copyButton {
+  position: absolute;
+  top: 0;
+  right: -30px; // 改为负值，让按钮位于气泡外部右侧
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 10;
+  
+  button {
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    
+    &:hover {
+      background-color: #fff;
+      transform: scale(1.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .anticon {
+      font-size: 14px;
+      color: #1890ff;
+    }
+  }
+}
+
+// 当鼠标悬停在消息内容上时显示复制按钮
+.messageContent:hover {
+  .copyButton {
+    opacity: 1;
+  }
+}
+
+// 添加特殊消息类型的样式
+.specialMessage {
+  .copyButton {
+    display: none; // 特殊消息不显示复制按钮
   }
 }
 
