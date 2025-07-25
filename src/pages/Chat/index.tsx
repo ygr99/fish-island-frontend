@@ -128,6 +128,7 @@ const ChatRoom: React.FC = () => {
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const isManuallyClosedRef = useRef(false);
+  const isAutoScrollingRef = useRef(false); // 添加自动滚动标记
 
   // 分页相关状态
   const [current, setCurrent] = useState<number>(1);
@@ -341,6 +342,9 @@ const ChatRoom: React.FC = () => {
     const container = messageContainerRef.current;
     if (!container) return;
 
+    // 标记正在进行自动滚动
+    isAutoScrollingRef.current = true;
+
     // 使用 requestAnimationFrame 确保在下一帧执行滚动
     requestAnimationFrame(() => {
       container.scrollTo({
@@ -356,6 +360,10 @@ const ChatRoom: React.FC = () => {
             behavior: 'smooth',
           });
         }
+        // 滚动完成后重置标记
+        setTimeout(() => {
+          isAutoScrollingRef.current = false;
+        }, 100);
       }, 100);
     });
   };
@@ -575,8 +583,10 @@ const ChatRoom: React.FC = () => {
     // 只有在以下情况才自动滚动到底部：
     // 1. 是当前用户发送的消息
     // 2. 用户已经在查看最新消息（在底部附近）
+    // 3. 不是由于加载历史消息导致的变化
 
-    if (isNearBottom) {
+    if (isNearBottom && !loadingRef.current) {
+      // 添加短暂延迟，避免与其他滚动机制冲突
       setTimeout(() => {
         scrollToBottom();
       }, 100);
@@ -718,8 +728,15 @@ const ChatRoom: React.FC = () => {
           // 保持滚动位置
           requestAnimationFrame(() => {
             if (container) {
+              // 防止自动滚动检测干扰
+              isAutoScrollingRef.current = true;
               const newScrollHeight = container.scrollHeight;
               container.scrollTop = newScrollHeight - oldScrollHeight;
+              
+              // 重置标记
+              setTimeout(() => {
+                isAutoScrollingRef.current = false;
+              }, 100);
             }
           });
         }
@@ -735,6 +752,9 @@ const ChatRoom: React.FC = () => {
 
   // 检查是否在底部
   const checkIfNearBottom = () => {
+    // 如果正在自动滚动，不更新状态
+    if (isAutoScrollingRef.current) return;
+    
     const container = messageContainerRef.current;
     if (!container) return;
 
@@ -747,6 +767,9 @@ const ChatRoom: React.FC = () => {
 
   // 修改滚动处理函数
   const handleScroll = () => {
+    // 如果是自动滚动触发的，不执行其他逻辑
+    if (isAutoScrollingRef.current) return;
+
     const container = messageContainerRef.current;
     if (!container || loadingRef.current || !hasMore) return;
 
@@ -1057,7 +1080,8 @@ const ChatRoom: React.FC = () => {
         const threshold = 30;
         const distanceFromBottom =
           container.scrollHeight - container.scrollTop - container.clientHeight;
-        if (distanceFromBottom <= threshold) {
+        if (distanceFromBottom <= threshold && !isAutoScrollingRef.current) {
+          // 避免重复滚动，添加防抖
           setTimeout(scrollToBottom, 100);
           // 如果滚动到底部，清除新消息计数和定时器
           setNewMessageCount(0);
@@ -1273,7 +1297,9 @@ const ChatRoom: React.FC = () => {
     setLastSendContentTime(now);
 
     // 滚动到底部
-    setTimeout(scrollToBottom, 100);
+    setTimeout(() => {
+      scrollToBottom();
+    }, 100);
 
     // 如果功能菜单是打开的，则关闭
     closeMobileToolbar();
@@ -2119,9 +2145,11 @@ const ChatRoom: React.FC = () => {
             const isLatestMessage = lastMessage?.content === content;
             if (
               isLatestMessage &&
-              (isNearBottom || lastMessage?.sender.id === String(currentUser?.id))
+              (isNearBottom || lastMessage?.sender.id === String(currentUser?.id)) &&
+              !isAutoScrollingRef.current // 避免重复滚动
             ) {
-              scrollToBottom();
+              // 添加短暂延迟，确保图片已完全渲染
+              setTimeout(scrollToBottom, 200);
             }
           }}
         />
