@@ -587,6 +587,56 @@ const ChatRoom: React.FC = () => {
     fetchOnlineUsers();
   }, []);
 
+  // 创建用户对象的工具函数
+  const createUserFromRecord = (userRecord: any, defaultRegion: string = '未知地区'): User => {
+    return {
+      id: String(userRecord?.id || ''),
+      name: userRecord?.name || '未知用户',
+      avatar: userRecord?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+      level: userRecord?.level || 1,
+      points: userRecord?.points || 0,
+      isAdmin: userRecord?.isAdmin || false,
+      isVip: userRecord?.isVip || userRecord?.vip || false,
+      region: userRecord?.region || defaultRegion,
+      country: userRecord?.country,
+      avatarFramerUrl: userRecord?.avatarFramerUrl,
+      titleId: userRecord?.titleId,
+      titleIdList: userRecord?.titleIdList,
+    };
+  };
+
+  // 创建消息对象的工具函数（从后端记录）
+  const createMessageFromRecord = (record: any): Message | null => {
+    const messageId = String(record.messageWrapper?.message?.id);
+    
+    // 如果消息ID为空，返回null
+    if (!messageId) return null;
+    
+    const senderRecord = record.messageWrapper?.message?.sender;
+    const quotedMessageRecord = record.messageWrapper?.message?.quotedMessage;
+    
+    // 创建引用消息（如果存在）
+    const quotedMessage = quotedMessageRecord ? {
+      id: String(quotedMessageRecord.id),
+      content: quotedMessageRecord.content || '',
+      sender: createUserFromRecord(quotedMessageRecord.sender),
+      timestamp: new Date(quotedMessageRecord.timestamp || Date.now()),
+    } : undefined;
+    
+    // 创建并返回消息对象
+    return {
+      id: messageId,
+      content: record.messageWrapper?.message?.content || '',
+      sender: createUserFromRecord(senderRecord, '未知地区'),
+      timestamp: new Date(record.messageWrapper?.message?.timestamp || Date.now()),
+      quotedMessage,
+      region: userIpInfo?.region || '未知地区',
+      country: userIpInfo?.country,
+      workdayType,
+      currentWeekType,
+    };
+  };
+
   const loadHistoryMessages = async (page: number, isFirstLoad = false) => {
     if (!hasMore || loadingRef.current) return;
 
@@ -622,58 +672,8 @@ const ChatRoom: React.FC = () => {
             // 将消息ID添加到当前请求的集合中
             currentRequestMessageIds.add(messageId);
 
-            return {
-              id: messageId,
-              content: record.messageWrapper?.message?.content || '',
-              sender: {
-                id: String(record.userId),
-                name: record.messageWrapper?.message?.sender?.name || '未知用户',
-                avatar:
-                  record.messageWrapper?.message?.sender?.avatar ||
-                  'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-                level: record.messageWrapper?.message?.sender?.level || 1,
-                points: record.messageWrapper?.message?.sender?.points || 0,
-                isAdmin: record.messageWrapper?.message?.sender?.isAdmin || false,
-                isVip: record.messageWrapper?.message?.sender?.isVip || record.messageWrapper?.message?.sender?.vip || false,
-                region: record.messageWrapper?.message?.sender?.region || '未知地区',
-                country: record.messageWrapper?.message?.sender?.country,
-                avatarFramerUrl: record.messageWrapper?.message?.sender?.avatarFramerUrl,
-                titleId: record.messageWrapper?.message?.sender?.titleId,
-                titleIdList: record.messageWrapper?.message?.sender?.titleIdList,
-              },
-              timestamp: new Date(record.messageWrapper?.message?.timestamp || Date.now()),
-              quotedMessage: record.messageWrapper?.message?.quotedMessage
-                ? {
-                    id: String(record.messageWrapper.message.quotedMessage.id),
-                    content: record.messageWrapper.message.quotedMessage.content || '',
-                    sender: {
-                      id: String(record.messageWrapper.message.quotedMessage.sender?.id),
-                      name: record.messageWrapper.message.quotedMessage.sender?.name || '未知用户',
-                      avatar:
-                        record.messageWrapper.message.quotedMessage.sender?.avatar ||
-                        'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-                      level: record.messageWrapper.message.quotedMessage.sender?.level || 1,
-                      points: record.messageWrapper.message.quotedMessage.sender?.points || 0,
-                      isAdmin: record.messageWrapper.message.quotedMessage.sender?.isAdmin || false,
-                      region:
-                        record.messageWrapper?.message.quotedMessage?.sender?.region || '未知地区',
-                      country: record.messageWrapper?.message.quotedMessage?.sender?.country,
-                      avatarFramerUrl:
-                        record.messageWrapper?.message.quotedMessage?.sender?.avatarFramerUrl,
-                      titleId: record.messageWrapper?.message.quotedMessage?.sender?.titleId,
-                      titleIdList:
-                        record.messageWrapper?.message.quotedMessage?.sender?.titleIdList,
-                    },
-                    timestamp: new Date(
-                      record.messageWrapper.message.quotedMessage.timestamp || Date.now(),
-                    ),
-                  }
-                : undefined,
-              region: userIpInfo?.region || '未知地区',
-              country: userIpInfo?.country,
-              workdayType: workdayType,
-              currentWeekType: currentWeekType,
-            };
+            // 使用工具函数创建消息对象
+            return createMessageFromRecord(record);
           })
           .filter(Boolean) as Message[]; // 使用类型断言
 
