@@ -59,6 +59,7 @@ import styles from './index.less';
 import { UNDERCOVER_NOTIFICATION, UNDERCOVER_ROOM_STATUS } from '@/constants';
 import eventBus from '@/utils/eventBus';
 import { joinRoomUsingPost } from '@/services/backend/drawGameController';
+import { getLevelEmoji, generateUniqueShortId, getTitleTagProperties } from '@/utils/titleUtils';
 
 interface Message {
   id: string;
@@ -1436,16 +1437,7 @@ const ChatRoom: React.FC = () => {
     }, 0);
   };
 
-  // 添加一个生成简短唯一标识符的函数
-  const generateUniqueShortId = (userId: string): string => {
-    // 如果是数字ID，转换为16进制并取前4位
-    if (/^\d+$/.test(userId)) {
-      const hex = parseInt(userId).toString(16).toUpperCase();
-      return `#${hex.padStart(4, '0').slice(0, 4)}`;
-    }
-    // 如果是字符串ID，取前4个字符，不足则补0
-    return `#${userId.slice(0, 4).padEnd(4, '0').toUpperCase()}`;
-  };
+  // Using utility function from titleUtils
 
   const UserInfoCard: React.FC<{ user: User }> = ({ user }) => {
     // 从 titleIdList 字符串解析称号 ID 数组
@@ -1589,39 +1581,13 @@ const ChatRoom: React.FC = () => {
     }, 0);
   };
 
-  const getLevelEmoji = (level: number) => {
-    switch (level) {
-      case 12:
-        return '🔱'; // 摸鱼祖师
-      case 11:
-        return '✨'; // 摸鱼天尊
-      case 10:
-        return '🌟'; // 摸鱼圣人
-      case 9:
-        return '🌈'; // 摸鱼仙君
-      case 8:
-        return '🏮'; // 摸鱼尊者
-      case 7:
-        return '👑'; // 摸鱼真人
-      case 6:
-        return '💫';
-      case 5:
-        return '🏖';
-      case 4:
-        return '🎣';
-      case 3:
-        return '⭐';
-      case 2:
-        return '🐣';
-      case 1:
-        return '💦';
-      default:
-        return '💦'; // 默认显示
-    }
-  };
+  // Using utility function from titleUtils
 
-  // 新增管理员标识函数
+    // Using utility function from titleUtils
   const getAdminTag = (isAdmin: boolean, level: number, titleId?: number) => {
+    const { tagText, tagEmoji, tagClass: baseTagClass } = getTitleTagProperties(isAdmin, level, titleId);
+    const tagClass = styles[baseTagClass]; // Convert string class name to styles reference
+    
     // 如果有特定的称号ID且不是0（0表示使用等级称号）
     if (titleId !== undefined && titleId != 0) {
       // 从 titles.json 中获取对应的称号
@@ -1629,128 +1595,16 @@ const ChatRoom: React.FC = () => {
       const title = titles.find((t: Title) => String(t.id) === String(titleId));
 
       if (title) {
-        let tagEmoji = '';
-        let tagClass = '';
-
-        // 根据不同的称号ID设置不同的样式
-        switch (String(titleId)) {
-          case '-1': // 管理员
-            tagEmoji = '🚀';
-            tagClass = styles.titleTagAdmin;
-            break;
-          case '1': // 天使投资人
-            tagEmoji = '😇';
-            tagClass = styles.titleTagInvestor;
-            break;
-          case '2': // 首席摸鱼官
-            tagEmoji = '🏆';
-            tagClass = styles.titleTagChief;
-            break;
-          case '3': // 白金摸鱼官
-            tagEmoji = '💎';
-            tagClass = styles.titleTagPlatinum;
-            break;
-          case '4': // 梦幻摸鱼官
-            tagEmoji = '🌟';
-            tagClass = styles.titleTagGold;
-            break;
-          case '5': // 摸鱼共建者
-            tagEmoji = '🛠️';
-            tagClass = styles.titleTagBuilder;
-            break;
-          case '6': // 摸鱼行刑官
-            tagEmoji = '⚔️';
-            tagClass = styles.titleTagExecutioner;
-            break;
-          case '7': // 电玩少女
-            tagEmoji = '🌸';
-            tagClass = styles.titleTagGamer;
-            break;
-          case '8': // 摸鱼点子王
-            tagEmoji = '💡';
-            tagClass = styles.titleTagIdeaKing;
-            break;
-          default:
-            tagEmoji = '🎯';
-            tagClass = styles.levelTagBeginner;
-        }
-
         return (
-                <span className={`${styles.adminTag} ${tagClass}`}>
-        {tagEmoji}
-        <span className={styles.adminText}>{title.name}</span>
-      </span>
-    );
+          <span className={`${styles.adminTag} ${tagClass}`}>
+            {tagEmoji}
+            <span className={styles.adminText}>{title.name}</span>
+          </span>
+        );
       }
     }
 
     // 如果没有特定称号或称号ID为0，则使用原有的等级称号逻辑
-    let tagText = '';
-    let tagEmoji = '';
-    let tagClass = '';
-
-    switch (level) {
-      case 12:
-        tagText = '摸鱼皇帝';
-        tagEmoji = '🔱';
-        tagClass = styles.levelTagGrandMaster;
-        break;
-      case 11:
-        tagText = '摸鱼天尊';
-        tagEmoji = '✨';
-        tagClass = styles.levelTagCelestial;
-        break;
-      case 10:
-        tagText = '摸鱼圣人';
-        tagEmoji = '🌟';
-        tagClass = styles.levelTagSaint;
-        break;
-      case 9:
-        tagText = '摸鱼仙君';
-        tagEmoji = '🌈';
-        tagClass = styles.levelTagImmortal;
-        break;
-      case 8:
-        tagText = '摸鱼尊者';
-        tagEmoji = '🏮';
-        tagClass = styles.levelTagElder;
-        break;
-      case 7:
-        tagText = '摸鱼真人';
-        tagEmoji = '👑';
-        tagClass = styles.levelTagMaster;
-        break;
-      case 6:
-        tagText = '躺平宗师';
-        tagEmoji = '💫';
-        tagClass = styles.levelTagExpert;
-        break;
-      case 5:
-        tagText = '摆烂大师';
-        tagEmoji = '🏖️';
-        tagClass = styles.levelTagPro;
-        break;
-      case 4:
-        tagText = '摸鱼专家 ';
-        tagEmoji = '🎣';
-        tagClass = styles.levelTagAdvanced;
-        break;
-      case 3:
-        tagText = '水群达人';
-        tagEmoji = '⭐';
-        tagClass = styles.levelTagBeginner;
-        break;
-      case 2:
-        tagText = '摸鱼学徒';
-        tagEmoji = '🐣';
-        tagClass = styles.levelTagNewbie;
-        break;
-      default:
-        tagText = '划水新秀';
-        tagEmoji = '💦';
-        tagClass = styles.levelTagNewbie;
-    }
-
     return (
       <span className={`${styles.adminTag} ${tagClass}`}>
         {tagEmoji}
