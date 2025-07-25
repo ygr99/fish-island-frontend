@@ -1619,6 +1619,10 @@ const ChatRoom: React.FC = () => {
             tagEmoji = '🌸';
             tagClass = styles.titleTagGamer;
             break;
+          case '8': // 摸鱼点子王
+            tagEmoji = '💡';
+            tagClass = styles.titleTagIdeaKing;
+            break;
           default:
             tagEmoji = '🎯';
             tagClass = styles.levelTagBeginner;
