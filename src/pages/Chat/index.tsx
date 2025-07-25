@@ -2762,7 +2762,6 @@ const ChatRoom: React.FC = () => {
                   {msg.sender.name}
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0px' }}>
                     {getAdminTag(msg.sender.isAdmin, msg.sender.level, msg.sender.titleId)}
-                    {(msg.sender.vip || msg.sender.isVip) && <span className={styles.vipBadge}>V</span>}
                   </span>
                   <span className={styles.levelBadge}>
                     {getLevelEmoji(msg.sender.level)} {msg.sender.level}

@@ -1478,8 +1478,9 @@
   
   &.titleTagIdeaKing {
     background: linear-gradient(135deg, #0033FF 0%, #66b0ff 100%);
+    background-size: 200% 200%;
     box-shadow: 0 2px 6px rgba(0, 51, 255, 0.4);
-    animation: ideaFlash 3s infinite;
+    animation: ideaPulse 2s infinite alternate;
     position: relative;
     overflow: hidden;
     
@@ -1490,16 +1491,30 @@
       right: -2px;
       font-size: 10px;
       opacity: 0.7;
-      animation: twinkle 2s ease-in-out infinite alternate;
+      animation: ideaFloat 3s ease-in-out infinite;
+    }
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(45deg, rgba(0, 51, 255, 0) 45%, rgba(66, 176, 255, 0.5) 50%, rgba(0, 51, 255, 0) 55%);
+      background-size: 200% 200%;
+      animation: ideaShine 3s ease-in-out infinite;
+      z-index: 1;
     }
     
     .adminText {
       position: relative;
       z-index: 2;
       color: #fff;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 5px rgba(0, 153, 255, 0.7);
       font-weight: 600;
       letter-spacing: 0.5px;
+      animation: ideaTextGlow 2s infinite alternate;
     }
   }
 }
@@ -2977,5 +2992,45 @@
 .hideOnMobile {
   @media screen and (max-width: 768px) {
     display: none !important;
+  }
+}
+
+/* 添加点子王标签的新动画效果 */
+@keyframes ideaPulse {
+  0% { 
+    box-shadow: 0 0 5px rgba(0, 51, 255, 0.5), 0 0 10px rgba(66, 176, 255, 0.3); 
+    filter: brightness(0.9);
+  }
+  100% { 
+    box-shadow: 0 0 15px rgba(0, 51, 255, 0.8), 0 0 20px rgba(66, 176, 255, 0.6); 
+    filter: brightness(1.2);
+  }
+}
+
+@keyframes ideaFloat {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0.7; }
+  50% { transform: translate(-3px, -3px) rotate(15deg); opacity: 1; }
+  100% { transform: translate(0, 0) rotate(0deg); opacity: 0.7; }
+}
+
+@keyframes ideaShine {
+  0% { background-position: 200% 50%; }
+  100% { background-position: -100% 50%; }
+}
+
+@keyframes ideaTextGlow {
+  0% { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 5px rgba(0, 153, 255, 0.5); }
+  100% { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 10px rgba(0, 153, 255, 0.8), 0 0 15px rgba(66, 176, 255, 0.6); }
+}
+
+@keyframes flowingLight {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
   }
 }
