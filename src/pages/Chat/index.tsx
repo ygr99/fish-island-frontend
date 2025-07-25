@@ -1122,6 +1122,39 @@ const ChatRoom: React.FC = () => {
     }
   }, [currentUser?.id]);
 
+  // 创建新消息对象的工具函数
+  const createNewMessage = (content: string, mentionedUsers: User[] = [], quotedMsg: Message | null = null): Message => {
+    if (!currentUser) {
+      throw new Error('用户未登录');
+    }
+    
+    return {
+      id: `${Date.now()}`,
+      content,
+      sender: {
+        id: String(currentUser.id),
+        name: currentUser.userName || '游客',
+        avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
+        level: currentUser.level || 1,
+        points: currentUser.points || 0,
+        isAdmin: currentUser.userRole === 'admin',
+        isVip: currentUser.vip,
+        region: userIpInfo?.region || '未知地区',
+        country: userIpInfo?.country || '未知国家',
+        avatarFramerUrl: currentUser.avatarFramerUrl,
+        titleId: currentUser.titleId,
+        titleIdList: currentUser.titleIdList,
+      },
+      timestamp: new Date(),
+      quotedMessage: quotedMsg || undefined,
+      mentionedUsers: mentionedUsers.length > 0 ? mentionedUsers : undefined,
+      region: userIpInfo?.region || '未知地区',
+      country: userIpInfo?.country || '未知国家',
+      workdayType,
+      currentWeekType,
+    };
+  };
+
   // 修改 handleSend 函数
   const handleSend = (customContent?: string) => {
     // Check if the message is a workday type command
@@ -1205,29 +1238,8 @@ const ChatRoom: React.FC = () => {
       }
     }
 
-    const newMessage: Message = {
-      id: `${Date.now()}`,
-      content: content,
-      sender: {
-        id: String(currentUser.id),
-        name: currentUser.userName || '游客',
-        avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-        level: currentUser.level || 1,
-        points: currentUser.points || 0,
-        isAdmin: currentUser.userRole === 'admin',
-        isVip: currentUser.vip,
-        region: userIpInfo?.region || '未知地区',
-        country: userIpInfo?.country || '未知国家',
-        avatarFramerUrl: currentUser.avatarFramerUrl,
-        titleId: currentUser.titleId,
-        titleIdList: currentUser.titleIdList,
-      },
-      timestamp: new Date(),
-      quotedMessage: quotedMessage || undefined,
-      mentionedUsers: mentionedUsers.length > 0 ? mentionedUsers : undefined,
-      region: userIpInfo?.region || '未知地区',
-      country: userIpInfo?.country || '未知国家',
-    };
+    // 使用工具函数创建消息对象
+    const newMessage = createNewMessage(content, mentionedUsers, quotedMessage);
 
     // 使用全局 WebSocket 服务发送消息
     wsService.send({
@@ -1750,25 +1762,8 @@ const ChatRoom: React.FC = () => {
       return;
     }
 
-    const newMessage: Message = {
-      id: `${Date.now()}`,
-      content: imageMessage,
-      sender: {
-        id: String(currentUser.id),
-        name: currentUser.userName || '游客',
-        avatar: currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-        level: currentUser.level || 1,
-        points: currentUser.points || 0, // 确保这里设置了积分
-        isAdmin: currentUser.userRole === 'admin',
-        isVip: currentUser.vip,
-        region: userIpInfo?.region || '未知地区',
-        country: userIpInfo?.country || '未知国家',
-        avatarFramerUrl: currentUser.avatarFramerUrl,
-        titleId: currentUser.titleId,
-        titleIdList: currentUser.titleIdList,
-      },
-      timestamp: new Date(),
-    };
+    // 使用工具函数创建消息对象
+    const newMessage = createNewMessage(imageMessage);
 
     // 新发送的消息添加到列表末尾
     setMessages((prev) => [...prev, newMessage]);
@@ -1862,27 +1857,8 @@ const ChatRoom: React.FC = () => {
 
           if (response.data) {
             // 发送红包消息
-            const newMessage: Message = {
-              id: `${Date.now()}`,
-              content: `[redpacket]${response.data}[/redpacket]`,
-              sender: {
-                id: String(currentUser.id),
-                name: currentUser.userName || '游客',
-                avatar:
-                  currentUser.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor',
-                level: currentUser.level || 1,
-                points: currentUser.points || 0,
-                isAdmin: currentUser.userRole === 'admin',
-                vip: currentUser.vip,
-                isVip: currentUser.vip,
-                region: userIpInfo?.region || '未知地区',
-                country: userIpInfo?.country || '未知国家',
-                avatarFramerUrl: currentUser.avatarFramerUrl,
-                titleId: currentUser.titleId,
-                titleIdList: currentUser.titleIdList,
-              },
-              timestamp: new Date(),
-            };
+            const redPacketContent = `[redpacket]${response.data}[/redpacket]`;
+            const newMessage = createNewMessage(redPacketContent);
 
             wsService.send({
               type: 2,
