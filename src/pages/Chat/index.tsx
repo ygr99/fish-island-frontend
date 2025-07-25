@@ -714,9 +714,18 @@ const ChatRoom: React.FC = () => {
         const currentTotal = loadedMessageIds.size;
         setHasMore(currentTotal < (response.data.total || 0));
 
-        // 只有在成功加载新消息时才更新页码
-        if (historyMessages.length > 0) {
-          setCurrent(page);
+        // 重要修改：无论是否有新消息，都更新页码
+        // 这样可以避免一直请求同一页
+        setCurrent(page);
+        
+        // 如果没有新消息但服务器返回的总数大于已加载的消息数，
+        // 可能是由于重复消息导致的，尝试请求下一页
+        if (historyMessages.length === 0 && currentTotal < (response.data.total || 0)) {
+          console.log('未获取到新消息，尝试请求下一页', page + 1);
+          // 等待当前请求完成后再尝试下一页
+          setTimeout(() => {
+            loadHistoryMessages(page + 1);
+          }, 300);
         }
 
         // 如果是首次加载，将滚动条设置到底部
