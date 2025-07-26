@@ -17,6 +17,7 @@ import * as mockInterviewController from './mockInterviewController';
 import * as postController from './postController';
 import * as postFavourController from './postFavourController';
 import * as postThumbController from './postThumbController';
+import * as propsController from './propsController';
 import * as redPacketController from './redPacketController';
 import * as restAuthController from './restAuthController';
 import * as tagsController from './tagsController';
@@ -45,6 +46,7 @@ export default {
   postController,
   postFavourController,
   postThumbController,
+  propsController,
   redPacketController,
   tagsController,
   todoController,

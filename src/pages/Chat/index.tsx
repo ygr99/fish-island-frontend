@@ -2,6 +2,7 @@ import zhData from '@emoji-mart/data/i18n/zh.json';
 import EmoticonPicker from '@/components/EmoticonPicker';
 import MessageContent from '@/components/MessageContent';
 import RoomInfoCard from '@/components/RoomInfoCard';
+import MoyuPet from '@/components/MoyuPet';
 import {
   getOnlineUserListUsingGet,
   listMessageVoByPageUsingPost,
@@ -2468,6 +2469,9 @@ const ChatRoom: React.FC = () => {
       case 'calendar':
         fetchMoyuCalendar();
         break;
+      case 'pet':
+        setIsPetModalVisible(true);
+        break;
       default:
         break;
     }
@@ -2481,6 +2485,9 @@ const ChatRoom: React.FC = () => {
       setIsMobileToolbarVisible(false);
     }
   };
+  
+  // 添加摸鱼宠物相关状态
+  const [isPetModalVisible, setIsPetModalVisible] = useState<boolean>(false);
 
   // 处理谁是卧底按钮点击
   const handleRoomInfoClick = () => {
@@ -2520,6 +2527,12 @@ const ChatRoom: React.FC = () => {
 
   return (
     <div className={styles.chatRoom}>
+      {/* 摸鱼宠物组件 */}
+      <MoyuPet
+        visible={isPetModalVisible}
+        onClose={() => setIsPetModalVisible(false)}
+      />
+      
       {/* 房间信息卡片 */}
       <RoomInfoCard
         visible={isRoomInfoVisible}
@@ -2836,6 +2849,10 @@ const ChatRoom: React.FC = () => {
                   <CustomerServiceOutlined className={styles.moreOptionsIcon} />
                   <span>点歌</span>
                 </div>
+                <div className={styles.moreOptionsItem} onClick={() => setIsPetModalVisible(true)}>
+                  <span className={styles.moreOptionsIcon}>🐟</span>
+                  <span>摸鱼宠物</span>
+                </div>
                 {(currentUser?.userRole === 'admin' || (currentUser?.level && currentUser.level >= 6) || currentUser?.vip) && (
                   <div className={styles.moreOptionsItem} onClick={() => setIsRedPacketModalVisible(true)}>
                     <GiftOutlined className={styles.moreOptionsIcon} />
@@ -2953,6 +2970,15 @@ const ChatRoom: React.FC = () => {
                 </div>
                 <div className={styles.mobileToolText}>摸鱼日历</div>
               </div>
+            </div>
+            <div className={styles.mobileToolRow}>
+              <div className={styles.mobileTool} onClick={() => handleMobileToolClick('pet')}>
+                <div className={styles.mobileToolIcon}>🐟</div>
+                <div className={styles.mobileToolText}>摸鱼宠物</div>
+              </div>
+              <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
+              <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
+              <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
             </div>
             {(currentUser?.userRole === 'admin' || (currentUser?.level && currentUser.level >= 6) || currentUser?.vip) && (
               <div className={styles.mobileToolRow}>

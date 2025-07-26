@@ -224,6 +224,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponsePagePropsVO_ = {
+    code?: number;
+    data?: PagePropsVO_;
+    message?: string;
+  };
+
   type BaseResponsePageRoomMessageVo_ = {
     code?: number;
     data?: PageRoomMessageVo_;
@@ -829,6 +835,15 @@ declare namespace API {
     roomId: string;
   };
 
+  type listPropsPageUsingGETParams = {
+    current?: number;
+    name?: string;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+    type?: string;
+  };
+
   type LoginUserVO = {
     avatarFramerUrl?: string;
     bindPlatforms?: PlatformBindVO[];
@@ -1138,6 +1153,19 @@ declare namespace API {
     total?: number;
   };
 
+  type PagePropsVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: PropsVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
   type PageRequest = {
     current?: number;
     pageSize?: number;
@@ -1343,6 +1371,20 @@ declare namespace API {
     viewNum?: number;
   };
 
+  type PropsPurchaseRequest = {
+    propsId?: number;
+  };
+
+  type PropsVO = {
+    createTime?: string;
+    description?: string;
+    frameId?: number;
+    imgUrl?: string;
+    name?: string;
+    points?: number;
+    type?: string;
+  };
+
   type quitRoomUsingPOSTParams = {
     /** roomId */
     roomId: string;
@@ -1427,7 +1469,6 @@ declare namespace API {
     id?: string;
     isAdmin?: boolean;
     isVip?: boolean;
-    vip?: boolean;
     level?: number;
     name?: string;
     points?: number;
