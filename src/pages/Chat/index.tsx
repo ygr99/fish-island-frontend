@@ -19,7 +19,9 @@ import { wsService } from '@/services/websocket';
 import { useModel } from '@@/exports';
 // ... 其他 imports ...
 import {
+  BugOutlined,
   CloseOutlined,
+  CopyOutlined,
   CustomerServiceOutlined,
   DeleteOutlined,
   GiftOutlined,
@@ -61,6 +63,12 @@ import { UNDERCOVER_NOTIFICATION, UNDERCOVER_ROOM_STATUS } from '@/constants';
 import eventBus from '@/utils/eventBus';
 import { joinRoomUsingPost } from '@/services/backend/drawGameController';
 import { getLevelEmoji, generateUniqueShortId, getTitleTagProperties } from '@/utils/titleUtils';
+
+// 添加样式定义
+const additionalStyles = {};
+
+// 合并样式
+Object.assign(styles, additionalStyles);
 
 interface Message {
   id: string;
@@ -2284,11 +2292,11 @@ const ChatRoom: React.FC = () => {
 
   // 添加处理查看用户详情的函数
   const handleViewUserDetail = async (user: User) => {
-    if (currentUser?.userRole === 'admin') {
-      setSelectedUser(user);
-      setIsUserDetailModalVisible(true);
+    setSelectedUser(user);
+    setIsUserDetailModalVisible(true);
 
-      // 获取用户禁言状态
+    // 如果是管理员，获取用户禁言状态
+    if (currentUser?.userRole === 'admin') {
       try {
         const response = await getUserMuteInfoUsingGet({
           userId: user.id // 直接传递字符串 ID
@@ -2488,6 +2496,7 @@ const ChatRoom: React.FC = () => {
   
   // 添加摸鱼宠物相关状态
   const [isPetModalVisible, setIsPetModalVisible] = useState<boolean>(false);
+  const [currentPetUserId, setCurrentPetUserId] = useState<string | null>(null);
 
   // 处理谁是卧底按钮点击
   const handleRoomInfoClick = () => {
@@ -2530,7 +2539,10 @@ const ChatRoom: React.FC = () => {
       {/* 摸鱼宠物组件 */}
       <MoyuPet
         visible={isPetModalVisible}
-        onClose={() => setIsPetModalVisible(false)}
+        onClose={() => {
+          setIsPetModalVisible(false);
+          setCurrentPetUserId(null);
+        }}
       />
       
       {/* 房间信息卡片 */}
@@ -2637,7 +2649,7 @@ const ChatRoom: React.FC = () => {
                 <span
                   className={styles.senderName}
                   onClick={() => handleViewUserDetail(msg.sender)}
-                  style={currentUser?.userRole === 'admin' ? { cursor: 'pointer' } : {}}
+                  style={{ cursor: 'pointer' }}
                 >
                   {msg.sender.name}
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0px' }}>
@@ -2656,7 +2668,7 @@ const ChatRoom: React.FC = () => {
                     <span
                       className={styles.quotedMessageSender}
                       onClick={() => msg.quotedMessage && handleViewUserDetail(msg.quotedMessage.sender)}
-                      style={currentUser?.userRole === 'admin' ? { cursor: 'pointer' } : {}}
+                      style={{ cursor: 'pointer' }}
                     >
                       {msg.quotedMessage.sender.name}
                     </span>
@@ -2850,7 +2862,7 @@ const ChatRoom: React.FC = () => {
                   <span>点歌</span>
                 </div>
                 <div className={styles.moreOptionsItem} onClick={() => setIsPetModalVisible(true)}>
-                  <span className={styles.moreOptionsIcon}>🐟</span>
+                  <BugOutlined className={styles.moreOptionsIcon} />
                   <span>摸鱼宠物</span>
                 </div>
                 {(currentUser?.userRole === 'admin' || (currentUser?.level && currentUser.level >= 6) || currentUser?.vip) && (
@@ -2973,7 +2985,9 @@ const ChatRoom: React.FC = () => {
             </div>
             <div className={styles.mobileToolRow}>
               <div className={styles.mobileTool} onClick={() => handleMobileToolClick('pet')}>
-                <div className={styles.mobileToolIcon}>🐟</div>
+                <div className={styles.mobileToolIcon}>
+                  <BugOutlined />
+                </div>
                 <div className={styles.mobileToolText}>摸鱼宠物</div>
               </div>
               <div className={styles.mobileTool} style={{ visibility: 'hidden' }}></div>
@@ -3294,7 +3308,7 @@ const ChatRoom: React.FC = () => {
         open={isUserDetailModalVisible}
         onCancel={() => setIsUserDetailModalVisible(false)}
         footer={
-          currentUser?.userRole === 'admin' && (
+          currentUser?.userRole === 'admin' ? (
             <div className={styles.userDetailActions}>
               {userMuteInfo?.isMuted ? (
                 <Button
@@ -3323,6 +3337,23 @@ const ChatRoom: React.FC = () => {
                 关闭
               </Button>
             </div>
+          ) : (
+            <div className={styles.userDetailActions}>
+              <Button 
+                type="primary"
+                icon={<BugOutlined />}
+                onClick={() => {
+                  if (selectedUser) {
+                    setCurrentPetUserId(selectedUser.id);
+                    setIsUserDetailModalVisible(false);
+                    setIsPetModalVisible(true);
+                  }
+                }}
+              >
+                查看宠物
+              </Button>
+              <Button onClick={() => setIsUserDetailModalVisible(false)}>关闭</Button>
+            </div>
           )
         }
         width={400}
@@ -3342,17 +3373,53 @@ const ChatRoom: React.FC = () => {
                   )}
                 </div>
               </div>
-              <div className={styles.userDetailInfo}>
-                <div className={styles.userDetailName}>{selectedUser.name}</div>
-                <div className={styles.userDetailId}>ID: {generateUniqueShortId(selectedUser.id)}</div>
-                {getAdminTag(selectedUser.isAdmin, selectedUser.level, selectedUser.titleId)}
+                              <div className={styles.userDetailInfo}>
+                  <div className={styles.userDetailName} style={{ display: 'flex', alignItems: 'center' }}>
+                    <span>{selectedUser.name}</span>
+                    {(selectedUser.vip || selectedUser.isVip) && (
+                      <span className={styles.vipBadge} style={{ marginLeft: '8px' }}>V</span>
+                    )}
+                    {currentUser?.userRole === 'admin' && (
+                      <Button 
+                        type="link" 
+                        size="small"
+                        icon={<CopyOutlined />}
+                        style={{ marginLeft: '8px', padding: '0 4px' }}
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedUser.id);
+                          messageApi.success('已复制用户ID到剪贴板');
+                        }}
+                      >
+                        复制ID
+                      </Button>
+                    )}
+                  </div>
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'row', 
+                    flexWrap: 'wrap', 
+                    gap: '0px', 
+                    marginTop: '12px',
+                    marginBottom: '12px',
+                    maxWidth: '100%'
+                  }}>
+                    <div style={{ display: 'inline-flex', marginRight: '-2px', transform: 'scale(0.85)' }}>
+                      {getAdminTag(selectedUser.isAdmin, selectedUser.level, selectedUser.titleId)}
+                    </div>
+                    {selectedUser.titleIdList && 
+                      JSON.parse(selectedUser.titleIdList || '[]')
+                        .filter((id: number) => id !== selectedUser.titleId && id !== 0)
+                        .map((titleId: number) => (
+                          <div key={titleId} style={{ display: 'inline-flex', marginRight: '-2px', transform: 'scale(0.85)' }}>
+                            {getAdminTag(selectedUser.isAdmin, selectedUser.level, titleId)}
+                          </div>
+                        ))
+                    }
+                  </div>
               </div>
             </div>
             <div className={styles.userDetailContent}>
-              <div className={styles.userDetailItem}>
-                <span className={styles.itemLabel}>用户ID：</span>
-                <span className={styles.itemValue}>{selectedUser.id}</span>
-              </div>
+
               <div className={styles.userDetailItem}>
                 <span className={styles.itemLabel}>等级：</span>
                 <span className={styles.itemValue}>
@@ -3361,7 +3428,7 @@ const ChatRoom: React.FC = () => {
               </div>
               <div className={styles.userDetailItem}>
                 <span className={styles.itemLabel}>积分：</span>
-                {isEditingPoints ? (
+                {currentUser?.userRole === 'admin' && isEditingPoints ? (
                   <div className={styles.pointsEditContainer}>
                     <Input
                       type="number"
@@ -3395,23 +3462,45 @@ const ChatRoom: React.FC = () => {
                   </span>
                 </div>
               )}
-              <div className={styles.userDetailItem}>
-                <span className={styles.itemLabel}>管理员：</span>
-                <span className={styles.itemValue}>{selectedUser.isAdmin ? '是' : '否'}</span>
-              </div>
+              {currentUser?.userRole === 'admin' && (
+                <div className={styles.userDetailItem}>
+                  <span className={styles.itemLabel}>管理员：</span>
+                  <span className={styles.itemValue}>{selectedUser.isAdmin ? '是' : '否'}</span>
+                </div>
+              )}
               <div className={styles.userDetailItem}>
                 <span className={styles.itemLabel}>上次活跃：</span>
                 <span className={styles.itemValue}>刚刚</span>
               </div>
-              <div className={styles.userDetailItem}>
-                <span className={styles.itemLabel}>状态：</span>
-                {userMuteInfo?.isMuted ? (
+              {currentUser?.userRole === 'admin' && userMuteInfo?.isMuted ? (
+                <div className={styles.userDetailItem}>
+                  <span className={styles.itemLabel}>状态：</span>
                   <span className={styles.itemValue} style={{ color: '#ff4d4f' }}>
                     已禁言（剩余 {userMuteInfo.remainingTime}）
                   </span>
-                ) : (
+                </div>
+              ) : (
+                <div className={styles.userDetailItem}>
+                  <span className={styles.itemLabel}>状态：</span>
                   <span className={styles.itemValue}>{selectedUser.status || '在线'}</span>
-                )}
+                </div>
+              )}
+                            <div className={styles.userDetailItem}>
+                <span className={styles.itemLabel}>宠物：</span>
+                <Button 
+                  type="primary" 
+                  size="small"
+                  icon={<BugOutlined />}
+                  onClick={() => {
+                    if (selectedUser) {
+                      setCurrentPetUserId(selectedUser.id);
+                      setIsUserDetailModalVisible(false);
+                      setIsPetModalVisible(true);
+                    }
+                  }}
+                >
+                  查看宠物
+                </Button>
               </div>
             </div>
           </div>
