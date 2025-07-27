@@ -86,6 +86,7 @@ const PetRules = () => (
         <li>喂食：增加20点饥饿度和5点心情值，消耗5积分</li>
         <li>抚摸：增加15点心情值，消耗3积分</li>
         <li>互动操作有1分钟冷却时间</li>
+        <li>修改名称：消耗100积分</li>
       </ul>
     </div>
     <div className={styles.ruleSection}>
@@ -228,27 +229,36 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
       return;
     }
 
-    setRenameLoading(true);
-    try {
-      const res = await updatePetNameUsingPost({
-        petId: pet.petId,
-        name: newName
-      });
+    // 确认是否修改名称
+    Modal.confirm({
+      title: '确认修改宠物名称',
+      content: '修改宠物名称将消耗100积分，确定要继续吗？',
+      okText: '确认修改',
+      cancelText: '取消',
+      onOk: async () => {
+        setRenameLoading(true);
+        try {
+          const res = await updatePetNameUsingPost({
+            petId: pet.petId,
+            name: newName
+          });
 
-      if (res.code === 0 && res.data) {
-        message.success('修改名称成功');
-        setPet({...pet, name: newName});
-        setIsRenaming(false);
-        setNewName('');
-      } else {
-        message.error(res.message || '修改名称失败');
+          if (res.code === 0 && res.data) {
+            message.success('修改名称成功');
+            setPet({...pet, name: newName});
+            setIsRenaming(false);
+            setNewName('');
+          } else {
+            message.error(res.message || '修改名称失败');
+          }
+        } catch (error) {
+          console.error('修改名称失败', error);
+          message.error('修改名称失败，可能是积分不足');
+        } finally {
+          setRenameLoading(false);
+        }
       }
-    } catch (error) {
-      console.error('修改名称失败', error);
-      message.error('修改名称失败');
-    } finally {
-      setRenameLoading(false);
-    }
+    });
   };
 
   useEffect(() => {
@@ -382,15 +392,17 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
               <span className={styles.name}>
                 {pet?.name}
                 {!isOtherUser && !isRenaming ? (
-                  <Button
-                    type="link"
-                    size="small"
-                    onClick={() => setIsRenaming(true)}
-                    icon={<EditOutlined />}
-                    className={styles.renameButton}
-                  >
-                    修改
-                  </Button>
+                  <Tooltip title="修改名称需要消耗100积分">
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => setIsRenaming(true)}
+                      icon={<EditOutlined />}
+                      className={styles.renameButton}
+                    >
+                      修改
+                    </Button>
+                  </Tooltip>
                 ) : isRenaming ? (
                   <div className={styles.renameContainer}>
                     <Input
