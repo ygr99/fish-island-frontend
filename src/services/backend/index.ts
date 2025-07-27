@@ -11,6 +11,7 @@ import * as drawGameController from './drawGameController';
 import * as emoticonFavourController from './emoticonFavourController';
 import * as eventRemindController from './eventRemindController';
 import * as fileController from './fileController';
+import * as fishPetController from './fishPetController';
 import * as heroController from './heroController';
 import * as hotPostController from './hotPostController';
 import * as mockInterviewController from './mockInterviewController';
@@ -39,6 +40,7 @@ export default {
   emoticonFavourController,
   eventRemindController,
   fileController,
+  fishPetController,
   heroController,
   hotPostController,
   mockInterviewController,

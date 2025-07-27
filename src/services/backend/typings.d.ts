@@ -164,6 +164,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseOtherUserPetVO_ = {
+    code?: number;
+    data?: OtherUserPetVO;
+    message?: string;
+  };
+
   type BaseResponsePageAvatarFrameVO_ = {
     code?: number;
     data?: PageAvatarFrameVO_;
@@ -269,6 +275,12 @@ declare namespace API {
   type BaseResponsePageUserVO_ = {
     code?: number;
     data?: PageUserVO_;
+    message?: string;
+  };
+
+  type BaseResponsePetVO_ = {
+    code?: number;
+    data?: PetVO;
     message?: string;
   };
 
@@ -474,6 +486,11 @@ declare namespace API {
     response?: Response;
   };
 
+  type CreatePetRequest = {
+    name?: string;
+    petUrl?: string;
+  };
+
   type CreateRedPacketRequest = {
     /** 红包个数 */
     count: number;
@@ -659,6 +676,11 @@ declare namespace API {
     frameId: number;
   };
 
+  type feedPetUsingPOSTParams = {
+    /** petId */
+    petId: number;
+  };
+
   type FluxString_ = {
     prefetch?: number;
   };
@@ -696,6 +718,11 @@ declare namespace API {
   type getMockInterviewByIdUsingGETParams = {
     /** id */
     id?: number;
+  };
+
+  type getOtherUserPetUsingGETParams = {
+    /** otherUserId */
+    otherUserId: number;
   };
 
   type getPlayerDetailInfoUsingGETParams = {
@@ -1023,6 +1050,17 @@ declare namespace API {
     column?: string;
   };
 
+  type OtherUserPetVO = {
+    createTime?: string;
+    hunger?: number;
+    level?: number;
+    mood?: number;
+    name?: string;
+    petId?: number;
+    petUrl?: string;
+    userId?: number;
+  };
+
   type PageAvatarFrameVO_ = {
     countId?: string;
     current?: number;
@@ -1267,6 +1305,24 @@ declare namespace API {
   type parseWebPageUsingGETParams = {
     /** url */
     url: string;
+  };
+
+  type patPetUsingPOSTParams = {
+    /** petId */
+    petId: number;
+  };
+
+  type PetVO = {
+    createTime?: string;
+    exp?: number;
+    extendData?: string;
+    hunger?: number;
+    level?: number;
+    mood?: number;
+    name?: string;
+    petId?: number;
+    petUrl?: string;
+    userId?: number;
   };
 
   type PlatformBindVO = {
@@ -1670,6 +1726,11 @@ declare namespace API {
   type unmuteUserUsingPOSTParams = {
     /** userId */
     userId: number;
+  };
+
+  type UpdatePetNameRequest = {
+    name?: string;
+    petId?: number;
   };
 
   type uploadFileByMinioUsingPOSTParams = {

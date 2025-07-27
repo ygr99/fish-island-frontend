@@ -2543,6 +2543,8 @@ const ChatRoom: React.FC = () => {
           setIsPetModalVisible(false);
           setCurrentPetUserId(null);
         }}
+        otherUserId={currentPetUserId ? Number(currentPetUserId) : undefined}
+        otherUserName={onlineUsers.find(user => user.id === currentPetUserId)?.name}
       />
 
       {/* 房间信息卡片 */}
@@ -2861,7 +2863,10 @@ const ChatRoom: React.FC = () => {
                   <CustomerServiceOutlined className={styles.moreOptionsIcon} />
                   <span>点歌</span>
                 </div>
-                <div className={styles.moreOptionsItem} onClick={() => setIsPetModalVisible(true)}>
+                <div className={styles.moreOptionsItem} onClick={() => {
+                  setCurrentPetUserId(null);
+                  setIsPetModalVisible(true);
+                }}>
                   <BugOutlined className={styles.moreOptionsIcon} />
                   <span>摸鱼宠物</span>
                 </div>
