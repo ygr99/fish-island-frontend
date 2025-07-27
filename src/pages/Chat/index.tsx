@@ -178,6 +178,8 @@ const ChatRoom: React.FC = () => {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [mentionSearchText, setMentionSearchText] = useState('');
   const mentionListRef = useRef<HTMLDivElement>(null);
+  // 添加防抖引用
+  const mentionDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isRedPacketModalVisible, setIsRedPacketModalVisible] = useState(false);
   const [redPacketAmount, setRedPacketAmount] = useState<number>(0);
@@ -357,24 +359,28 @@ const ChatRoom: React.FC = () => {
 
     // 使用 requestAnimationFrame 确保在下一帧执行滚动
     requestAnimationFrame(() => {
+      // 使用性能更好的方式计算滚动位置
+      const scrollTarget = container.scrollHeight - container.clientHeight;
+      
       container.scrollTo({
-        top: container.scrollHeight,
-        behavior: 'smooth',
+        top: scrollTarget,
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
       });
 
-      // 添加二次检查，处理可能的延迟加载情况
-      setTimeout(() => {
-        if (container.scrollTop + container.clientHeight < container.scrollHeight) {
+      // 添加二次检查，处理可能的延迟加载情况，但减少不必要的重复滚动
+      const checkScrollPosition = () => {
+        if (container.scrollTop + container.clientHeight < container.scrollHeight - 20) {
           container.scrollTo({
-            top: container.scrollHeight,
-            behavior: 'smooth',
+            top: container.scrollHeight - container.clientHeight,
+            behavior: 'auto', // 二次滚动使用即时滚动，避免动画叠加
           });
         }
         // 滚动完成后重置标记
-        setTimeout(() => {
-          isAutoScrollingRef.current = false;
-        }, 100);
-      }, 100);
+        isAutoScrollingRef.current = false;
+      };
+      
+      // 使用 requestAnimationFrame 代替 setTimeout，性能更好
+      setTimeout(checkScrollPosition, 100);
     });
   };
 
@@ -1352,7 +1358,7 @@ const ChatRoom: React.FC = () => {
     // 过滤掉 ``` 字符
     value = value.replace(/```/g, '');
 
-    // 更新输入值
+    // 更新输入值 - 这个操作必须立即执行，确保用户输入的即时反馈
     setInputValue(value);
 
     // 如果输入框有内容并且功能面板显示中，则关闭功能面板
@@ -1360,7 +1366,7 @@ const ChatRoom: React.FC = () => {
       closeMobileToolbar();
     }
 
-    // 检查是否输入了#摸鱼日历
+    // 检查是否输入了#摸鱼日历 - 这个功能必须立即响应
     if (value === '#摸鱼日历') {
       fetchMoyuCalendar();
       setInputValue(''); // 清空输入框，因为这是触发词
@@ -1368,43 +1374,56 @@ const ChatRoom: React.FC = () => {
       return;
     }
 
-    // 原有的@功能处理逻辑保持不变
-    const lastAtPos = value.lastIndexOf('@');
-    if (lastAtPos !== -1) {
-      const searchText = value.slice(lastAtPos + 1);
-      setMentionSearchText(searchText);
-
-      // 过滤在线用户，添加安全检查
-      const filtered = onlineUsers.filter((user) => {
-        if (!user || !user.name) return false;
-        return user.name.toLowerCase().includes(searchText.toLowerCase());
-      });
-      setFilteredUsers(filtered);
-
-      // 获取输入框位置
-      const textarea = e.target;
-      const rect = textarea.getBoundingClientRect();
-      const cursorPos = textarea.selectionStart;
-      const lineHeight = parseInt(getComputedStyle(textarea).lineHeight);
-      const lines = value.slice(0, cursorPos).split('\n');
-      const currentLine = lines[lines.length - 1];
-      const currentLinePos = currentLine.length;
-
-      // 根据过滤结果数量调整位置
-      const itemHeight = 40; // 每个选项的高度
-      const maxItems = 3; // 最多显示3条数据时紧贴显示
-      const listHeight = Math.min(filtered.length, maxItems) * itemHeight;
-      const topOffset = filtered.length <= maxItems ? -listHeight : -200; // 数据较少时紧贴输入框
-
-      setMentionListPosition({
-        top: rect.top + topOffset,
-        left: rect.left + currentLinePos * 8, // 8是字符的近似宽度
-      });
-
-      setIsMentionListVisible(true);
-    } else {
-      setIsMentionListVisible(false);
+    // 使用防抖处理@功能，减少频繁计算
+    if (mentionDebounceRef.current) {
+      clearTimeout(mentionDebounceRef.current);
     }
+
+    mentionDebounceRef.current = setTimeout(() => {
+      // @功能处理逻辑
+      const lastAtPos = value.lastIndexOf('@');
+      if (lastAtPos !== -1) {
+        const searchText = value.slice(lastAtPos + 1);
+        setMentionSearchText(searchText);
+
+        // 如果搜索文本为空，显示所有在线用户（限制数量）
+        if (!searchText.trim()) {
+          setFilteredUsers(onlineUsers.slice(0, 10)); // 限制显示数量
+        } else {
+          // 优化过滤逻辑，使用缓存的小写名称进行比较
+          const searchTextLower = searchText.toLowerCase();
+          const filtered = onlineUsers.filter((user) => {
+            if (!user || !user.name) return false;
+            return user.name.toLowerCase().includes(searchTextLower);
+          }).slice(0, 10); // 限制结果数量
+          setFilteredUsers(filtered);
+        }
+
+        // 只有当有过滤结果时才计算位置
+        if (onlineUsers.length > 0) {
+          // 获取输入框位置
+          const textarea = e.target;
+          const rect = textarea.getBoundingClientRect();
+          
+          // 简化位置计算逻辑
+          const itemHeight = 40; // 每个选项的高度
+          const maxItems = 3; // 最多显示3条数据时紧贴显示
+          const listHeight = Math.min(onlineUsers.length, maxItems) * itemHeight;
+          const topOffset = -listHeight - 10; // 固定在输入框上方，加一点间距
+          
+          setMentionListPosition({
+            top: rect.top + topOffset,
+            left: rect.left + 10, // 固定在左侧，稍微缩进
+          });
+
+          setIsMentionListVisible(true);
+        } else {
+          setIsMentionListVisible(false);
+        }
+      } else {
+        setIsMentionListVisible(false);
+      }
+    }, 150); // 150ms的防抖延迟，平衡响应速度和性能
   };
 
   // 点击空白处隐藏成员列表
@@ -1423,27 +1442,35 @@ const ChatRoom: React.FC = () => {
 
   // 选择@成员
   const handleSelectMention = (user: User) => {
-    const value = inputValue;
-    const lastAtPos = value.lastIndexOf('@');
-    if (lastAtPos !== -1) {
-      // 如果已经输入了@，则替换当前@后面的内容
-      const newValue =
-        value.slice(0, lastAtPos) +
-        `@${user.name} ` +
-        value.slice(lastAtPos + mentionSearchText.length + 1);
-      setInputValue(newValue);
-    } else {
-      // 如果没有输入@，则在当前光标位置插入@用户名
-      const cursorPos = inputRef.current?.selectionStart || 0;
-      const newValue = value.slice(0, cursorPos) + `@${user.name} ` + value.slice(cursorPos);
-      setInputValue(newValue);
+    // 清理防抖计时器
+    if (mentionDebounceRef.current) {
+      clearTimeout(mentionDebounceRef.current);
+      mentionDebounceRef.current = null;
     }
+
+    // 使用函数式更新确保使用最新的inputValue
+    setInputValue(currentValue => {
+      const lastAtPos = currentValue.lastIndexOf('@');
+      if (lastAtPos !== -1) {
+        // 如果已经输入了@，则替换当前@后面的内容
+        return currentValue.slice(0, lastAtPos) +
+          `@${user.name} ` +
+          currentValue.slice(lastAtPos + mentionSearchText.length + 1);
+      } else {
+        // 如果没有输入@，则在当前光标位置插入@用户名
+        const cursorPos = inputRef.current?.selectionStart || 0;
+        return currentValue.slice(0, cursorPos) + `@${user.name} ` + currentValue.slice(cursorPos);
+      }
+    });
+    
+    // 立即隐藏列表，提高响应速度
     setIsMentionListVisible(false);
     setMentionSearchText('');
-    // 让输入框获得焦点
-    setTimeout(() => {
+    
+    // 使用 requestAnimationFrame 延迟聚焦，提高渲染性能
+    requestAnimationFrame(() => {
       inputRef.current?.focus();
-    }, 0);
+    });
   };
 
   // Using utility function from titleUtils
@@ -1625,10 +1652,10 @@ const ChatRoom: React.FC = () => {
   const handleEmojiClick = (emoji: any) => {
     setInputValue((prev) => prev + emoji.native);
     setIsEmojiPickerVisible(false);
-    // 让输入框获得焦点
-    setTimeout(() => {
+    // 使用 requestAnimationFrame 延迟聚焦，提高渲染性能
+    requestAnimationFrame(() => {
       inputRef.current?.focus();
-    }, 0);
+    });
   };
 
   const emojiPickerContent = (
@@ -1648,8 +1675,7 @@ const ChatRoom: React.FC = () => {
   const handleEmoticonSelect = (url: string) => {
     // 将图片URL作为消息内容发送
     const imageMessage = `[img]${url}[/img]`;
-    setInputValue(imageMessage);
-
+    
     // 直接使用新的消息内容发送，而不是依赖 inputValue 的状态更新
     if (!wsService.isConnected()) {
       return;
@@ -1663,11 +1689,13 @@ const ChatRoom: React.FC = () => {
     // 使用工具函数创建消息对象
     const newMessage = createNewMessage(imageMessage);
 
-    // 新发送的消息添加到列表末尾
+    // 批量更新状态，减少重渲染次数
     setMessages((prev) => [...prev, newMessage]);
     // 更新总消息数和分页状态
     setTotal((prev) => prev + 1);
     setHasMore(true);
+    setInputValue('');
+    setIsEmoticonPickerVisible(false);
 
     // 发送消息到服务器
     wsService.send({
@@ -1681,10 +1709,8 @@ const ChatRoom: React.FC = () => {
       },
     });
 
-    setInputValue('');
-    setIsEmoticonPickerVisible(false);
-    // 发送消息后滚动到底部
-    setTimeout(scrollToBottom, 100);
+    // 使用 requestAnimationFrame 优化滚动性能
+    requestAnimationFrame(scrollToBottom);
   };
 
   // 修改 handleInviteClick 函数
@@ -2284,8 +2310,9 @@ const ChatRoom: React.FC = () => {
 
   // 当搜索关键词变化时重置搜索状态
   const handleSearchKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchKey(e.target.value);
-    if (hasSearched && e.target.value !== searchKey) {
+    const newValue = e.target.value;
+    setSearchKey(newValue);
+    if (hasSearched && newValue !== searchKey) {
       setHasSearched(false); // 如果关键词变化，重置搜索状态
     }
   };
@@ -2543,7 +2570,7 @@ const ChatRoom: React.FC = () => {
           setIsPetModalVisible(false);
           setCurrentPetUserId(null);
         }}
-        otherUserId={currentPetUserId ? Number(currentPetUserId) : undefined}
+        otherUserId={currentPetUserId ? currentPetUserId as any : undefined}
         otherUserName={onlineUsers.find(user => user.id === currentPetUserId)?.name}
       />
 

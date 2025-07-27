@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Tabs, Button, Progress, Card, Avatar, Row, Col, Input, Form, message, Tooltip, Popover } from 'antd';
+import { Modal, Tabs, Button, Progress, Card, Avatar, Row, Col, Input, Form, message, Tooltip, Popover, Spin } from 'antd';
 import {
   HeartOutlined,
   ThunderboltOutlined,
@@ -17,6 +17,7 @@ import {
 } from '@ant-design/icons';
 import styles from './index.less';
 import { getPetDetailUsingGet, createPetUsingPost, feedPetUsingPost, patPetUsingPost, updatePetNameUsingPost, getOtherUserPetUsingGet } from '@/services/backend/fishPetController';
+import { listPetSkinsUsingGet, exchangePetSkinUsingPost, setPetSkinUsingPost } from '@/services/backend/petSkinController';
 
 export interface PetInfo {
   id: string;
@@ -97,8 +98,54 @@ const PetRules = () => (
         <li>如果饥饿度和心情值都为0，宠物将不会产出积分</li>
       </ul>
     </div>
+    <div className={styles.ruleSection}>
+      <h4>皮肤系统</h4>
+      <ul>
+        <li>可以在商店中使用积分购买不同的宠物皮肤</li>
+        <li>已购买的皮肤会显示在皮肤馆中，可以随时切换使用</li>
+        <li>皮肤一旦购买成功，永久拥有</li>
+      </ul>
+    </div>
   </div>
 );
+
+// 商店 Tab 组件
+interface ShopTabsProps {
+  renderSkinsList: (showAll: boolean) => React.ReactNode;
+}
+
+const ShopTabs: React.FC<ShopTabsProps> = ({ renderSkinsList }) => {
+  return (
+    <Tabs
+      defaultActiveKey="skin"
+      items={[
+        {
+          key: 'skin',
+          label: (
+            <span>
+              <SkinOutlined /> 皮肤商店
+            </span>
+          ),
+          children: renderSkinsList(true),
+        },
+        {
+          key: 'props',
+          label: (
+            <span>
+              <GiftOutlined /> 道具商店
+            </span>
+          ),
+          children: (
+            <div className={styles.shopEmpty}>
+              <div className={styles.emptyIcon}>🛒</div>
+              <div className={styles.emptyText}>更多道具即将上架，敬请期待！</div>
+            </div>
+          ),
+        },
+      ]}
+    />
+  );
+};
 
 const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherUserName }) => {
   const [pet, setPet] = useState<API.PetVO | API.OtherUserPetVO | null>(null);
@@ -112,6 +159,10 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
   const [isRenaming, setIsRenaming] = useState(false);
   const [isOtherUserEmptyPet, setIsOtherUserEmptyPet] = useState(false); // 添加状态来跟踪是否是其他用户的空宠物状态
   const isOtherUser = !!otherUserId; // 是否查看其他用户的宠物
+  const [skins, setSkins] = useState<API.PetSkinVO[]>([]);
+  const [skinLoading, setSkinLoading] = useState(false);
+  const [exchangeLoading, setExchangeLoading] = useState<number | null>(null);
+  const [setCurrentSkinLoading, setSetCurrentSkinLoading] = useState<number | null>(null);
 
   // 获取宠物数据
   const fetchPetData = async () => {
@@ -161,8 +212,7 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
     setLoading(true);
     try {
       const res = await createPetUsingPost({
-        name: petName,
-        petUrl: 'https://api.oss.cqbo.com/moyu/pet/超级玛丽马里奥 (73)_爱给网_aigei_com.png', // 默认头像
+        name: petName
       });
 
       if (res.code === 0 && res.data) {
@@ -261,6 +311,118 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
     });
   };
 
+  // 获取宠物皮肤列表
+  const fetchPetSkins = async () => {
+    if (isOtherUser) return; // 如果是查看其他用户的宠物，不需要获取皮肤列表
+    
+    setSkinLoading(true);
+    try {
+      const res = await listPetSkinsUsingGet({
+        current: 1,
+        pageSize: 100,
+      });
+      
+      if (res.code === 0 && res.data?.records) {
+        // 添加原皮卡片，ID为-1
+        const originalSkin: API.PetSkinVO = {
+          skinId: -1,
+          name: '原皮',
+          description: '最初的样子，朴素而自然',
+          url: 'https://api.oss.cqbo.com/moyu/pet/超级玛丽马里奥 (73)_爱给网_aigei_com.png', // 使用默认图片，可以根据实际情况调整
+          points: 0,
+          owned: true, // 默认拥有
+        };
+        
+        // 将原皮添加到皮肤列表的开头
+        setSkins([originalSkin, ...res.data.records]);
+      } else {
+        message.error(res.message || '获取皮肤列表失败');
+      }
+    } catch (error) {
+      console.error('获取皮肤列表失败', error);
+      message.error('获取皮肤列表失败');
+    } finally {
+      setSkinLoading(false);
+    }
+  };
+
+  // 兑换皮肤
+  const handleExchangeSkin = async (skinId: number) => {
+    // 添加二次确认
+    Modal.confirm({
+      title: '确认购买皮肤',
+      content: `确定要花费 ${skins.find(skin => skin.skinId === skinId)?.points || 0} 积分购买该皮肤吗？`,
+      okText: '确认购买',
+      cancelText: '取消',
+      onOk: async () => {
+        setExchangeLoading(skinId);
+        try {
+          const res = await exchangePetSkinUsingPost({
+            skinId
+          });
+          
+          if (res.code === 0 && res.data) {
+            message.success('购买皮肤成功');
+            // 更新皮肤列表中的owned状态
+            setSkins(skins.map(skin => 
+              skin.skinId === skinId ? { ...skin, owned: true } : skin
+            ));
+            // 重新获取宠物信息，更新皮肤列表
+            fetchPetData();
+          } else {
+            message.error(res.message || '购买皮肤失败');
+          }
+        } catch (error) {
+          console.error('购买皮肤失败', error);
+          message.error('购买皮肤失败，可能是积分不足');
+        } finally {
+          setExchangeLoading(null);
+        }
+      }
+    });
+  };
+
+  // 设置当前皮肤
+  const handleSetCurrentSkin = async (skinId: number) => {
+    if (!pet?.petId) return;
+    
+    setSetCurrentSkinLoading(skinId);
+    try {
+      // 如果是原皮(ID为-1)，需要特殊处理
+      if (skinId === -1) {
+        // 这里假设后端API支持传入-1作为原皮ID
+        // 如果后端不支持，可能需要修改后端代码或使用其他方式处理
+        const res = await setPetSkinUsingPost({
+          skinId: -1
+        });
+        
+        if (res.code === 0 && res.data) {
+          message.success('设置原皮成功');
+          setPet(res.data);
+        } else {
+          message.error(res.message || '设置原皮失败');
+        }
+      } else {
+        // 正常皮肤处理
+        const res = await setPetSkinUsingPost({
+          skinId
+        });
+        
+        if (res.code === 0 && res.data) {
+          message.success('设置皮肤成功');
+          setPet(res.data);
+        } else {
+          message.error(res.message || '设置皮肤失败');
+        }
+      }
+    } catch (error) {
+      console.error('设置皮肤失败', error);
+      message.error('设置皮肤失败');
+    } finally {
+      setSetCurrentSkinLoading(null);
+    }
+  };
+
   useEffect(() => {
     if (visible) {
       // 重置状态，避免显示上一次的结果
@@ -268,6 +430,7 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
       setIsCreating(false);
       setIsOtherUserEmptyPet(false);
       fetchPetData();
+      fetchPetSkins(); // 获取皮肤列表
     }
   }, [visible, otherUserId]);
 
@@ -347,6 +510,102 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
       </Modal>
     );
   }
+
+  // 渲染皮肤列表
+  const renderSkinsList = (showAll = false) => {
+    // 如果showAll为true，显示所有皮肤（商店），否则只显示已拥有的皮肤（皮肤馆）
+    const filteredSkins = showAll ? skins : skins.filter(skin => skin.owned);
+    
+    if (skinLoading) {
+      return (
+        <div style={{ textAlign: 'center', padding: '50px 0' }}>
+          <Spin tip="加载中..." />
+        </div>
+      );
+    }
+    
+    if (filteredSkins.length === 0) {
+      return (
+        <div className={styles.shopEmpty} style={{ textAlign: 'center', padding: '50px 0' }}>
+          <div className={styles.emptyIcon} style={{ fontSize: '48px', marginBottom: '20px' }}>
+            {showAll ? '🛒' : '👕'}
+          </div>
+          <div className={styles.emptyText} style={{ fontSize: '16px' }}>
+            {showAll ? '暂无可购买的皮肤' : '暂无已拥有的皮肤'}
+          </div>
+        </div>
+      );
+    }
+    
+    return (
+      <div className={styles.skinsList}>
+        <Row gutter={[12, 12]}>
+          {filteredSkins.map((skin) => (
+            <Col span={8} key={skin.skinId}>
+              <Card
+                className={`${styles.skinCard} ${skin.owned ? styles.ownedSkin : ''}`}
+                hoverable
+                size="small"
+                cover={
+                  <div className={styles.skinImageContainer}>
+                    <img
+                      alt={skin.name}
+                      src={skin.url}
+                      className={styles.skinImage}
+                    />
+                    {skin.owned && (
+                      (skin.skinId === -1 && (!pet?.petUrl || pet.petUrl === skin.url)) || 
+                      (skin.skinId !== -1 && pet?.petUrl === skin.url)
+                    ) && (
+                      <div className={styles.currentSkinBadge}>
+                        当前使用
+                      </div>
+                    )}
+                  </div>
+                }
+                bodyStyle={{ padding: '12px 16px' }}
+              >
+                <Card.Meta
+                  title={<div className={styles.skinTitle}>{skin.name}</div>}
+                  description={<div className={styles.skinDescription}>{skin.description}</div>}
+                />
+                <div className={styles.skinPrice}>
+                  {skin.points} 积分
+                </div>
+                <div className={styles.skinActions}>
+                  {skin.owned ? (
+                    <Button
+                      type="primary"
+                      size="small"
+                      disabled={(skin.skinId === -1 && (!pet?.petUrl || pet.petUrl === skin.url)) || 
+                               (skin.skinId !== -1 && pet?.petUrl === skin.url)}
+                      onClick={() => handleSetCurrentSkin(skin.skinId || 0)}
+                      loading={setCurrentSkinLoading === skin.skinId}
+                      icon={(skin.skinId === -1 && (!pet?.petUrl || pet.petUrl === skin.url)) || 
+                            (skin.skinId !== -1 && pet?.petUrl === skin.url) ? <CheckOutlined /> : <SkinOutlined />}
+                    >
+                      {(skin.skinId === -1 && (!pet?.petUrl || pet.petUrl === skin.url)) || 
+                       (skin.skinId !== -1 && pet?.petUrl === skin.url) ? '当前使用中' : '使用'}
+                    </Button>
+                  ) : showAll ? (
+                    <Button
+                      type="primary"
+                      size="small"
+                      onClick={() => handleExchangeSkin(skin.skinId || 0)}
+                      loading={exchangeLoading === skin.skinId}
+                      icon={<ShoppingOutlined />}
+                    >
+                      购买
+                    </Button>
+                  ) : null}
+                </div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </div>
+    );
+  };
 
   return (
     <Modal
@@ -585,10 +844,14 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
               ),
               children: (
                 <div className={styles.shopContainer}>
-                  <div className={styles.shopEmpty}>
-                    <div className={styles.emptyIcon}>🛒</div>
-                    <div className={styles.emptyText}>商店即将开业，敬请期待！</div>
-                  </div>
+                  {isOtherUser ? (
+                    <div className={styles.shopEmpty}>
+                      <div className={styles.emptyIcon}>🛒</div>
+                      <div className={styles.emptyText}>无法查看其他用户的商店</div>
+                    </div>
+                  ) : (
+                    <ShopTabs renderSkinsList={renderSkinsList} />
+                  )}
                 </div>
               ),
             }]),
@@ -601,10 +864,55 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
               ),
               children: (
                 <div className={styles.skinContainer}>
-                  <div className={styles.shopEmpty} style={{ textAlign: 'center', padding: '50px 0' }}>
-                    <div className={styles.emptyIcon} style={{ fontSize: '48px', marginBottom: '20px' }}>👕</div>
-                    <div className={styles.emptyText} style={{ fontSize: '16px' }}>皮肤馆即将开放，敬请期待！</div>
-                  </div>
+                  {isOtherUser ? (
+                    <div className={styles.otherUserSkins}>
+                      {pet?.skins && pet.skins.length > 0 ? (
+                        <div className={styles.skinsList}>
+                          <Row gutter={[12, 12]}>
+                            {pet.skins.map((skin) => (
+                              <Col span={8} key={skin.skinId}>
+                                <Card
+                                  className={`${styles.skinCard} ${styles.ownedSkin}`}
+                                  hoverable
+                                  size="small"
+                                  cover={
+                                    <div className={styles.skinImageContainer}>
+                                      <img
+                                        alt={skin.name}
+                                        src={skin.url}
+                                        className={styles.skinImage}
+                                      />
+                                      {(skin.skinId === -1 && (!pet?.petUrl || pet.petUrl === skin.url)) || 
+                                       (skin.skinId !== -1 && pet?.petUrl === skin.url) ? (
+                                        <div className={styles.currentSkinBadge}>
+                                          当前使用
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  }
+                                  bodyStyle={{ padding: '12px 16px' }}
+                                >
+                                  <Card.Meta
+                                    title={<div className={styles.skinTitle}>{skin.name}</div>}
+                                    description={<div className={styles.skinDescription}>{skin.description}</div>}
+                                  />
+                                </Card>
+                              </Col>
+                            ))}
+                          </Row>
+                        </div>
+                      ) : (
+                        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                          <div style={{ fontSize: '16px', marginBottom: '20px' }}>
+                            当前皮肤
+                          </div>
+                          <Avatar src={pet?.petUrl} size={100} />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    renderSkinsList(false)
+                  )}
                 </div>
               ),
             },

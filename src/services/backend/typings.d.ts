@@ -218,6 +218,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponsePagePetSkinVO_ = {
+    code?: number;
+    data?: PagePetSkinVO_;
+    message?: string;
+  };
+
   type BaseResponsePagePost_ = {
     code?: number;
     data?: PagePost_;
@@ -488,7 +494,6 @@ declare namespace API {
 
   type CreatePetRequest = {
     name?: string;
-    petUrl?: string;
   };
 
   type CreateRedPacketRequest = {
@@ -862,6 +867,14 @@ declare namespace API {
     roomId: string;
   };
 
+  type listPetSkinsUsingGETParams = {
+    current?: number;
+    name?: string;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+  };
+
   type listPropsPageUsingGETParams = {
     current?: number;
     name?: string;
@@ -1058,6 +1071,7 @@ declare namespace API {
     name?: string;
     petId?: number;
     petUrl?: string;
+    skins?: PetSkinVO[];
     userId?: number;
   };
 
@@ -1160,6 +1174,19 @@ declare namespace API {
     orders?: OrderItem[];
     pages?: number;
     records?: MockInterview[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PagePetSkinVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: PetSkinVO[];
     searchCount?: boolean;
     size?: number;
     total?: number;
@@ -1312,16 +1339,33 @@ declare namespace API {
     petId: number;
   };
 
+  type PetSkinExchangeRequest = {
+    skinId?: number;
+  };
+
+  type PetSkinSetRequest = {
+    skinId?: number;
+  };
+
+  type PetSkinVO = {
+    description?: string;
+    name?: string;
+    owned?: boolean;
+    points?: number;
+    skinId?: number;
+    url?: string;
+  };
+
   type PetVO = {
     createTime?: string;
     exp?: number;
-    extendData?: string;
     hunger?: number;
     level?: number;
     mood?: number;
     name?: string;
     petId?: number;
     petUrl?: string;
+    skins?: PetSkinVO[];
     userId?: number;
   };
 

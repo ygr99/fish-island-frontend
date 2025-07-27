@@ -15,6 +15,7 @@ import * as fishPetController from './fishPetController';
 import * as heroController from './heroController';
 import * as hotPostController from './hotPostController';
 import * as mockInterviewController from './mockInterviewController';
+import * as petSkinController from './petSkinController';
 import * as postController from './postController';
 import * as postFavourController from './postFavourController';
 import * as postThumbController from './postThumbController';
@@ -31,6 +32,7 @@ import * as userVipController from './userVipController';
 import * as webParserController from './webParserController';
 export default {
   avatarFrameController,
+  petSkinController,
   webParserController,
   chatController,
   commentController,
@@ -40,11 +42,11 @@ export default {
   emoticonFavourController,
   eventRemindController,
   fileController,
-  fishPetController,
   heroController,
   hotPostController,
   mockInterviewController,
   restAuthController,
+  fishPetController,
   postController,
   postFavourController,
   postThumbController,
