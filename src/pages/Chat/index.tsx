@@ -628,13 +628,13 @@ const ChatRoom: React.FC = () => {
   // 创建消息对象的工具函数（从后端记录）
   const createMessageFromRecord = (record: any): Message | null => {
     const messageId = String(record.messageWrapper?.message?.id);
-    
+
     // 如果消息ID为空，返回null
     if (!messageId) return null;
-    
+
     const senderRecord = record.messageWrapper?.message?.sender;
     const quotedMessageRecord = record.messageWrapper?.message?.quotedMessage;
-    
+
     // 创建引用消息（如果存在）
     const quotedMessage = quotedMessageRecord ? {
       id: String(quotedMessageRecord.id),
@@ -642,7 +642,7 @@ const ChatRoom: React.FC = () => {
       sender: createUserFromRecord(quotedMessageRecord.sender),
       timestamp: new Date(quotedMessageRecord.timestamp || Date.now()),
     } : undefined;
-    
+
     // 创建并返回消息对象
     return {
       id: messageId,
@@ -727,7 +727,7 @@ const ChatRoom: React.FC = () => {
         // 重要修改：无论是否有新消息，都更新页码
         // 这样可以避免一直请求同一页
         setCurrent(page);
-        
+
         // 如果没有新消息但服务器返回的总数大于已加载的消息数，
         // 可能是由于重复消息导致的，尝试请求下一页
         if (historyMessages.length === 0 && currentTotal < (response.data.total || 0)) {
@@ -751,7 +751,7 @@ const ChatRoom: React.FC = () => {
               isAutoScrollingRef.current = true;
               const newScrollHeight = container.scrollHeight;
               container.scrollTop = newScrollHeight - oldScrollHeight;
-              
+
               // 重置标记
               setTimeout(() => {
                 isAutoScrollingRef.current = false;
@@ -773,7 +773,7 @@ const ChatRoom: React.FC = () => {
   const checkIfNearBottom = () => {
     // 如果正在自动滚动，不更新状态
     if (isAutoScrollingRef.current) return;
-    
+
     const container = messageContainerRef.current;
     if (!container) return;
 
@@ -1170,7 +1170,7 @@ const ChatRoom: React.FC = () => {
     if (!currentUser) {
       throw new Error('用户未登录');
     }
-    
+
     return {
       id: `${Date.now()}`,
       content,
@@ -1596,7 +1596,7 @@ const ChatRoom: React.FC = () => {
   const getAdminTag = (isAdmin: boolean, level: number, titleId?: number) => {
     const { tagText, tagEmoji, tagClass: baseTagClass } = getTitleTagProperties(isAdmin, level, titleId);
     const tagClass = styles[baseTagClass]; // Convert string class name to styles reference
-    
+
     // 如果有特定的称号ID且不是0（0表示使用等级称号）
     if (titleId !== undefined && titleId != 0) {
       // 从 titles.json 中获取对应的称号
@@ -2493,7 +2493,7 @@ const ChatRoom: React.FC = () => {
       setIsMobileToolbarVisible(false);
     }
   };
-  
+
   // 添加摸鱼宠物相关状态
   const [isPetModalVisible, setIsPetModalVisible] = useState<boolean>(false);
   const [currentPetUserId, setCurrentPetUserId] = useState<string | null>(null);
@@ -2544,7 +2544,7 @@ const ChatRoom: React.FC = () => {
           setCurrentPetUserId(null);
         }}
       />
-      
+
       {/* 房间信息卡片 */}
       <RoomInfoCard
         visible={isRoomInfoVisible}
@@ -3339,19 +3339,6 @@ const ChatRoom: React.FC = () => {
             </div>
           ) : (
             <div className={styles.userDetailActions}>
-              <Button 
-                type="primary"
-                icon={<BugOutlined />}
-                onClick={() => {
-                  if (selectedUser) {
-                    setCurrentPetUserId(selectedUser.id);
-                    setIsUserDetailModalVisible(false);
-                    setIsPetModalVisible(true);
-                  }
-                }}
-              >
-                查看宠物
-              </Button>
               <Button onClick={() => setIsUserDetailModalVisible(false)}>关闭</Button>
             </div>
           )
@@ -3380,8 +3367,8 @@ const ChatRoom: React.FC = () => {
                       <span className={styles.vipBadge} style={{ marginLeft: '8px' }}>V</span>
                     )}
                     {currentUser?.userRole === 'admin' && (
-                      <Button 
-                        type="link" 
+                      <Button
+                        type="link"
                         size="small"
                         icon={<CopyOutlined />}
                         style={{ marginLeft: '8px', padding: '0 4px' }}
@@ -3394,11 +3381,11 @@ const ChatRoom: React.FC = () => {
                       </Button>
                     )}
                   </div>
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'row', 
-                    flexWrap: 'wrap', 
-                    gap: '0px', 
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    gap: '0px',
                     marginTop: '12px',
                     marginBottom: '12px',
                     maxWidth: '100%'
@@ -3406,7 +3393,7 @@ const ChatRoom: React.FC = () => {
                     <div style={{ display: 'inline-flex', marginRight: '-2px', transform: 'scale(0.85)' }}>
                       {getAdminTag(selectedUser.isAdmin, selectedUser.level, selectedUser.titleId)}
                     </div>
-                    {selectedUser.titleIdList && 
+                    {selectedUser.titleIdList &&
                       JSON.parse(selectedUser.titleIdList || '[]')
                         .filter((id: number) => id !== selectedUser.titleId && id !== 0)
                         .map((titleId: number) => (
@@ -3487,8 +3474,8 @@ const ChatRoom: React.FC = () => {
               )}
                             <div className={styles.userDetailItem}>
                 <span className={styles.itemLabel}>宠物：</span>
-                <Button 
-                  type="primary" 
+                <Button
+                  type="primary"
                   size="small"
                   icon={<BugOutlined />}
                   onClick={() => {

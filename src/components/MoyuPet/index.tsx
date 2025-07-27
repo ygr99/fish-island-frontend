@@ -13,7 +13,6 @@ import styles from './index.less';
 export interface PetInfo {
   id: string;
   name: string;
-  type: string;
   level: number;
   exp: number;
   maxExp: number;
@@ -64,7 +63,6 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose }) => {
   const [pet, setPet] = useState<PetInfo>({
     id: '1',
     name: '小鱼儿',
-    type: '鱼',
     level: 5,
     exp: 350,
     maxExp: 1000,
@@ -72,7 +70,7 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose }) => {
     maxHunger: 100,
     mood: 85,
     maxMood: 100,
-    avatar: 'https://api.oss.cqbo.com/moyu/pet%2F%E6%B4%BE%E8%92%99_%E7%88%B1%E7%BB%99%E7%BD%91_aigei_com.png',
+    avatar: 'https://api.oss.cqbo.com/moyu/pet/超级玛丽马里奥 (73)_爱给网_aigei_com.png',
     skills: [
       {
         id: 's1',
@@ -182,7 +180,6 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose }) => {
             <div className={styles.petName}>
               <span className={styles.name}>{pet.name}</span>
               <span className={styles.level}>Lv.{pet.level}</span>
-              <span className={styles.type}>{pet.type}</span>
             </div>
             <div className={styles.petStatus}>
               <div className={styles.statusItem}>

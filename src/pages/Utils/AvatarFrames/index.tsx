@@ -394,7 +394,7 @@ const AvatarFrames: React.FC = () => {
   // 处理标签页切换
   const handleTabChange = (key: string) => {
     setActiveTab(key);
-    
+
     // 重置数据和页码
     if (key === 'frames') {
       // 如果切换到头像框标签，重置头像框数据和页码
@@ -426,7 +426,7 @@ const AvatarFrames: React.FC = () => {
             <Avatar src={currentUser?.userAvatar} size={120} />
             {(currentUser?.avatarFramerUrl || (previewFrame && previewFrame.id !== -1)) && (
               <img
-                src={previewFrame ? previewFrame.url : currentUser?.avatarFramerUrl}
+                src={previewFrame ? previewFrame.url : ""}
                 className={styles.avatarFrame}
                 alt={previewFrame ? previewFrame.name : "当前头像框"}
               />
