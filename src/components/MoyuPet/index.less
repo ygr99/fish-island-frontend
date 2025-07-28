@@ -663,3 +663,24 @@
     }
   }
 } 
+
+// 页面组件模式下的样式
+.pageComponentHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 10px;
+  
+  .pageComponentTitle {
+    font-size: 20px;
+    font-weight: bold;
+    color: #1890ff;
+    margin: 0;
+    
+    &::before {
+      content: '🐟';
+      margin-right: 8px;
+    }
+  }
+} 
