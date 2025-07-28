@@ -111,6 +111,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseListPetRankVO_ = {
+    code?: number;
+    data?: PetRankVO[];
+    message?: string;
+  };
+
   type BaseResponseListSimpleHeroVO_ = {
     code?: number;
     data?: SimpleHeroVO[];
@@ -759,6 +765,11 @@ declare namespace API {
   type getOtherUserPetUsingGETParams = {
     /** otherUserId */
     otherUserId: number;
+  };
+
+  type getPetRankListUsingGETParams = {
+    /** limit */
+    limit?: number;
   };
 
   type getPlayerDetailInfoUsingGETParams = {
@@ -1410,6 +1421,18 @@ declare namespace API {
   type patPetUsingPOSTParams = {
     /** petId */
     petId: number;
+  };
+
+  type PetRankVO = {
+    exp?: number;
+    level?: number;
+    name?: string;
+    petId?: number;
+    petUrl?: string;
+    rank?: number;
+    userAvatar?: string;
+    userId?: number;
+    userName?: string;
   };
 
   type PetSkinExchangeRequest = {

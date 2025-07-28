@@ -290,6 +290,74 @@
   }
 }
 
+// 排行榜容器样式
+.rankingContainer {
+  padding: 16px;
+  
+  @media (max-width: 768px) {
+    padding: 8px;
+  }
+}
+
+.rankingTip {
+  margin-bottom: 12px;
+  color: #666;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  
+  &::before {
+    content: "💡";
+    margin-right: 8px;
+    font-size: 16px;
+  }
+}
+
+.rankTable {
+  :global(.ant-table-thead > tr > th) {
+    background-color: #f7f7f7;
+    padding: 12px 16px;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  :global(.ant-table-tbody > tr > td) {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  :global(.ant-table-tbody > tr:hover > td) {
+    background-color: #f0f7ff;
+  }
+  
+  :global(.ant-table-tbody > tr) {
+    transition: all 0.3s;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+      z-index: 1;
+    }
+  }
+  
+  :global(.ant-table-tbody > tr:last-child > td) {
+    border-bottom: none;
+  }
+  
+  // 前三名行样式
+  :global(.ant-table-tbody > tr:nth-child(1)) {
+    background-color: rgba(255, 215, 0, 0.05);
+  }
+  
+  :global(.ant-table-tbody > tr:nth-child(2)) {
+    background-color: rgba(192, 192, 192, 0.05);
+  }
+  
+  :global(.ant-table-tbody > tr:nth-child(3)) {
+    background-color: rgba(205, 127, 50, 0.05);
+  }
+}
+
 @media (max-width: 768px) {
   .petComponentWrapper {
     margin: 0;
