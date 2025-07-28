@@ -195,7 +195,7 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
           }
           return;
         }
-        
+
         // 获取当前用户的宠物信息
         const res = await getPetDetailUsingGet();
         if (res.code === 0 && res.data) {
@@ -341,7 +341,7 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
   // 获取宠物列表
   const fetchPetSkins = async () => {
     if (isOtherUser) return; // 如果是查看其他用户的宠物，不需要获取宠物列表
-    
+
     // 检查当前用户是否登录
     if (!initialState?.currentUser) {
       // 如果未登录，不发送请求
@@ -495,7 +495,7 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
         </div>
       );
     }
-    
+
     return (
       <Modal
         title="创建你的摸鱼宠物"
@@ -539,7 +539,7 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
         </div>
       );
     }
-    
+
     return (
       <Modal
         title="我的摸鱼宠物"
@@ -565,7 +565,7 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
         </div>
       );
     }
-    
+
     return (
       <Modal
         title={
@@ -689,7 +689,7 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
     return (
       <div className={styles.petContainer}>
         <div className={styles.pageComponentHeader}>
-          <h2 className={styles.pageComponentTitle}>我的摸鱼宠物</h2>
+          <h2 className={styles.pageComponentTitle}>🐟</h2>
           <Popover
             content={<PetRules />}
             title="宠物系统说明"
@@ -1399,7 +1399,7 @@ export const MiniPet: React.FC<MiniPetProps> = ({ onClick }) => {
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const petRef = useRef<HTMLDivElement>(null);
   const initialPosition = useRef({ x: 0, y: 0 });
-  
+
   // 获取宠物数据，使用缓存减少请求
   const fetchPetData = async (force = false) => {
     // 检查用户是否登录
@@ -1408,7 +1408,7 @@ export const MiniPet: React.FC<MiniPetProps> = ({ onClick }) => {
       setLoading(false);
       return;
     }
-    
+
     // 如果有缓存且未过期，直接使用缓存数据
     const now = Date.now();
     if (!force && cachedPet && (now - lastFetchTime < CACHE_DURATION)) {
@@ -1416,7 +1416,7 @@ export const MiniPet: React.FC<MiniPetProps> = ({ onClick }) => {
       setLoading(false);
       return;
     }
-    
+
     setLoading(true);
     try {
       const res = await getPetDetailUsingGet();
@@ -1432,11 +1432,11 @@ export const MiniPet: React.FC<MiniPetProps> = ({ onClick }) => {
       setLoading(false);
     }
   };
-  
+
   // 处理拖动开始
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
     e.stopPropagation();
-    
+
     let clientX, clientY;
     if ('touches' in e) {
       // 触摸事件
@@ -1448,21 +1448,21 @@ export const MiniPet: React.FC<MiniPetProps> = ({ onClick }) => {
       clientY = e.clientY;
       e.preventDefault(); // 只在鼠标事件中阻止默认行为
     }
-    
+
     // 记录初始位置，用于判断是否真的发生了拖动
     initialPosition.current = { ...position };
-    
+
     setIsDragging(true);
     setStartPos({
       x: clientX - position.x,
       y: clientY - position.y
     });
   };
-  
+
   // 处理拖动过程
   const handleMouseMove = useCallback((e: MouseEvent | TouchEvent) => {
     if (!isDragging) return;
-    
+
     let clientX, clientY;
     if ('touches' in e) {
       clientX = e.touches[0].clientX;
@@ -1471,10 +1471,10 @@ export const MiniPet: React.FC<MiniPetProps> = ({ onClick }) => {
       clientX = e.clientX;
       clientY = e.clientY;
     }
-    
+
     const newX = clientX - startPos.x;
     const newY = clientY - startPos.y;
-    
+
     // 限制宠物不能拖出屏幕
     const petElement = petRef.current;
     if (petElement) {
@@ -1482,28 +1482,28 @@ export const MiniPet: React.FC<MiniPetProps> = ({ onClick }) => {
       const petHeight = petElement.offsetHeight;
       const maxX = window.innerWidth - petWidth;
       const maxY = window.innerHeight - petHeight;
-      
+
       const boundedX = Math.max(0, Math.min(newX, maxX));
       const boundedY = Math.max(0, Math.min(newY, maxY));
-      
+
       setPosition({ x: boundedX, y: boundedY });
     }
   }, [isDragging, startPos]);
-  
+
   // 处理拖动结束
   const handleMouseUp = useCallback(() => {
     if (isDragging) {
       setIsDragging(false);
-      
+
       // 判断是否真的发生了拖动
       const hasMoved = initialPosition.current.x !== position.x || initialPosition.current.y !== position.y;
-      
+
       if (hasMoved) {
         // 标记刚刚完成了拖动操作
         setWasDragging(true);
         // 保存位置到localStorage
         localStorage.setItem('miniPetPosition', JSON.stringify(position));
-        
+
         // 100ms后重置拖动标记，这样点击事件才能再次被触发
         // 减少时间以提高响应速度
         setTimeout(() => {
@@ -1512,7 +1512,7 @@ export const MiniPet: React.FC<MiniPetProps> = ({ onClick }) => {
       }
     }
   }, [isDragging, position]);
-  
+
   // 处理点击事件
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     // 只有在非拖动状态下才触发点击事件
@@ -1520,27 +1520,27 @@ export const MiniPet: React.FC<MiniPetProps> = ({ onClick }) => {
       onClick();
     }
   };
-  
+
   // 添加单独的点击处理函数，确保点击能正常触发
   const handlePetClick = () => {
     if (!isDragging && !wasDragging && onClick) {
       onClick();
     }
   };
-  
+
   useEffect(() => {
     // 初始加载时获取数据
     fetchPetData();
-    
+
     // 每30分钟刷新一次宠物数据，减少请求频率
     const intervalId = setInterval(() => fetchPetData(true), CACHE_DURATION);
-    
+
     // 添加拖动相关的事件监听
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     window.addEventListener('touchmove', handleMouseMove, { passive: false });
     window.addEventListener('touchend', handleMouseUp);
-    
+
     return () => {
       clearInterval(intervalId);
       window.removeEventListener('mousemove', handleMouseMove);
@@ -1549,15 +1549,15 @@ export const MiniPet: React.FC<MiniPetProps> = ({ onClick }) => {
       window.removeEventListener('touchend', handleMouseUp);
     };
   }, [handleMouseMove, handleMouseUp]);
-  
+
   if (loading || !pet) {
     return null;
   }
-  
+
   return (
-    <div 
+    <div
       ref={petRef}
-      className={`${styles.miniPet} ${isDragging ? styles.dragging : ''}`} 
+      className={`${styles.miniPet} ${isDragging ? styles.dragging : ''}`}
       style={{
         position: 'fixed',
         left: `${position.x}px`,
@@ -1573,9 +1573,9 @@ export const MiniPet: React.FC<MiniPetProps> = ({ onClick }) => {
     >
       <div onClick={handlePetClick} style={{ width: '100%', height: '100%' }}>
         <Tooltip title={`${pet.name} (Lv.${pet.level}) - 可拖动调整位置`}>
-          <img 
-            src={pet.petUrl} 
-            alt="我的宠物" 
+          <img
+            src={pet.petUrl}
+            alt="我的宠物"
             className={styles.miniPetImage}
             draggable={false}
           />
