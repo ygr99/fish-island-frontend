@@ -27,6 +27,7 @@ import * as userMuteController from './userMuteController';
 import * as userTitleController from './userTitleController';
 import * as userVipController from './userVipController';
 import * as webParserController from './webParserController';
+import * as wordLibraryController from './wordLibraryController';
 export default {
   avatarFrameController,
   webParserController,
@@ -53,4 +54,5 @@ export default {
   userMuteController,
   userTitleController,
   userVipController,
+  wordLibraryController,
 };

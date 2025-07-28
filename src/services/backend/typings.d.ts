@@ -266,6 +266,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponsePageWordLibrary_ = {
+    code?: number;
+    data?: PageWordLibrary_;
+    message?: string;
+  };
+
   type BaseResponsePostVO_ = {
     code?: number;
     data?: PostVO;
@@ -347,6 +353,12 @@ declare namespace API {
   type BaseResponseWebParseVO_ = {
     code?: number;
     data?: WebParseVO;
+    message?: string;
+  };
+
+  type BaseResponseWordLibrary_ = {
+    code?: number;
+    data?: WordLibrary;
     message?: string;
   };
 
@@ -771,6 +783,11 @@ declare namespace API {
     id?: number;
   };
 
+  type getWordLibraryByIdUsingGETParams = {
+    /** id */
+    id?: number;
+  };
+
   type grabRedPacketUsingPOSTParams = {
     /** 红包ID */
     redPacketId: string;
@@ -846,6 +863,7 @@ declare namespace API {
     userName?: string;
     userProfile?: string;
     userRole?: string;
+    vip?: boolean;
   };
 
   type Message = {
@@ -1235,6 +1253,19 @@ declare namespace API {
     total?: number;
   };
 
+  type PageWordLibrary_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: WordLibrary[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
   type parseWebPageUsingGETParams = {
     /** url */
     url: string;
@@ -1425,6 +1456,7 @@ declare namespace API {
     country?: string;
     id?: string;
     isAdmin?: boolean;
+    isVip?: boolean;
     level?: number;
     name?: string;
     points?: number;
@@ -1533,6 +1565,7 @@ declare namespace API {
     userName?: string;
     userProfile?: string;
     userRole?: string;
+    vip?: boolean;
   };
 
   type unbindUsingDELETEParams = {
@@ -1872,5 +1905,38 @@ declare namespace API {
     description?: string;
     favicon?: string;
     title?: string;
+  };
+
+  type WordLibrary = {
+    category?: string;
+    createTime?: string;
+    id?: number;
+    updateTime?: string;
+    word?: string;
+    wordType?: string;
+  };
+
+  type WordLibraryAddRequest = {
+    category?: string;
+    word?: string;
+    wordType?: string;
+  };
+
+  type WordLibraryQueryRequest = {
+    category?: string;
+    current?: number;
+    id?: number;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+    word?: string;
+    wordType?: string;
+  };
+
+  type WordLibraryUpdateRequest = {
+    category?: string;
+    id?: number;
+    word?: string;
+    wordType?: string;
   };
 }
