@@ -1065,6 +1065,7 @@ declare namespace API {
 
   type OtherUserPetVO = {
     createTime?: string;
+    exp?: number;
     hunger?: number;
     level?: number;
     mood?: number;
