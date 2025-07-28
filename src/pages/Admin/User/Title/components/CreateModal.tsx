@@ -1,24 +1,24 @@
-import { addWordLibraryUsingPost } from '@/services/backend/wordLibraryController';
-import { ProColumns, ProTable } from '@ant-design/pro-components';
+import {addUserTitleUsingPost} from '@/services/backend/userTitleController';
+import {ProColumns, ProTable} from '@ant-design/pro-components';
 import '@umijs/max';
-import { message, Modal } from 'antd';
+import {message, Modal} from 'antd';
 import React from 'react';
 
 interface Props {
   visible: boolean;
-  columns: ProColumns<API.WordLibrary>[];
-  onSubmit: (values: API.WordLibraryAddRequest) => void;
+  columns: ProColumns<API.UserTitle>[];
+  onSubmit: (values: API.UserTitleAddRequest) => void;
   onCancel: () => void;
 }
 
 /**
- * 添加词库项
+ * 添加称号项
  * @param fields
  */
-const handleAdd = async (fields: API.WordLibraryAddRequest) => {
+const handleAdd = async (fields: API.UserTitleAddRequest) => {
   const hide = message.loading('正在添加');
   try {
-    const res = await addWordLibraryUsingPost(fields);
+    const res = await addUserTitleUsingPost(fields);
     hide();
     if (res.code === 0) {
       message.success('创建成功');
@@ -45,7 +45,7 @@ const CreateModal: React.FC<Props> = (props) => {
   return (
     <Modal
       destroyOnClose
-      title={'创建词库'}
+      title={'创建称号'}
       open={visible}
       footer={null}
       onCancel={() => {
@@ -55,7 +55,7 @@ const CreateModal: React.FC<Props> = (props) => {
       <ProTable
         type="form"
         columns={columns}
-        onSubmit={async (values: API.WordLibraryAddRequest) => {
+        onSubmit={async (values: API.UserTitleAddRequest) => {
           const success = await handleAdd(values);
           if (success) {
             onSubmit?.(values);

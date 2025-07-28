@@ -1,26 +1,26 @@
-import { updateWordLibraryUsingPost } from '@/services/backend/wordLibraryController';
-import { ProColumns, ProTable } from '@ant-design/pro-components';
+import {updateUserTitleUsingPost} from '@/services/backend/userTitleController';
+import {ProColumns, ProTable} from '@ant-design/pro-components';
 import '@umijs/max';
-import { message, Modal } from 'antd';
+import {message, Modal} from 'antd';
 import React from 'react';
 
 interface Props {
-  oldData?: API.WordLibrary;
+  oldData?: API.UserTitle;
   visible: boolean;
-  columns: ProColumns<API.WordLibrary>[];
-  onSubmit: (values: API.WordLibraryUpdateRequest) => void;
+  columns: ProColumns<API.UserTitle>[];
+  onSubmit: (values: API.UserTitleUpdateRequest) => void;
   onCancel: () => void;
 }
 
 /**
- * 更新词库项
+ * 更新称号项
  *
  * @param fields
  */
-const handleUpdate = async (fields: API.WordLibraryUpdateRequest) => {
+const handleUpdate = async (fields: API.UserTitleUpdateRequest) => {
   const hide = message.loading('正在更新');
   try {
-    const res = await updateWordLibraryUsingPost(fields);
+    const res = await updateUserTitleUsingPost(fields);
     hide();
     if (res.code === 0) {
       message.success('更新成功');
@@ -51,7 +51,7 @@ const UpdateModal: React.FC<Props> = (props) => {
   return (
     <Modal
       destroyOnClose
-      title={'更新词库'}
+      title={'更新称号'}
       open={visible}
       footer={null}
       onCancel={() => {
@@ -64,10 +64,10 @@ const UpdateModal: React.FC<Props> = (props) => {
         form={{
           initialValues: oldData,
         }}
-        onSubmit={async (values: API.WordLibraryUpdateRequest) => {
+        onSubmit={async (values: API.UserTitleUpdateRequest) => {
           const success = await handleUpdate({
             ...values,
-            id: oldData.id as any,
+            titleId: oldData.titleId as any,
           });
           if (success) {
             onSubmit?.(values);
