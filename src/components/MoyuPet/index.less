@@ -385,6 +385,43 @@
     font-size: 12px;
     opacity: 0.8;
     margin-left: 4px;
+    background-color: rgba(0, 0, 0, 0.15);
+    color: rgba(255, 255, 255, 0.85);
+    padding: 0 4px;
+    border-radius: 10px;
+  }
+  
+  .expBadge {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.85);
+    background-color: rgba(82, 196, 26, 0.8);
+    padding: 0 4px;
+    border-radius: 10px;
+    margin-left: 4px;
+  }
+  
+  .actionButton {
+    min-width: 120px;
+    border-radius: 20px;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+    }
+    
+    &:active {
+      transform: translateY(0);
+    }
+    
+    .anticon {
+      margin-right: 6px;
+      font-size: 16px;
+    }
   }
 }
 
@@ -536,6 +573,72 @@
 
 .petAvatar {
   animation: float 3s ease-in-out infinite;
+}
+
+// 添加迷你宠物样式
+.miniPet {
+  position: fixed;
+  z-index: 1000;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  user-select: none;
+  touch-action: none;
+  transition: none; /* 移除过渡动画 */
+  
+  &:hover {
+    /* 移除悬停时的缩放效果 */
+    
+    &::after {
+      content: '拖动或点击';
+      position: absolute;
+      bottom: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0.8;
+    }
+  }
+  
+  &.dragging {
+    opacity: 0.8;
+    /* 移除拖动时的缩放效果 */
+    
+    &::after {
+      content: '';
+      display: none;
+    }
+  }
+  
+  .miniPetImage {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    animation: none; /* 移除呼吸动画 */
+    pointer-events: none; /* 防止图片干扰拖动 */
+  }
+  
+  @media screen and (max-width: 768px) {
+    .miniPetImage {
+      width: 50px;
+      height: 50px;
+    }
+  }
+}
+
+@keyframes breathe {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+  100% {
+    transform: translateY(0);
+  }
 }
 
 // 响应式调整
