@@ -164,6 +164,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseOtherUserPetVO_ = {
+    code?: number;
+    data?: OtherUserPetVO;
+    message?: string;
+  };
+
   type BaseResponsePageAvatarFrameVO_ = {
     code?: number;
     data?: PageAvatarFrameVO_;
@@ -212,6 +218,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponsePagePetSkinVO_ = {
+    code?: number;
+    data?: PagePetSkinVO_;
+    message?: string;
+  };
+
   type BaseResponsePagePost_ = {
     code?: number;
     data?: PagePost_;
@@ -221,6 +233,12 @@ declare namespace API {
   type BaseResponsePagePostVO_ = {
     code?: number;
     data?: PagePostVO_;
+    message?: string;
+  };
+
+  type BaseResponsePagePropsVO_ = {
+    code?: number;
+    data?: PagePropsVO_;
     message?: string;
   };
 
@@ -266,9 +284,9 @@ declare namespace API {
     message?: string;
   };
 
-  type BaseResponsePageWordLibrary_ = {
+  type BaseResponsePetVO_ = {
     code?: number;
-    data?: PageWordLibrary_;
+    data?: PetVO;
     message?: string;
   };
 
@@ -353,12 +371,6 @@ declare namespace API {
   type BaseResponseWebParseVO_ = {
     code?: number;
     data?: WebParseVO;
-    message?: string;
-  };
-
-  type BaseResponseWordLibrary_ = {
-    code?: number;
-    data?: WordLibrary;
     message?: string;
   };
 
@@ -478,6 +490,10 @@ declare namespace API {
     /** 区域 */
     region?: string;
     response?: Response;
+  };
+
+  type CreatePetRequest = {
+    name?: string;
   };
 
   type CreateRedPacketRequest = {
@@ -665,6 +681,11 @@ declare namespace API {
     frameId: number;
   };
 
+  type feedPetUsingPOSTParams = {
+    /** petId */
+    petId: number;
+  };
+
   type FluxString_ = {
     prefetch?: number;
   };
@@ -702,6 +723,11 @@ declare namespace API {
   type getMockInterviewByIdUsingGETParams = {
     /** id */
     id?: number;
+  };
+
+  type getOtherUserPetUsingGETParams = {
+    /** otherUserId */
+    otherUserId: number;
   };
 
   type getPlayerDetailInfoUsingGETParams = {
@@ -783,11 +809,6 @@ declare namespace API {
     id?: number;
   };
 
-  type getWordLibraryByIdUsingGETParams = {
-    /** id */
-    id?: number;
-  };
-
   type grabRedPacketUsingPOSTParams = {
     /** 红包ID */
     redPacketId: string;
@@ -844,6 +865,23 @@ declare namespace API {
   type joinRoomUsingPOSTParams = {
     /** roomId */
     roomId: string;
+  };
+
+  type listPetSkinsUsingGETParams = {
+    current?: number;
+    name?: string;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+  };
+
+  type listPropsPageUsingGETParams = {
+    current?: number;
+    name?: string;
+    pageSize?: number;
+    sortField?: string;
+    sortOrder?: string;
+    type?: string;
   };
 
   type LoginUserVO = {
@@ -1025,6 +1063,18 @@ declare namespace API {
     column?: string;
   };
 
+  type OtherUserPetVO = {
+    createTime?: string;
+    hunger?: number;
+    level?: number;
+    mood?: number;
+    name?: string;
+    petId?: number;
+    petUrl?: string;
+    skins?: PetSkinVO[];
+    userId?: number;
+  };
+
   type PageAvatarFrameVO_ = {
     countId?: string;
     current?: number;
@@ -1129,6 +1179,19 @@ declare namespace API {
     total?: number;
   };
 
+  type PagePetSkinVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: PetSkinVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
   type PagePost_ = {
     countId?: string;
     current?: number;
@@ -1150,6 +1213,19 @@ declare namespace API {
     orders?: OrderItem[];
     pages?: number;
     records?: PostVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PagePropsVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: PropsVO[];
     searchCount?: boolean;
     size?: number;
     total?: number;
@@ -1253,22 +1329,44 @@ declare namespace API {
     total?: number;
   };
 
-  type PageWordLibrary_ = {
-    countId?: string;
-    current?: number;
-    maxLimit?: number;
-    optimizeCountSql?: boolean;
-    orders?: OrderItem[];
-    pages?: number;
-    records?: WordLibrary[];
-    searchCount?: boolean;
-    size?: number;
-    total?: number;
-  };
-
   type parseWebPageUsingGETParams = {
     /** url */
     url: string;
+  };
+
+  type patPetUsingPOSTParams = {
+    /** petId */
+    petId: number;
+  };
+
+  type PetSkinExchangeRequest = {
+    skinId?: number;
+  };
+
+  type PetSkinSetRequest = {
+    skinId?: number;
+  };
+
+  type PetSkinVO = {
+    description?: string;
+    name?: string;
+    owned?: boolean;
+    points?: number;
+    skinId?: number;
+    url?: string;
+  };
+
+  type PetVO = {
+    createTime?: string;
+    exp?: number;
+    hunger?: number;
+    level?: number;
+    mood?: number;
+    name?: string;
+    petId?: number;
+    petUrl?: string;
+    skins?: PetSkinVO[];
+    userId?: number;
   };
 
   type PlatformBindVO = {
@@ -1371,6 +1469,20 @@ declare namespace API {
     user?: UserVO;
     userId?: number;
     viewNum?: number;
+  };
+
+  type PropsPurchaseRequest = {
+    propsId?: number;
+  };
+
+  type PropsVO = {
+    createTime?: string;
+    description?: string;
+    frameId?: number;
+    imgUrl?: string;
+    name?: string;
+    points?: number;
+    type?: string;
   };
 
   type quitRoomUsingPOSTParams = {
@@ -1660,6 +1772,11 @@ declare namespace API {
     userId: number;
   };
 
+  type UpdatePetNameRequest = {
+    name?: string;
+    petId?: number;
+  };
+
   type uploadFileByMinioUsingPOSTParams = {
     biz?: string;
   };
@@ -1905,38 +2022,5 @@ declare namespace API {
     description?: string;
     favicon?: string;
     title?: string;
-  };
-
-  type WordLibrary = {
-    category?: string;
-    createTime?: string;
-    id?: number;
-    updateTime?: string;
-    word?: string;
-    wordType?: string;
-  };
-
-  type WordLibraryAddRequest = {
-    category?: string;
-    word?: string;
-    wordType?: string;
-  };
-
-  type WordLibraryQueryRequest = {
-    category?: string;
-    current?: number;
-    id?: number;
-    pageSize?: number;
-    sortField?: string;
-    sortOrder?: string;
-    word?: string;
-    wordType?: string;
-  };
-
-  type WordLibraryUpdateRequest = {
-    category?: string;
-    id?: number;
-    word?: string;
-    wordType?: string;
   };
 }

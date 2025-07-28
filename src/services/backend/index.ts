@@ -11,12 +11,15 @@ import * as drawGameController from './drawGameController';
 import * as emoticonFavourController from './emoticonFavourController';
 import * as eventRemindController from './eventRemindController';
 import * as fileController from './fileController';
+import * as fishPetController from './fishPetController';
 import * as heroController from './heroController';
 import * as hotPostController from './hotPostController';
 import * as mockInterviewController from './mockInterviewController';
+import * as petSkinController from './petSkinController';
 import * as postController from './postController';
 import * as postFavourController from './postFavourController';
 import * as postThumbController from './postThumbController';
+import * as propsController from './propsController';
 import * as redPacketController from './redPacketController';
 import * as restAuthController from './restAuthController';
 import * as tagsController from './tagsController';
@@ -30,6 +33,7 @@ import * as webParserController from './webParserController';
 import * as wordLibraryController from './wordLibraryController';
 export default {
   avatarFrameController,
+  petSkinController,
   webParserController,
   chatController,
   commentController,
@@ -43,9 +47,11 @@ export default {
   hotPostController,
   mockInterviewController,
   restAuthController,
+  fishPetController,
   postController,
   postFavourController,
   postThumbController,
+  propsController,
   redPacketController,
   tagsController,
   todoController,
