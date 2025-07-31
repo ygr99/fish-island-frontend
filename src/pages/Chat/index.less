@@ -1544,6 +1544,47 @@
       letter-spacing: 0.5px;
     }
   }
+  
+  &.titleTagGamer2 {
+    background: linear-gradient(135deg, #9933ff 0%, #cc33ff 100%);
+    box-shadow: 0 2px 8px rgba(153, 51, 255, 0.6);
+    animation: gamer2Pulse 2s infinite alternate;
+    position: relative;
+    overflow: hidden;
+    
+    &::before {
+      content: '👾';
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      font-size: 10px;
+      opacity: 0.7;
+      animation: gamer2Float 3s ease-in-out infinite;
+    }
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(45deg, rgba(153, 51, 255, 0) 45%, rgba(204, 51, 255, 0.5) 50%, rgba(153, 51, 255, 0) 55%);
+      background-size: 200% 200%;
+      animation: gamer2Shine 3s ease-in-out infinite;
+      z-index: 1;
+    }
+    
+    .adminText {
+      position: relative;
+      z-index: 2;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 5px rgba(153, 51, 255, 0.7);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      animation: gamer2TextGlow 2s infinite alternate;
+    }
+  }
 }
 
 @keyframes slideInFromLeft {
@@ -3071,4 +3112,32 @@
   0% { transform: translate(0, 0) rotate(0deg); opacity: 0.7; }
   50% { transform: translate(-3px, -3px) rotate(10deg); opacity: 1; }
   100% { transform: translate(0, 0) rotate(0deg); opacity: 0.7; }
+}
+
+/* 入机王标签的动画效果 */
+@keyframes gamer2Pulse {
+  0% { 
+    box-shadow: 0 0 5px rgba(153, 51, 255, 0.5), 0 0 10px rgba(204, 51, 255, 0.3); 
+    filter: brightness(0.9);
+  }
+  100% { 
+    box-shadow: 0 0 15px rgba(153, 51, 255, 0.8), 0 0 20px rgba(204, 51, 255, 0.6); 
+    filter: brightness(1.2);
+  }
+}
+
+@keyframes gamer2Float {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0.7; }
+  50% { transform: translate(-3px, -3px) rotate(20deg); opacity: 1; }
+  100% { transform: translate(0, 0) rotate(0deg); opacity: 0.7; }
+}
+
+@keyframes gamer2Shine {
+  0% { background-position: 200% 50%; }
+  100% { background-position: -100% 50%; }
+}
+
+@keyframes gamer2TextGlow {
+  0% { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 5px rgba(153, 51, 255, 0.5); }
+  100% { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 10px rgba(153, 51, 255, 0.8), 0 0 15px rgba(204, 51, 255, 0.6); }
 }
