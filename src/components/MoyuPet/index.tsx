@@ -244,8 +244,6 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
         message.success('创建宠物成功');
         setIsCreating(false);
         fetchPetData(); // 重新获取宠物数据
-      } else {
-        message.error(res.message || '创建宠物失败');
       }
     } catch (error) {
       console.error('创建宠物失败', error);
@@ -275,12 +273,8 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
           res.data.hunger = Math.floor(res.data.hunger);
         }
         setPet(res.data);
-      } else {
-        message.error(res.message || '喂食失败');
       }
     } catch (error) {
-      console.error('喂食失败', error);
-      message.error('喂食失败');
     } finally {
       setFeedLoading(false);
     }
@@ -306,12 +300,9 @@ const MoyuPet: React.FC<MoyuPetProps> = ({ visible, onClose, otherUserId, otherU
           res.data.hunger = Math.floor(res.data.hunger);
         }
         setPet(res.data);
-      } else {
-        message.error(res.message || '抚摸失败');
       }
     } catch (error) {
       console.error('抚摸失败', error);
-      message.error('抚摸失败');
     } finally {
       setPatLoading(false);
     }
