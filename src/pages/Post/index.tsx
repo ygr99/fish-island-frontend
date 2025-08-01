@@ -396,28 +396,34 @@ const PostPage: React.FC = () => {
   }, []);
 
   // 在组件内添加点赞处理函数
-  const handleThumbPost = async (postId: string, currentThumbStatus: boolean, currentThumbNum: number) => {
+  const handleThumbPost = async (postId: string) => {
     if (!currentUser) {
       message.warning('请先登录');
       return;
     }
 
     try {
-      await doThumbUsingPost1({
-        postId: postId
-      } as any);
+      const res = await doThumbUsingPost1({
+        postId: postId as any,
+      });
 
-      // 更新该帖子的点赞状态和数量
-      setPosts(posts.map(post => {
-        if (post.id === Number(postId)) {
-          return {
-            ...post,
-            hasThumb: !currentThumbStatus,
-            thumbNum: currentThumbStatus ? (currentThumbNum - 1) : (currentThumbNum + 1)
-          };
-        }
-        return post;
-      }));
+      if (res.code === 0) {
+        setPosts(prevPosts =>
+          prevPosts.map(post => {
+            if (String(post.id) === postId) {
+              const newHasThumb = !post.hasThumb;
+              return {
+                ...post,
+                hasThumb: newHasThumb,
+                thumbNum: (post.thumbNum ?? 0) + (newHasThumb ? 1 : -1),
+              };
+            }
+            return post;
+          }),
+        );
+      } else {
+        message.error(res.message || '操作失败');
+      }
     } catch (error) {
       message.error('操作失败');
     }
@@ -583,7 +589,7 @@ const PostPage: React.FC = () => {
                           <span
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleThumbPost(String(item.id), item.hasThumb || false, item.thumbNum || 0);
+                              handleThumbPost(String(item.id));
                             }}
                             className={item.hasThumb ? 'like-button active' : 'like-button'}
                           >
