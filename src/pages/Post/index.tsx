@@ -223,7 +223,7 @@ const PostPage: React.FC = () => {
 
     try {
       await setFeaturedStatusUsingPost({
-        id: Number(postId),
+        id: postId as any,
         isFeatured: currentStatus === 1 ? 0 : 1
       });
 
