@@ -125,6 +125,10 @@ export const getTitleTagProperties = (isAdmin: boolean, level: number, titleId?:
           tagEmoji = '🍔';
           tagClass = 'titleTagBurgerKing';
           break;
+        case '12': // 摸鱼铲屎官
+          tagEmoji = '🦊';
+          tagClass = 'titleTagFox';
+          break;
         default:
           tagEmoji = '🎯';
           tagClass = 'levelTagBeginner';
