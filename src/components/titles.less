@@ -38,6 +38,24 @@
     font-weight: 500;
     letter-spacing: 0.3px;
   }
+  
+  .titleImg {
+    height: 16px;
+    width: auto;
+    vertical-align: middle;
+    object-fit: contain;
+  }
+  
+  .transparentBg {
+    background: transparent !important;
+    box-shadow: none !important;
+    &::before {
+      display: none;
+    }
+    &::after {
+      display: none;
+    }
+  }
 
   // 为不同等级的标签添加不同的渐变色
   &.levelTagMaster {

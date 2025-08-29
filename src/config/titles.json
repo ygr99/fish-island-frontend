@@ -13,7 +13,8 @@
     {
       "id": "1",
       "name": "天使投资人",
-      "description": "赞助主播 1 块以上获得的称号"
+      "description": "赞助主播 1 块以上获得的称号",
+      "titleImg": "https://api.oss.cqbo.com/moyu/title%2Fbadge-天使投资人.png"
     },
     {
       "id": "2",
@@ -69,6 +70,13 @@
       "id": "12",
       "name": "摸鱼铲屎官",
       "description": "宠物排行榜前十名称号"
+    },
+    {
+      "id": "13",
+      "name": "查无此人",
+      "description": "没有名字的专属定制称号",
+      "titleImg": "https://api.oss.cqbo.com/moyu/title/Yg2oqPCa-badge-查无此人.png"
+
     }
   ]
 }

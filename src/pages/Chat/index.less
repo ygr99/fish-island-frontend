@@ -2480,3 +2480,22 @@
 }
 
 /* All title-related animations have been moved to src/components/titles.less */
+
+.adminTag {
+  // ... existing code ...
+}
+
+.titleImg {
+  height: 16px;
+  width: auto;
+  vertical-align: middle;
+  object-fit: contain;
+}
+
+.transparentBg {
+  background: transparent !important;
+  box-shadow: none !important;
+  &::before {
+    display: none;
+  }
+}

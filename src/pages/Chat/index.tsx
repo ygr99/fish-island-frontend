@@ -1632,7 +1632,7 @@ const ChatRoom: React.FC = () => {
 
     // Using utility function from titleUtils
   const getAdminTag = (isAdmin: boolean, level: number, titleId?: number) => {
-    const { tagText, tagEmoji, tagClass: baseTagClass } = getTitleTagProperties(isAdmin, level, titleId);
+    const { tagText, tagEmoji, tagClass: baseTagClass, titleImg } = getTitleTagProperties(isAdmin, level, titleId);
     const tagClass = styles[baseTagClass]; // Convert string class name to styles reference
 
     // 如果有特定的称号ID且不是0（0表示使用等级称号）
@@ -1642,6 +1642,15 @@ const ChatRoom: React.FC = () => {
       const title = titles.find((t: Title) => String(t.id) === String(titleId));
 
       if (title) {
+        // 如果有titleImg，则只使用图片渲染称号
+        if (titleImg) {
+          return (
+            <span className={`${styles.adminTag} ${styles.transparentBg}`}>
+              <img src={titleImg} alt={title.name} className={styles.titleImg} />
+            </span>
+          );
+        }
+        // 否则使用emoji渲染
         return (
           <span className={`${styles.adminTag} ${tagClass}`}>
             {tagEmoji}
