@@ -77,6 +77,13 @@
       "description": "没有名字的专属定制称号",
       "titleImg": "https://api.oss.cqbo.com/moyu/title/Yg2oqPCa-badge-查无此人.png"
 
+    },
+    {
+      "id": "14",
+      "name": "喂鱼大师",
+      "description": "喂鱼大师的专属定制称号",
+      "titleImg": "https://api.oss.cqbo.com/moyu/title/wZdzS3TT-badge-喂鱼大师.png"
+
     }
   ]
 }
