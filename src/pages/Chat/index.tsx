@@ -1502,20 +1502,18 @@ const ChatRoom: React.FC = () => {
 
     // 优先显示用户选中的称号
     const defaultTitle = user.titleId
-      ? allTitles.find((titleElement) => {
-          // 检查是否是管理员称号
-          if (
-            user.titleId === -1 &&
-            titleElement.props?.children?.[1]?.props?.children === '管理员'
-          ) {
+      ? allTitles.find((titleElement, index) => {
+          // 如果是等级称号(index=0)且titleId=0，则匹配
+          if (user.titleId === 0 && index === 0) {
             return true;
           }
-          // 检查其他称号
-          const titles = require('@/config/titles.json').titles;
-          const titleConfig = titles.find((t: Title) => String(t.id) === String(user.titleId));
-          return (
-            titleConfig && titleConfig.name === titleElement.props?.children?.[1]?.props?.children
-          );
+          
+          // 对于其他称号，通过titleId直接匹配
+          if (index > 0 && userTitleIds[index - 1] === user.titleId) {
+            return true;
+          }
+          
+          return false;
         }) || allTitles[0]
       : allTitles[0];
     // 其他称号
