@@ -1643,69 +1643,15 @@ const ChatRoom: React.FC = () => {
         // 如果有titleImg，则只使用图片渲染称号
                   if (titleImg) {
             return (
-              <span style={{ 
-                background: 'transparent', 
-                boxShadow: 'none',
-                position: 'relative',
-                overflow: 'visible',
-                padding: 0,
-                margin: 0,
-                border: 'none'
-              }}>
+              <span className={styles.titleImageContainer}>
                 <img 
                   src={titleImg} 
                   alt={title.name}
-                  style={{
-                    position: 'relative',
-                    zIndex: 2,
-                    transform: 'none',
-                    animation: 'none',
-                    background: 'transparent',
-                    border: 'none',
-                    boxShadow: 'none',
-                    height: '14px',
-                    width: 'auto',
-                    verticalAlign: 'middle',
-                    objectFit: 'contain'
-                  }}
+                  className={styles.titleImage}
                 />
-                {/* 优化星星特效 */}
-                <span style={{
-                  position: 'absolute',
-                  top: '-1px',
-                  left: '-1px',
-                  fontSize: '7px',
-                  color: '#FFD700',
-                  textShadow: '0 0 2px #FFD700, 0 0 3px rgba(255, 215, 0, 0.5)',
-                  animation: 'titleStarsFloat 4s infinite ease-in-out',
-                  zIndex: 1,
-                  opacity: 0.8,
-                  transform: 'none',
-                  lineHeight: '7px',
-                  background: 'transparent',
-                  border: 'none',
-                  boxShadow: 'none',
-                  padding: 0,
-                  pointerEvents: 'none'
-                }}>✨</span>
-                <span style={{
-                  position: 'absolute',
-                  bottom: '-1px',
-                  right: '-1px',
-                  fontSize: '7px',
-                  color: '#FFD700',
-                  textShadow: '0 0 2px #FFD700, 0 0 3px rgba(255, 215, 0, 0.5)',
-                  animation: 'titleStarsFloat 4s infinite ease-in-out 2s',
-                  zIndex: 1,
-                  opacity: 0.8,
-                  transform: 'none',
-                  lineHeight: '7px',
-                  background: 'transparent',
-                  border: 'none',
-                  boxShadow: 'none',
-                  padding: 0,
-                  pointerEvents: 'none'
-                }}>✨</span>
+                <span className={styles.titleSweepLight}></span>
+                <span className={styles.titleStar1}>✨</span>
+                <span className={styles.titleStar2}>✨</span>
               </span>
             );
           }
