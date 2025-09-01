@@ -2485,17 +2485,24 @@
   // ... existing code ...
 }
 
-.titleImg {
-  height: 18px;
-  width: auto;
-  vertical-align: middle;
-  object-fit: contain;
-}
-
-.transparentBg {
-  background: transparent !important;
-  box-shadow: none !important;
-  &::before {
-    display: none;
+// 图片称号特效的动画 - 优化的闪烁和微小缩放效果
+@keyframes titleStarsFloat {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.95);
+  }
+  25% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.05);
+  }
+  75% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0.4;
+    transform: scale(0.95);
   }
 }
