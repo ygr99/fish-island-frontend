@@ -84,5 +84,13 @@
       "titleImg": "https://api.oss.cqbo.com/moyu/title/wZdzS3TT-badge-喂鱼大师.png"
 
     }
+  ,
+    {
+      "id": "15",
+      "name": "恐龙专属称号",
+      "description": "空白专属称号",
+      "titleImg": "https://api.oss.cqbo.com/moyu/title/恐龙.png"
+
+    }
   ]
 }
