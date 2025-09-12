@@ -128,6 +128,12 @@ declare global {
   }
 }
 
+// 添加用户备注类型
+interface UserRemark {
+  userId: string;
+  remark: string;
+}
+
 const ChatRoom: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [workdayType, setWorkdayType] = useState<'single' | 'double' | 'mixed'>('double');
@@ -358,6 +364,12 @@ const ChatRoom: React.FC = () => {
   const newMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isLoadingMoyu, setIsLoadingMoyu] = useState(false);
+
+  // 添加用户备注相关状态
+  const [userRemarks, setUserRemarks] = useState<Record<string, string>>({});
+  const [isRemarkModalVisible, setIsRemarkModalVisible] = useState(false);
+  const [remarkValue, setRemarkValue] = useState('');
+  const [remarkUserId, setRemarkUserId] = useState<string | null>(null);
 
   const scrollToBottom = () => {
     const container = messageContainerRef.current;
@@ -1549,7 +1561,12 @@ const ChatRoom: React.FC = () => {
           </div>
           <div className={styles.userInfoCardTitle}>
             <div className={styles.userInfoCardNameRow}>
-              <span className={styles.userInfoCardName}>{user.name}</span>
+              <span className={styles.userInfoCardName}>
+                {userRemarks[user.id] || user.name}
+                {userRemarks[user.id] && (
+                  <span className={styles.originalName}>({user.name})</span>
+                )}
+              </span>
               <span className={styles.userInfoCardLevel}>
                 <span className={styles.levelEmoji}>{getLevelEmoji(user.level)}</span>
                 <span className={styles.levelText}>{user.level}</span>
@@ -2633,6 +2650,46 @@ const ChatRoom: React.FC = () => {
     }
   }, []);
 
+  // 加载用户备注
+  useEffect(() => {
+    const savedRemarks = localStorage.getItem('user_remarks');
+    if (savedRemarks) {
+      try {
+        setUserRemarks(JSON.parse(savedRemarks));
+      } catch (error) {
+        console.error('加载用户备注失败:', error);
+      }
+    }
+  }, []);
+
+  // 保存用户备注
+  const saveUserRemark = (userId: string, remark: string) => {
+    const newRemarks = { ...userRemarks, [userId]: remark };
+    setUserRemarks(newRemarks);
+    localStorage.setItem('user_remarks', JSON.stringify(newRemarks));
+  };
+
+  // 获取用户显示名称
+  const getUserDisplayName = (user: User) => {
+    return userRemarks[user.id] || user.name;
+  };
+
+  // 打开设置备注弹窗
+  const openRemarkModal = (user: User) => {
+    setRemarkUserId(user.id);
+    setRemarkValue(userRemarks[user.id] || '');
+    setIsRemarkModalVisible(true);
+  };
+
+  // 保存备注
+  const handleSaveRemark = () => {
+    if (remarkUserId) {
+      saveUserRemark(remarkUserId, remarkValue);
+      setIsRemarkModalVisible(false);
+      messageApi.success('备注设置成功');
+    }
+  };
+
   return (
     <div className={`${styles.chatRoom} ${isSpeedMode ? styles.speedMode : ''}`}>
         {/* 可拖动宠物组件 */}
@@ -2770,7 +2827,7 @@ const ChatRoom: React.FC = () => {
                   onClick={() => handleViewUserDetail(msg.sender)}
                   style={{ cursor: 'pointer' }}
                 >
-                  {msg.sender.name}
+                  {getUserDisplayName(msg.sender)}
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0px' }}>
                     {getAdminTag(msg.sender.isAdmin, msg.sender.level, msg.sender.titleId)}
                   </span>
@@ -2789,7 +2846,7 @@ const ChatRoom: React.FC = () => {
                       onClick={() => msg.quotedMessage && handleViewUserDetail(msg.quotedMessage.sender)}
                       style={{ cursor: 'pointer' }}
                     >
-                      {msg.quotedMessage.sender.name}
+                      {getUserDisplayName(msg.quotedMessage.sender)}
                     </span>
                     <span className={styles.quotedMessageTime}>
                       {new Date(msg.quotedMessage.timestamp).toLocaleTimeString()}
@@ -3502,49 +3559,64 @@ const ChatRoom: React.FC = () => {
                   )}
                 </div>
               </div>
-                              <div className={styles.userDetailInfo}>
-                  <div className={styles.userDetailName} style={{ display: 'flex', alignItems: 'center' }}>
-                    <span>{selectedUser.name}</span>
-                    {(selectedUser.vip || selectedUser.isVip) && (
-                      <span className={styles.vipBadge} style={{ marginLeft: '8px' }}>V</span>
+              <div className={styles.userDetailInfo}>
+                <div className={styles.userDetailName} style={{ display: 'flex', alignItems: 'center' }}>
+                  <span>
+                    {getUserDisplayName(selectedUser)}
+                    {userRemarks[selectedUser.id] && (
+                      <span style={{ fontSize: '12px', color: '#999', marginLeft: '5px' }}>
+                        ({selectedUser.name})
+                      </span>
                     )}
-                    {currentUser?.userRole === 'admin' && (
-                      <Button
-                        type="link"
-                        size="small"
-                        icon={<CopyOutlined />}
-                        style={{ marginLeft: '8px', padding: '0 4px' }}
-                        onClick={() => {
-                          navigator.clipboard.writeText(selectedUser.id);
-                          messageApi.success('已复制用户ID到剪贴板');
-                        }}
-                      >
-                        复制ID
-                      </Button>
-                    )}
+                  </span>
+                  {(selectedUser.vip || selectedUser.isVip) && (
+                    <span className={styles.vipBadge} style={{ marginLeft: '8px' }}>V</span>
+                  )}
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={() => openRemarkModal(selectedUser)}
+                    style={{ marginLeft: '8px', padding: '0 4px' }}
+                  >
+                    {userRemarks[selectedUser.id] ? '修改备注' : '设置备注'}
+                  </Button>
+                  {currentUser?.userRole === 'admin' && (
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<CopyOutlined />}
+                      style={{ marginLeft: '8px', padding: '0 4px' }}
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedUser.id);
+                        messageApi.success('已复制用户ID到剪贴板');
+                      }}
+                    >
+                      复制ID
+                    </Button>
+                  )}
+                </div>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: '0px',
+                  marginTop: '12px',
+                  marginBottom: '12px',
+                  maxWidth: '100%'
+                }}>
+                  <div style={{ display: 'inline-flex', marginRight: '-2px', transform: 'scale(0.85)' }}>
+                    {getAdminTag(selectedUser.isAdmin, selectedUser.level, selectedUser.titleId)}
                   </div>
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    flexWrap: 'wrap',
-                    gap: '0px',
-                    marginTop: '12px',
-                    marginBottom: '12px',
-                    maxWidth: '100%'
-                  }}>
-                    <div style={{ display: 'inline-flex', marginRight: '-2px', transform: 'scale(0.85)' }}>
-                      {getAdminTag(selectedUser.isAdmin, selectedUser.level, selectedUser.titleId)}
-                    </div>
-                    {selectedUser.titleIdList &&
-                      JSON.parse(selectedUser.titleIdList || '[]')
-                        .filter((id: number) => id !== selectedUser.titleId && id !== 0)
-                        .map((titleId: number) => (
-                          <div key={titleId} style={{ display: 'inline-flex', marginRight: '-2px', transform: 'scale(0.85)' }}>
-                            {getAdminTag(selectedUser.isAdmin, selectedUser.level, titleId)}
-                          </div>
-                        ))
-                    }
-                  </div>
+                  {selectedUser.titleIdList &&
+                    JSON.parse(selectedUser.titleIdList || '[]')
+                      .filter((id: number) => id !== selectedUser.titleId && id !== 0)
+                      .map((titleId: number) => (
+                        <div key={titleId} style={{ display: 'inline-flex', marginRight: '-2px', transform: 'scale(0.85)' }}>
+                          {getAdminTag(selectedUser.isAdmin, selectedUser.level, titleId)}
+                        </div>
+                      ))
+                  }
+                </div>
               </div>
             </div>
             <div className={styles.userDetailContent}>
@@ -3702,6 +3774,32 @@ const ChatRoom: React.FC = () => {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* 添加备注设置弹窗 */}
+      <Modal
+        title="设置备注"
+        open={isRemarkModalVisible}
+        onCancel={() => setIsRemarkModalVisible(false)}
+        onOk={handleSaveRemark}
+        okText="保存"
+        cancelText="取消"
+        width={300}
+      >
+        <div style={{ marginBottom: '16px' }}>
+          <Input
+            placeholder="请输入备注名称"
+            value={remarkValue}
+            onChange={(e) => setRemarkValue(e.target.value)}
+            maxLength={20}
+            allowClear
+          />
+        </div>
+        {remarkValue && (
+          <div style={{ color: '#666', fontSize: '12px' }}>
+            备注后将在聊天中显示为：{remarkValue}
+          </div>
+        )}
       </Modal>
     </div>
   );
