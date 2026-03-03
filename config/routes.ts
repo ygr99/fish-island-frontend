@@ -2,6 +2,7 @@ export default [
   {
     path: '/user', layout: false, requireAuth: false, routes: [
       {path: '/user/login', component: './User/Login', requireAuth: false},
+      {path: '/user/login/linuxdo', component: './User/Login/LinuxDo', requireAuth: false},
       {path: '/user/register', component: './User/Register', requireAuth: false}
     ]
   },
@@ -15,6 +16,7 @@ export default [
   {path: '/post/:id',component: './Post/Detail', requireAuth: true},
   {path: '/reader', icon: 'BookOutlined', component: './Reader', name: '摸鱼阅读', requireAuth: true},
   {path: '/pet', icon: 'HeartOutlined', component: './Pet', name: '摸鱼宠物', requireAuth: true},
+  {path: '/pet/fight', icon: 'HeartOutlined', component: './Pet/Fight', requireAuth: true},
   { path: '/draw', icon: 'FundViewOutlined', component: './Draw', name: '你画我猜', requireAuth: true },
   {path: '/draw/:id',component: './Draw/Detail', requireAuth: true},
   {
@@ -152,6 +154,13 @@ export default [
         name: 'AI周报助手',
         requireAuth: false
       },
+      {
+        icon: 'FundOutlined',
+        path: '/utils/fund-hub',
+        component: './Utils/FundHub',
+        name: '基金估值',
+        requireAuth: true
+      },
     ],
   },
   {
@@ -167,6 +176,7 @@ export default [
     name: '关于网站',
     routes: [
       {icon: 'DesktopOutlined', path: '/rank/reward', component: './Rank/Reward', name: '打赏榜 👑', requireAuth: false},
+      {icon: 'DesktopOutlined', path: '/rank/welfare', component: './Welfare', name: '外卖福利🎁', requireAuth: false},
       {icon: 'DesktopOutlined', path: '/rank/about', component: './About', name: '共建与反馈 🚀', requireAuth: false},
       {icon: 'DesktopOutlined', path: '/rank/other', component: './Other', name: '其他产品 🔥', requireAuth: false},
       {path: 'https://github.com/lhccong/fish-island-backend', name: '狠狠点个 star 🌟'},
@@ -186,6 +196,7 @@ export default [
       {icon: 'BulbOutlined', path: '/admin/title', component: './Admin/User/Title', name: '称号管理', requireAuth: true},
       {icon: 'TagsOutlined', path: '/admin/tags', component: './Admin/Tags', name: '标签管理', requireAuth: true},
       {icon: 'BookOutlined', path: '/admin/word/library', component: './Admin/Word/Library', name: '词库管理', requireAuth: true},
+      {icon: 'ToolOutlined', path: '/admin/game/itemTemplates', component: './Admin/ItemTemplates', name: '装备管理', requireAuth: true},
     ],
   },
   {path: '/', redirect: '/index', requireAuth: true},

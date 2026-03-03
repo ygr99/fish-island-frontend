@@ -1,4 +1,13 @@
 declare namespace API {
+  type AddFundRequest = {
+    /** 持有金额 */
+    amount: number;
+    /** 基金代码 */
+    code: string;
+    /** 盈亏金额（正数为盈利，负数为亏损） */
+    profit: number;
+  };
+
   type addTitleToUserUsingPOSTParams = {
     /** titleId */
     titleId: number;
@@ -39,6 +48,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseBossBattleInfoVO_ = {
+    code?: number;
+    data?: BossBattleInfoVO;
+    message?: string;
+  };
+
   type BaseResponseCosCredentialVo_ = {
     code?: number;
     data?: CosCredentialVo;
@@ -63,6 +78,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseFundListVO_ = {
+    code?: number;
+    data?: FundListVO;
+    message?: string;
+  };
+
   type BaseResponseHeroRankingVO_ = {
     code?: number;
     data?: HeroRankingVO;
@@ -81,9 +102,45 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseItemInstances_ = {
+    code?: number;
+    data?: ItemInstances;
+    message?: string;
+  };
+
+  type BaseResponseItemInstanceVO_ = {
+    code?: number;
+    data?: ItemInstanceVO;
+    message?: string;
+  };
+
+  type BaseResponseItemTemplateVO_ = {
+    code?: number;
+    data?: ItemTemplateVO;
+    message?: string;
+  };
+
   type BaseResponseListAvatarFrame_ = {
     code?: number;
     data?: AvatarFrame[];
+    message?: string;
+  };
+
+  type BaseResponseListBattleResultVO_ = {
+    code?: number;
+    data?: BattleResultVO[];
+    message?: string;
+  };
+
+  type BaseResponseListBossChallengeRankingVO_ = {
+    code?: number;
+    data?: BossChallengeRankingVO[];
+    message?: string;
+  };
+
+  type BaseResponseListBossVO_ = {
+    code?: number;
+    data?: BossVO[];
     message?: string;
   };
 
@@ -231,6 +288,24 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponsePageItemInstances_ = {
+    code?: number;
+    data?: PageItemInstances_;
+    message?: string;
+  };
+
+  type BaseResponsePageItemInstanceVO_ = {
+    code?: number;
+    data?: PageItemInstanceVO_;
+    message?: string;
+  };
+
+  type BaseResponsePageItemTemplateVO_ = {
+    code?: number;
+    data?: PageItemTemplateVO_;
+    message?: string;
+  };
+
   type BaseResponsePageMockInterview_ = {
     code?: number;
     data?: PageMockInterview_;
@@ -321,6 +396,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponsePostRewardTokenVO_ = {
+    code?: number;
+    data?: PostRewardTokenVO;
+    message?: string;
+  };
+
   type BaseResponsePostVO_ = {
     code?: number;
     data?: PostVO;
@@ -387,6 +468,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseUserRewardVO_ = {
+    code?: number;
+    data?: UserRewardVO;
+    message?: string;
+  };
+
   type BaseResponseUserTitle_ = {
     code?: number;
     data?: UserTitle;
@@ -415,6 +502,64 @@ declare namespace API {
     code?: number;
     data?: WordLibrary;
     message?: string;
+  };
+
+  type BattleResultVO = {
+    /** 当前攻击对象类型：PET-宠物攻击，BOSS-Boss攻击 */
+    attackerType?: string;
+    /** Boss剩余血量 */
+    bossRemainingHealth?: number;
+    /** 扣血量 */
+    damage?: number;
+    /** 是否连击 */
+    isCombo?: boolean;
+    /** 是否暴击 */
+    isCritical?: boolean;
+    /** 是否闪避 */
+    isDodge?: boolean;
+    /** 是否普通攻击 */
+    isNormalAttack?: boolean;
+    /** 宠物剩余血量 */
+    petRemainingHealth?: number;
+  };
+
+  type battleUsingGETParams = {
+    /** bossId */
+    bossId: number;
+  };
+
+  type BossBattleInfoVO = {
+    bossInfo?: BossInfo;
+    petInfo?: PetInfo;
+  };
+
+  type BossChallengeRankingVO = {
+    damage?: number;
+    petAvatar?: string;
+    petName?: string;
+    rank?: number;
+    userAvatar?: string;
+    userId?: number;
+    userName?: string;
+  };
+
+  type BossInfo = {
+    attack?: number;
+    avatar?: string;
+    currentHealth?: number;
+    id?: number;
+    maxHealth?: number;
+    name?: string;
+    rewardPoints?: number;
+  };
+
+  type BossVO = {
+    attack?: number;
+    avatar?: string;
+    health?: number;
+    id?: number;
+    name?: string;
+    rewardPoints?: number;
   };
 
   type callbackUsingDELETEParams = {
@@ -556,6 +701,11 @@ declare namespace API {
     token?: string;
   };
 
+  type DeleteFundRequest = {
+    /** 基金代码 */
+    code: string;
+  };
+
   type DeleteRequest = {
     id?: string;
   };
@@ -666,6 +816,15 @@ declare namespace API {
     wordHint?: string;
   };
 
+  type EditFundRequest = {
+    /** 持有金额 */
+    amount: number;
+    /** 基金代码 */
+    code: string;
+    /** 盈亏金额（正数为盈利，负数为亏损） */
+    profit: number;
+  };
+
   type eliminatePlayerUsingPOSTParams = {
     /** roomId */
     roomId: string;
@@ -733,9 +892,61 @@ declare namespace API {
     prefetch?: number;
   };
 
+  type FundItemVO = {
+    /** 涨跌幅（%） */
+    changePercent?: number;
+    /** 基金代码 */
+    code?: string;
+    /** 成本价 */
+    cost?: number;
+    /** 当前价格（实时估值） */
+    currentPrice?: number;
+    /** 今日盈亏 */
+    dayProfit?: number;
+    /** 持有市值 */
+    marketValue?: number;
+    /** 基金名称 */
+    name?: string;
+    /** 昨日净值 */
+    prevPrice?: number;
+    /** 持有份额 */
+    shares?: number;
+    /** 累计盈亏 */
+    totalProfit?: number;
+    /** 更新时间 */
+    updateTime?: string;
+  };
+
+  type FundListVO = {
+    /** 基金列表 */
+    fundList?: FundItemVO[];
+    /** 今日下跌的基金数量 */
+    todayDownCount?: number;
+    /** 今日上涨的基金数量 */
+    todayUpCount?: number;
+    /** 今日总盈亏 */
+    totalDayProfit?: number;
+    /** 总市值 */
+    totalMarketValue?: number;
+    /** 累计总盈亏 */
+    totalProfit?: number;
+  };
+
   type generatePresignedDownloadUrlUsingGETParams = {
     /** fileName */
     fileName: string;
+  };
+
+  type getBossBattleInfoUsingGETParams = {
+    /** bossId */
+    bossId: number;
+  };
+
+  type getBossChallengeRankingUsingGETParams = {
+    /** bossId */
+    bossId: number;
+    /** limit */
+    limit?: number;
   };
 
   type getCosCredentialUsingGETParams = {
@@ -748,12 +959,27 @@ declare namespace API {
     roomId: string;
   };
 
+  type getCurrentRewardUserUsingGETParams = {
+    /** postId */
+    postId?: number;
+  };
+
   type getDonationRecordsVoByIdUsingGETParams = {
     /** id */
     id?: number;
   };
 
   type getHeroByIdUsingGETParams = {
+    /** id */
+    id?: number;
+  };
+
+  type getItemInstanceByIdUsingGETParams = {
+    /** id */
+    id?: number;
+  };
+
+  type getItemTemplateVOByIdUsingPOSTParams = {
     /** id */
     id?: number;
   };
@@ -790,6 +1016,11 @@ declare namespace API {
     roomId: string;
     /** userId */
     userId: number;
+  };
+
+  type getPostRewardTokenUsingGETParams = {
+    /** postId */
+    postId?: number;
   };
 
   type getPostVoByIdUsingGETParams = {
@@ -920,9 +1151,222 @@ declare namespace API {
     updateTime?: string;
   };
 
+  type ItemInstanceAddRequest = {
+    /** 是否绑定（1-绑定后不可交易，0-未绑定可交易） */
+    bound?: number;
+    /** 耐久度（可选，部分装备适用） */
+    durability?: number;
+    /** 强化等级 */
+    enhanceLevel?: number;
+    /** 扩展信息（如附魔、镶嵌孔、特殊属性等JSON数据） */
+    extraData?: Record<string, any>;
+    /** 持有者用户ID，如果不传默认添加当前登录用户 */
+    ownerUserId?: number;
+    /** 添加数量，stackable为1时有效，stackable为0会忽略 */
+    quantity?: number;
+    /** 物品模板ID */
+    templateId: number;
+  };
+
+  type ItemInstanceEditRequest = {
+    /** 是否绑定（1绑定，0未绑定） */
+    bound?: number;
+    /** 耐久度 */
+    durability?: number;
+    /** 强化等级 */
+    enhanceLevel?: number;
+    /** 扩展信息（JSON字符串或对象） */
+    extraData?: Record<string, any>;
+    /** 物品实例ID */
+    id: number;
+    /** 是否需要返回模板信息，默认 true */
+    includeTemplate?: boolean;
+    /** 持有者用户ID（允许转移所有权） */
+    ownerUserId?: number;
+    /** 数量（大于0有效） */
+    quantity?: number;
+    /** 物品模板ID（允许修改实例关联的模板） */
+    templateId?: number;
+  };
+
+  type ItemInstanceQueryRequest = {
+    /** 物品大类（可选） */
+    category?: string;
+    current?: number;
+    /** 装备槽位（可选） */
+    equipSlot?: string;
+    pageSize?: number;
+    /** 稀有度等级（可选） */
+    rarity?: number;
+    sortField?: string;
+    sortOrder?: string;
+  };
+
+  type ItemInstances = {
+    bound?: number;
+    createTime?: string;
+    durability?: number;
+    enhanceLevel?: number;
+    extraData?: Record<string, any>;
+    id?: number;
+    isDelete?: number;
+    ownerUserId?: number;
+    quantity?: number;
+    templateId?: number;
+    updateTime?: string;
+  };
+
+  type ItemInstanceUpdateRequest = {
+    /** 绑定状态：1-绑定，0-未绑定 */
+    bound?: number;
+    /** 强化等级 */
+    enhanceLevel?: number;
+    /** 扩展信息(JSON) */
+    extraData?: string;
+    /** 物品实例ID */
+    id: number;
+    ownerUserId?: number;
+    /** 数量 */
+    quantity?: number;
+    templateId?: number;
+  };
+
+  type ItemInstanceVO = {
+    bound?: number;
+    createTime?: string;
+    durability?: number;
+    enhanceLevel?: number;
+    extraData?: Record<string, any>;
+    id?: number;
+    ownerUserId?: number;
+    quantity?: number;
+    template?: ItemTemplateVO;
+    templateId?: number;
+    updateTime?: string;
+  };
+
+  type ItemTemplateAddRequest = {
+    /** 基础攻击力 */
+    baseAttack?: number;
+    /** 基础防御力 */
+    baseDefense?: number;
+    /** 基础生命值 */
+    baseHp?: number;
+    /** 物品大类：equipment-装备类（能穿戴的）、consumable-消耗品（药水/卷轴/食物）、material-材料（强化石/合成材料） */
+    category?: string;
+    /** 模板唯一码，例如 sword_iron_01 */
+    code?: string;
+    /** 物品描述 */
+    description?: string;
+    /** 可穿戴槽位: head-头部, hand-手部, foot-脚部, weapon-武器；NULL 表示无法穿戴 */
+    equipSlot?: string;
+    /** 物品图标地址 */
+    icon?: string;
+    /** 使用等级需求 */
+    levelReq?: number;
+    /** 非常规属性/词缀(JSON)，格式: [{k,v},...] */
+    mainAttr?: Record<string, any>;
+    /** 物品名称 */
+    name?: string;
+    /** 稀有度等级（1-8，数字越高越稀有） */
+    rarity?: number;
+    /** 分解后获得的积分 */
+    removePoint?: number;
+    /** 是否可叠加，0-不可叠加，1-可叠加（如消耗品） */
+    stackable?: number;
+    /** 物品子类型，例如 weapon 武器、head 头盔、foot 鞋子、hand 手套 */
+    subType?: string;
+  };
+
+  type ItemTemplateEditRequest = {
+    /** 基础攻击力 */
+    baseAttack?: number;
+    /** 基础防御力 */
+    baseDefense?: number;
+    /** 基础生命值 */
+    baseHp?: number;
+    /** 物品大类 */
+    category: string;
+    /** 模板唯一码 */
+    code: string;
+    /** 物品描述 */
+    description?: string;
+    /** 可穿戴槽位 */
+    equipSlot?: string;
+    /** 物品图标地址 */
+    icon?: string;
+    /** 物品模板ID */
+    id: number;
+    /** 逻辑删除标识（0-正常，1-已删除） */
+    isDelete?: number;
+    /** 使用等级需求 */
+    levelReq?: number;
+    /** 非常规属性/词缀(JSON) */
+    mainAttr?: Record<string, any>;
+    /** 物品名称 */
+    name: string;
+    /** 稀有度等级（1-8） */
+    rarity?: number;
+    /** 分解后获得的积分 */
+    removePoint?: number;
+    /** 是否可叠加（0-不可叠加，1-可叠加） */
+    stackable?: number;
+    /** 物品子类型 */
+    subType?: string;
+  };
+
+  type ItemTemplateQueryRequest = {
+    /** 物品大类：equipment-装备类、consumable-消耗品、material-材料 */
+    category?: string;
+    /** 模板唯一码（精确匹配） */
+    code?: string;
+    current?: number;
+    /** id */
+    id?: number;
+    /** 使用等级需求 */
+    levelReq?: number;
+    /** 物品名称（模糊搜索） */
+    name?: string;
+    pageSize?: number;
+    /** 稀有度等级（1-8，数字越高越稀有） */
+    rarity?: number;
+    sortField?: string;
+    sortOrder?: string;
+    /** 是否可叠加（0-不可叠加，1-可叠加） */
+    stackable?: number;
+    /** 子类型，例如 weapon 武器、head 头盔、foot 鞋子、hand 手套 */
+    subType?: string;
+  };
+
+  type ItemTemplateVO = {
+    baseAttack?: number;
+    baseDefense?: number;
+    baseHp?: number;
+    category?: string;
+    code?: string;
+    description?: string;
+    equipSlot?: string;
+    icon?: string;
+    id?: number;
+    levelReq?: number;
+    mainAttr?: Record<string, any>;
+    name?: string;
+    rarity?: number;
+    removePoint?: number;
+    stackable?: number;
+    subType?: string;
+  };
+
   type joinRoomUsingPOSTParams = {
     /** roomId */
     roomId: string;
+  };
+
+  type linuxDoCallbackUsingGETParams = {
+    /** code */
+    code?: string;
+    /** state */
+    state?: string;
   };
 
   type listPetSkinsUsingGETParams = {
@@ -1230,6 +1674,45 @@ declare namespace API {
     total?: number;
   };
 
+  type PageItemInstances_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: ItemInstances[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageItemInstanceVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: ItemInstanceVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
+  type PageItemTemplateVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: ItemTemplateVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
   type PageMockInterview_ = {
     countId?: string;
     current?: number;
@@ -1429,6 +1912,15 @@ declare namespace API {
     petId: number;
   };
 
+  type PetInfo = {
+    attack?: number;
+    avatar?: string;
+    health?: number;
+    level?: number;
+    name?: string;
+    petId?: number;
+  };
+
   type PetRankVO = {
     exp?: number;
     level?: number;
@@ -1538,6 +2030,15 @@ declare namespace API {
     tags?: string[];
     title?: string;
     userId?: number;
+  };
+
+  type PostRandomThumbRequest = {
+    postId?: number;
+    randomIndex?: number;
+  };
+
+  type PostRewardTokenVO = {
+    rewardToken?: string;
   };
 
   type PostThumbAddRequest = {
@@ -1881,6 +2382,19 @@ declare namespace API {
     userId: number;
   };
 
+  type UpdateFundRequest = {
+    /** 基金代码 */
+    code: string;
+    /** 成本净值 */
+    cost?: number;
+    /** 基金名称 */
+    name?: string;
+    /** 持有份额 */
+    shares?: number;
+    /** 用户ID */
+    userId: number;
+  };
+
   type UpdatePetNameRequest = {
     name?: string;
     petId?: number;
@@ -2021,6 +2535,16 @@ declare namespace API {
     email?: string;
     userAccount?: string;
     userPassword?: string;
+  };
+
+  type UserRewardVO = {
+    createTime?: string;
+    id?: number;
+    rewardToken?: string;
+    userAvatar?: string;
+    userName?: string;
+    userProfile?: string;
+    userRole?: string;
   };
 
   type UserTitle = {

@@ -16,8 +16,10 @@ import {
   grabRedPacketUsingPost,
 } from '@/services/backend/redPacketController';
 import { muteUserUsingPost, getUserMuteInfoUsingGet, unmuteUserUsingPost } from '@/services/backend/userMuteController';
+import { generateAnnualReportUsingGet } from '@/services/backend/userController';
 import { wsService } from '@/services/websocket';
 import { useModel } from '@@/exports';
+import html2canvas from 'html2canvas';
 // ... 其他 imports ...
 import {
   BugOutlined,
@@ -38,9 +40,10 @@ import {
   CalendarOutlined,
   TeamOutlined,
   EllipsisOutlined,
-  ThunderboltOutlined,
   FileImageOutlined,
   RocketOutlined,
+  EyeOutlined,
+  EyeInvisibleOutlined,
 } from '@ant-design/icons';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -64,7 +67,7 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import styles from './index.less';
-import { UNDERCOVER_NOTIFICATION, UNDERCOVER_ROOM_STATUS } from '@/constants';
+import { UNDERCOVER_NOTIFICATION } from '@/constants';
 import eventBus from '@/utils/eventBus';
 import { joinRoomUsingPost } from '@/services/backend/drawGameController';
 import { getLevelEmoji, generateUniqueShortId, getTitleTagProperties } from '@/utils/titleUtils';
@@ -162,12 +165,18 @@ const ChatRoom: React.FC = () => {
   const loadingRef = useRef(false); // 添加loadingRef防止重复请求
 
   const [announcement, setAnnouncement] = useState<string>(
-    '欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢：感谢 yovvis 大佬赞助的服务器资源🌟，域名9月份过期，请移步新域名：<a href="https://yucoder.cn/" target="_blank" rel="noopener noreferrer">https://yucoder.cn/</a>',
+    '欢迎来到摸鱼聊天室！🎉 这里是一个充满快乐的地方~。致谢服务商：<a href="https://crash.work/" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; text-decoration: none; margin-left: 4px;"><img src="/img/posuiyun.png" alt="破碎工坊云" style="height: 20px; vertical-align: middle; margin-right: 4px;" /></a>',
   );
   const [showAnnouncement, setShowAnnouncement] = useState<boolean>(true);
   const [isAnnouncementModalVisible, setIsAnnouncementModalVisible] = useState(false);
+  const [isAnnualReportModalVisible, setIsAnnualReportModalVisible] = useState(false);
+  const [annualReportHtml, setAnnualReportHtml] = useState<string>('');
+  const [isLoadingAnnualReport, setIsLoadingAnnualReport] = useState(false);
 
   const [isComponentMounted, setIsComponentMounted] = useState(true);
+  const [isPageVisible, setIsPageVisible] = useState(!document.hidden);
+  const pageHiddenTimeRef = useRef<number | null>(null);
+  const visibilityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [uploading, setUploading] = useState(false);
 
@@ -193,10 +202,62 @@ const ChatRoom: React.FC = () => {
   const mentionListRef = useRef<HTMLDivElement>(null);
   // 添加防抖引用
   const mentionDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const annualReportRef = useRef<HTMLDivElement | null>(null);
+
+  // 导出摸鱼年终报告为图片
+  const handleExportAnnualReportImage = async () => {
+    if (!annualReportHtml) {
+      message.error('报告内容还没有加载完成，请稍后再试~');
+      return;
+    }
+
+    try {
+      setIsExportingAnnualReportImage(true);
+
+      // 在屏幕外创建一个隐藏容器，避免被 Modal 头部等元素遮挡
+      const container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.width = '750px'; // 固定宽度，保证版式稳定
+      container.style.padding = '24px 0 32px';
+      container.style.background = '#E7F5FF'; // 和年报背景接近
+      container.style.zIndex = '-1';
+      container.innerHTML = annualReportHtml;
+
+      document.body.appendChild(container);
+
+      // 等待一帧，确保样式和图片加载
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+
+      const canvas = await html2canvas(container, {
+        useCORS: true,
+        backgroundColor: '#E7F5FF',
+        scale: 2,
+        scrollX: 0,
+        scrollY: 0,
+      });
+
+      document.body.removeChild(container);
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = 'moyu-annual-report.png';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('导出年终报告图片失败:', error);
+      message.error('导出图片失败，请稍后重试~');
+    } finally {
+      setIsExportingAnnualReportImage(false);
+    }
+  };
 
   const [isRedPacketModalVisible, setIsRedPacketModalVisible] = useState(false);
-  const [redPacketAmount, setRedPacketAmount] = useState<number>(0);
-  const [redPacketCount, setRedPacketCount] = useState<number>(1);
+  const [redPacketAmount, setRedPacketAmount] = useState<number>(100);
+  const [redPacketCount, setRedPacketCount] = useState<number>(10);
   const [redPacketMessage, setRedPacketMessage] = useState<string>('恭喜发财，大吉大利！');
   const [redPacketType, setRedPacketType] = useState<number>(1); // 1-随机红包 2-平均红包
   // 添加发红包防抖相关的状态
@@ -359,11 +420,18 @@ const ChatRoom: React.FC = () => {
   // 添加一个状态来记录最新消息的时间戳
   const [lastMessageTimestamp, setLastMessageTimestamp] = useState<number>(Date.now());
 
+  // 添加用户列表显示隐藏状态，从localStorage获取初始值
+  const [isUserListVisible, setIsUserListVisible] = useState<boolean>(() => {
+    const saved = localStorage.getItem('chat_userlist_visible');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
   // 添加防抖相关的状态和引用
   const [newMessageCount, setNewMessageCount] = useState<number>(0);
   const newMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isLoadingMoyu, setIsLoadingMoyu] = useState(false);
+  const [isExportingAnnualReportImage, setIsExportingAnnualReportImage] = useState(false);
 
   // 添加用户备注相关状态
   const [userRemarks, setUserRemarks] = useState<Record<string, string>>({});
@@ -382,7 +450,7 @@ const ChatRoom: React.FC = () => {
     requestAnimationFrame(() => {
       // 使用性能更好的方式计算滚动位置
       const scrollTarget = container.scrollHeight - container.clientHeight;
-      
+
       container.scrollTo({
         top: scrollTarget,
         behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
@@ -399,7 +467,7 @@ const ChatRoom: React.FC = () => {
         // 滚动完成后重置标记
         isAutoScrollingRef.current = false;
       };
-      
+
       // 使用 requestAnimationFrame 代替 setTimeout，性能更好
       setTimeout(checkScrollPosition, 100);
     });
@@ -452,7 +520,11 @@ const ChatRoom: React.FC = () => {
       const headerHeight = 40;
       const padding = 20;
       const newHeight = Math.max(containerHeight - headerHeight - padding, 200);
+      console.log('计算列表高度:', { containerHeight, headerHeight, padding, newHeight });
       setListHeight(newHeight);
+    } else {
+      console.log('userListRef.current 不存在，使用默认高度');
+      setListHeight(400); // 设置一个默认高度
     }
   }, []);
 
@@ -577,7 +649,7 @@ const ChatRoom: React.FC = () => {
           id: '-1',
           name: '摸鱼助手',
           avatar:
-            'https://api.oss.cqbo.com/moyu/user_avatar/1/hYskW0jH-34eaba5c-3809-45ef-a3bd-dd01cf97881b_478ce06b6d869a5a11148cf3ee119bac.gif',
+            'https://oss.cqbo.com/moyu/user_avatar/1/hYskW0jH-34eaba5c-3809-45ef-a3bd-dd01cf97881b_478ce06b6d869a5a11148cf3ee119bac.gif',
           level: 1,
           isAdmin: false,
           status: '在线',
@@ -631,10 +703,21 @@ const ChatRoom: React.FC = () => {
       }, 100);
     }
   }, [messages]); // 监听消息数组变化
-  // 初始化时获取在线用户列表
+  // 初始化时获取在线用户列表（仅在列表可见时）
   useEffect(() => {
-    fetchOnlineUsers();
-  }, []);
+    if (isUserListVisible) {
+      fetchOnlineUsers();
+      // 延迟计算高度，确保DOM已经渲染
+      setTimeout(() => {
+        updateListHeight();
+      }, 100);
+    }
+  }, [isUserListVisible, updateListHeight]);
+
+  // 监听用户列表显示状态变化，保存到localStorage
+  useEffect(() => {
+    localStorage.setItem('chat_userlist_visible', JSON.stringify(isUserListVisible));
+  }, [isUserListVisible]);
 
   // 创建用户对象的工具函数
   const createUserFromRecord = (userRecord: any, defaultRegion: string = '未知地区'): User => {
@@ -990,43 +1073,7 @@ const ChatRoom: React.FC = () => {
   };
 
   // 处理文件上传
-  const handleFileUpload = async (file: File) => {
-    try {
-      setUploadingFile(true);
-
-      // 调用后端上传接口
-      const res = await uploadFileByMinioUsingPost(
-        { biz: 'user_file' }, // 业务标识参数
-        {}, // body 参数
-        file, // 文件参数
-        {
-          // 其他选项
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        },
-      );
-
-      if (!res.data) {
-        throw new Error('文件上传失败');
-      }
-
-      // 获取文件的访问URL
-      const fileUrl = res.data;
-      console.log('文件上传地址：', fileUrl);
-      setPendingFileUrl(fileUrl);
-      // 更新发送按钮状态
-      setShouldShowSendButton(true);
-
-      messageApi.success('文件上传成功');
-    } catch (error) {
-      messageApi.error(`文件上传失败：${error}`);
-    } finally {
-      setUploadingFile(false);
-    }
-  };
-
-  // 移除待发送的文件
+// 移除待发送的文件
   const handleRemoveFile = () => {
     setPendingFileUrl(null);
     // 更新发送按钮状态
@@ -1427,13 +1474,13 @@ const ChatRoom: React.FC = () => {
           // 获取输入框位置
           const textarea = e.target;
           const rect = textarea.getBoundingClientRect();
-          
+
           // 简化位置计算逻辑
           const itemHeight = 40; // 每个选项的高度
           const maxItems = 3; // 最多显示3条数据时紧贴显示
           const listHeight = Math.min(onlineUsers.length, maxItems) * itemHeight;
           const topOffset = -listHeight - 10; // 固定在输入框上方，加一点间距
-          
+
           setMentionListPosition({
             top: rect.top + topOffset,
             left: rect.left + 10, // 固定在左侧，稍微缩进
@@ -1485,11 +1532,11 @@ const ChatRoom: React.FC = () => {
         return currentValue.slice(0, cursorPos) + `@${user.name} ` + currentValue.slice(cursorPos);
       }
     });
-    
+
     // 立即隐藏列表，提高响应速度
     setIsMentionListVisible(false);
     setMentionSearchText('');
-    
+
     // 使用 requestAnimationFrame 延迟聚焦，提高渲染性能
     requestAnimationFrame(() => {
       inputRef.current?.focus();
@@ -1519,12 +1566,12 @@ const ChatRoom: React.FC = () => {
           if (user.titleId === 0 && index === 0) {
             return true;
           }
-          
+
           // 对于其他称号，通过titleId直接匹配
           if (index > 0 && userTitleIds[index - 1] === user.titleId) {
             return true;
           }
-          
+
           return false;
         }) || allTitles[0]
       : allTitles[0];
@@ -1661,8 +1708,8 @@ const ChatRoom: React.FC = () => {
                   if (titleImg) {
             return (
               <span className={styles.titleImageContainer}>
-                <img 
-                  src={titleImg} 
+                <img
+                  src={titleImg}
                   alt={title.name}
                   className={styles.titleImage}
                 />
@@ -1717,7 +1764,7 @@ const ChatRoom: React.FC = () => {
   const handleEmoticonSelect = (url: string) => {
     // 将图片URL作为消息内容发送
     const imageMessage = `[img]${url}[/img]`;
-    
+
     // 直接使用新的消息内容发送，而不是依赖 inputValue 的状态更新
     if (!wsService.isConnected()) {
       return;
@@ -2078,7 +2125,7 @@ const ChatRoom: React.FC = () => {
     if (imgMatch) {
       // 处理图片，根据极速模式决定是否默认渲染
       const [_, imageUrl] = imgMatch;
-      
+
       const handleImageClick = () => {
         setExpandedImages(prev => {
           const newSet = new Set(prev);
@@ -2086,7 +2133,7 @@ const ChatRoom: React.FC = () => {
           return newSet;
         });
       };
-      
+
       // 如果不是极速模式，或者图片已经被展开，则渲染图片
       if (!isSpeedMode || expandedImages.has(imageUrl)) {
         return (
@@ -2406,7 +2453,7 @@ const ChatRoom: React.FC = () => {
   };
 
   // 添加禁言用户的函数
-  const handleMuteUser = (userId: string) => {
+  const handleMuteUser = () => {
     // 确保当前用户是管理员
     if (!currentUser || currentUser.userRole !== 'admin') {
       return;
@@ -2633,13 +2680,36 @@ const ChatRoom: React.FC = () => {
     setIsSpeedMode(checked);
     // 保存到本地存储，以便刷新页面后保持设置
     localStorage.setItem('chat_speed_mode', checked.toString());
-    
+
     // 如果关闭极速模式，清空已展开图片的状态
     if (!checked) {
       setExpandedImages(new Set());
     }
-    
+
     messageApi.success(`已${checked ? '开启' : '关闭'}极速模式`);
+  };
+
+  // 清空聊天记录
+  const handleClearMessages = () => {
+    Modal.confirm({
+      title: '确认清空聊天记录',
+      content: '此操作将清空当前页面显示的所有聊天记录，该操作不可撤销。确定要继续吗？',
+      okText: '确认清空',
+      cancelText: '取消',
+      okType: 'danger',
+      onOk: () => {
+        // 清空消息列表
+        setMessages([]);
+        // 重置分页状态
+        setCurrent(1);
+        setTotal(0);
+        setHasMore(true);
+        // 清空已加载的消息ID集合
+        loadedMessageIds.clear();
+        // 显示成功提示
+        messageApi.success('聊天记录已清空');
+      },
+    });
   };
 
   // 从本地存储加载极速模式设置
@@ -2660,6 +2730,76 @@ const ChatRoom: React.FC = () => {
         console.error('加载用户备注失败:', error);
       }
     }
+  }, []);
+
+  // 监听页面可见性变化
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const isVisible = !document.hidden;
+      setIsPageVisible(isVisible);
+
+      if (isVisible) {
+        // 页面变为可见时
+        console.log('页面变为可见');
+
+        // 清除定时器
+        if (visibilityTimeoutRef.current) {
+          clearTimeout(visibilityTimeoutRef.current);
+          visibilityTimeoutRef.current = null;
+        }
+
+        // 检查是否离开超过30秒
+        if (pageHiddenTimeRef.current) {
+          const hiddenDuration = Date.now() - pageHiddenTimeRef.current;
+          const THIRTY_SECONDS = 30 * 1000;
+
+          if (hiddenDuration >= THIRTY_SECONDS) {
+            // 离开超过30秒，执行恢复和重新加载
+            console.log(`页面离开了 ${Math.round(hiddenDuration / 1000)} 秒，重新获取聊天记录`);
+            wsService.resumeMessageProcessing();
+
+            // 清空当前消息列表并重新加载最新消息
+            setMessages([]);
+            setCurrent(1);
+            setHasMore(true);
+            loadHistoryMessages(1, true);
+
+            // 显示恢复提示
+            messageApi.info(`页面离开了 ${Math.round(hiddenDuration / 1000)} 秒，已重新获取最新聊天记录`);
+          } else {
+            // 离开时间不足30秒，只恢复消息处理
+            console.log(`页面离开了 ${Math.round(hiddenDuration / 1000)} 秒，未达到30秒阈值，仅恢复消息处理`);
+            wsService.resumeMessageProcessing();
+          }
+
+          pageHiddenTimeRef.current = null;
+        } else {
+          // 首次加载或其他情况，直接恢复消息处理
+          wsService.resumeMessageProcessing();
+        }
+      } else {
+        // 页面变为不可见时
+        console.log('页面变为不可见，30秒后将暂停消息处理');
+        pageHiddenTimeRef.current = Date.now();
+
+        // 设置30秒延迟暂停消息处理
+        visibilityTimeoutRef.current = setTimeout(() => {
+          console.log('页面离开超过30秒，暂停消息处理');
+          wsService.pauseMessageProcessing();
+        }, 30 * 1000);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // 清理定时器
+      if (visibilityTimeoutRef.current) {
+        clearTimeout(visibilityTimeoutRef.current);
+        visibilityTimeoutRef.current = null;
+      }
+    };
   }, []);
 
   // 保存用户备注
@@ -2691,13 +2831,13 @@ const ChatRoom: React.FC = () => {
   };
 
   return (
-    <div className={`${styles.chatRoom} ${isSpeedMode ? styles.speedMode : ''}`}>
+    <div className={`${styles.chatRoom} ${isSpeedMode ? styles.speedMode : ''} ${!isUserListVisible ? styles.userListCollapsed : ''}`}>
         {/* 可拖动宠物组件 */}
         <MiniPet onClick={() => {
           setCurrentPetUserId(null);
           setIsPetModalVisible(true);
         }} />
-      
+
       {/* 摸鱼宠物组件 */}
       <MoyuPet
         visible={isPetModalVisible}
@@ -2755,10 +2895,29 @@ const ChatRoom: React.FC = () => {
               <span dangerouslySetInnerHTML={{ __html: announcement }} />
               <Button
                 type="link"
-                onClick={() => setIsAnnouncementModalVisible(true)}
-                style={{ marginLeft: '16px', padding: '0' }}
+                loading={isLoadingAnnualReport}
+                onClick={async () => {
+                  let hideLoading: VoidFunction | undefined;
+                  try {
+                    setIsLoadingAnnualReport(true);
+                    hideLoading = messageApi.loading('摸鱼年报生成中，请稍候...', 0);
+                    const res = await generateAnnualReportUsingGet();
+                    // 接口直接返回 HTML 字符串
+                    setAnnualReportHtml(res as unknown as string);
+                    setIsAnnualReportModalVisible(true);
+                  } catch (error) {
+                    console.error('生成摸鱼年终报告失败:', error);
+                    message.error('生成摸鱼年终报告失败，请稍后重试~');
+                  } finally {
+                    if (hideLoading) {
+                      hideLoading();
+                    }
+                    setIsLoadingAnnualReport(false);
+                  }
+                }}
+                style={{ marginLeft: 16, padding: 0 }}
               >
-                查看更新
+                ⭐生成你的摸鱼年终报告🐟
               </Button>
             </div>
           }
@@ -2769,6 +2928,27 @@ const ChatRoom: React.FC = () => {
           className={styles.announcement}
         />
       )}
+      <Modal
+        title="你的摸鱼年终报告"
+        open={isAnnualReportModalVisible}
+        onCancel={() => setIsAnnualReportModalVisible(false)}
+        footer={[
+          <Button key="download" type="primary" loading={isExportingAnnualReportImage} onClick={handleExportAnnualReportImage}>
+            导出为图片
+          </Button>,
+          <Button key="close" onClick={() => setIsAnnualReportModalVisible(false)}>
+            关闭
+          </Button>,
+        ]}
+        width={800}
+        bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
+      >
+        <div
+          ref={annualReportRef}
+          // 后端返回的是完整的 HTML 片段
+          dangerouslySetInnerHTML={{ __html: annualReportHtml }}
+        />
+      </Modal>
       <div className={styles['floating-fish'] + ' ' + styles.fish1}>🐟</div>
       <div className={styles['floating-fish'] + ' ' + styles.fish2}>🐠</div>
       <div className={styles['floating-fish'] + ' ' + styles.fish3}>🐡</div>
@@ -2883,19 +3063,48 @@ const ChatRoom: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className={styles.userList}>
-        <div className={styles.userListHeader}>在线成员 ({onlineUsers.length})</div>
-        <div className={styles.userListContent} ref={userListRef}>
-          <List
-            height={listHeight}
-            itemCount={onlineUsers.length}
-            itemSize={USER_ITEM_HEIGHT}
-            width="100%"
-          >
-            {UserItem}
-          </List>
+      {/* 用户列表隐藏时显示浮动按钮 */}
+      {!isUserListVisible && (
+        <div className={`${styles.userList} ${styles.userListHidden}`}>
+          <div className={styles.userListHeader}>
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => setIsUserListVisible(!isUserListVisible)}
+              title="显示用户列表"
+              className={styles.toggleButton}
+            />
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* 用户列表显示时的正常布局 */}
+      {isUserListVisible && (
+        <div className={styles.userList}>
+          <div className={styles.userListHeader}>
+            <span>在线成员 ({onlineUsers.length})</span>
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeInvisibleOutlined />}
+              onClick={() => setIsUserListVisible(!isUserListVisible)}
+              title="隐藏用户列表"
+              className={styles.toggleButton}
+            />
+          </div>
+          <div className={styles.userListContent} ref={userListRef}>
+            <List
+              height={listHeight}
+              itemCount={onlineUsers.length}
+              itemSize={USER_ITEM_HEIGHT}
+              width="100%"
+            >
+              {UserItem}
+            </List>
+          </div>
+        </div>
+      )}
 
               <div className={styles.inputArea}>
         {quotedMessage && (
@@ -3070,6 +3279,10 @@ const ChatRoom: React.FC = () => {
                       />
                     </div>
                   </div>
+                </div>
+                <div className={styles.moreOptionsItem} onClick={handleClearMessages}>
+                  <DeleteOutlined className={styles.moreOptionsIcon} />
+                  <span>清空聊天记录</span>
                 </div>
               </div>
             }
@@ -3520,7 +3733,7 @@ const ChatRoom: React.FC = () => {
                 <Button
                   type="primary"
                   danger
-                  onClick={() => selectedUser && handleMuteUser(selectedUser.id)}
+                  onClick={() => selectedUser && handleMuteUser()}
                 >
                   禁言用户
                 </Button>

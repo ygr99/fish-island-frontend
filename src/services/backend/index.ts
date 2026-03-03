@@ -3,6 +3,7 @@
 // API 更新时间：
 // API 唯一标识：
 import * as avatarFrameController from './avatarFrameController';
+import * as bossController from './bossController';
 import * as chatController from './chatController';
 import * as commentController from './commentController';
 import * as commentThumbController from './commentThumbController';
@@ -12,8 +13,11 @@ import * as emoticonFavourController from './emoticonFavourController';
 import * as eventRemindController from './eventRemindController';
 import * as fileController from './fileController';
 import * as fishPetController from './fishPetController';
+import * as fundController from './fundController';
 import * as heroController from './heroController';
 import * as hotPostController from './hotPostController';
+import * as itemInstancesController from './itemInstancesController';
+import * as itemTemplatesController from './itemTemplatesController';
 import * as mockInterviewController from './mockInterviewController';
 import * as petRankController from './petRankController';
 import * as petSkinController from './petSkinController';
@@ -37,6 +41,7 @@ export default {
   petRankController,
   petSkinController,
   webParserController,
+  bossController,
   chatController,
   commentController,
   commentThumbController,
@@ -45,8 +50,11 @@ export default {
   emoticonFavourController,
   eventRemindController,
   fileController,
+  fundController,
   heroController,
   hotPostController,
+  itemInstancesController,
+  itemTemplatesController,
   mockInterviewController,
   restAuthController,
   fishPetController,
